@@ -112,6 +112,55 @@
         });
     },
 
+    /* Manual Trigger Sync Cloudflare dari Button Topbar / Pengaturan */
+    manualSyncCloud: function () {
+      const btn = document.getElementById('btn-sync-cloud');
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+      }
+      V.toast('Menyinkronkan data dengan Cloud...');
+      const self = this;
+      
+      // Ambil data terbaru di server dulu
+      fetch('/api/sync')
+        .then(function (res) { return res.json(); })
+        .then(function (res) {
+          if (res && res.ok && res.data) {
+            const cloudUpdated = res.data.meta && res.data.meta.updated;
+            const localUpdated = self.db && self.db.meta && self.db.meta.updated;
+            if (cloudUpdated && cloudUpdated > localUpdated) {
+              self.db = S.normalize(res.data);
+              S.Persist.save(self.db);
+              self.render();
+              V.toast('Berhasil mengambil data terbaru dari Cloud! ☁️', 'ok');
+              if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+              App.updateNetDot(true, 'Cloudflare Aktif');
+              return;
+            }
+          }
+          // Jika lokal lebih baru atau sama, dorong ke cloud
+          return fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(self.db)
+          }).then(function (postRes) {
+            if (postRes.ok) {
+              V.toast('Berhasil mengirim data lokal ke Cloud! ☁️', 'ok');
+              App.updateNetDot(true, 'Cloudflare Aktif');
+            } else {
+              V.toast('Gagal menyinkronkan data ke Cloud', 'err');
+            }
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+          });
+        })
+        .catch(function (err) {
+          V.toast('Koneksi gagal: pastikan ada internet', 'err');
+          if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+          App.updateNetDot(false, 'Offline (Lokal)');
+        });
+    },
+
     saveAndRender: function () { this.save(); this.render(); },
 
     deleteReceipt: function (rid) {

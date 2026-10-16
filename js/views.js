@@ -1121,6 +1121,16 @@
         '<input type="checkbox" id="st-pw-import" style="width:auto"> Impor menggantikan seluruh data (bukan menggabung)</label></div>' +
     '</div>' +
 
+    '<div class="card mt"><div class="card-head"><h2>⚡ Cloudflare D1 Cloud Sync (Otomatis)</h2>' +
+      '<span class="net-dot on"><span></span><em>Aktif Realtime</em></span></div>' +
+      '<p class="dim" style="font-size:13px;margin-bottom:14px">' +
+        'Data Anda otomatis tersinkronkan ke database serverless Cloudflare D1 di latar belakang setiap ada perubahan. ' +
+        'Jika Anda ingin memaksa sinkronisasi sekarang secara manual, klik tombol di bawah.</p>' +
+      '<div class="row">' +
+        '<button class="btn primary" onclick="App.manualSyncCloud()">🔄 Sinkronkan Sekarang (Cloudflare)</button>' +
+      '</div>' +
+    '</div>' +
+
     '<div class="card mt"><div class="card-head"><h2>☁️ Sinkronisasi Google Drive</h2>' +
       '<span class="net-dot' + (st.driveEnabled && st.driveFileId ? ' on' : '') + '"><span></span><em>' +
         (st.driveEnabled && st.driveFileId ? (st.lastSync ? 'Terhubung · ' + H(U.fmtDate(String(st.lastSync).slice(0, 10))) : 'Terhubung') : 'Belum tersambung') + '</em></span></div>' +
