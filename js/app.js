@@ -251,6 +251,9 @@
       Array.prototype.forEach.call(document.querySelectorAll('#nav a'), function (a) {
         a.classList.toggle('active', a.dataset.view === name);
       });
+      Array.prototype.forEach.call(document.querySelectorAll('#bottom-nav .bnav-item'), function (a) {
+        a.classList.toggle('active', a.dataset.bview === name);
+      });
       document.getElementById('content').scrollTop = 0;
     },
 
