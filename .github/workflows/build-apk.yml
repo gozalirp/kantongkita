@@ -59,7 +59,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee ../gradle_error.log
 
       - name: Upload Build Log on Failure
         if: failure()
