@@ -4,6 +4,16 @@ Selamat datang di dokumentasi resmi **SavingDuit**, aplikasi pencatat keuangan p
 
 ---
 
+## 📱 Unduh & Pasang APK Android (Standalone Native App)
+
+Aplikasi SavingDuit telah berhasil di-compile secara otomatis melalui GitHub Actions CI/CD dan siap dipasang di smartphone Android:
+
+- **File APK Lokal**: `C:/Users/gozali.rahman/Project/savingduit/apk/app-debug.apk` (Ukuran: ~4.1 MB)
+- **Unduh dari GitHub**: [GitHub Actions Run #23 (Artifact: SavingDuit-App)](https://github.com/gozalirp/savingduit/actions/runs/38880907232)
+- **Versi Web / PWA Langsung**: [https://savingduit.gozalirp.workers.dev](https://savingduit.gozalirp.workers.dev)
+
+---
+
 ## 📌 Daftar Isi
 1. [Ikhtisar Arsitektur](#-ikhtisar-arsitektur)
 2. [Fitur-Fitur Utama](#-fitur-fitur-utama)
