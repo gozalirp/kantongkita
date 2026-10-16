@@ -19,11 +19,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup Java (JDK 17)
+      - name: Setup Java (JDK 21)
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: 17
+          java-version: 21
 
       - name: Install Dependencies
         run: |
@@ -59,7 +59,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace || (echo "=== GRADLE ERROR LOG ===" && ./gradlew assembleDebug --info > ../gradle_error.log 2>&1; cat ../gradle_error.log | tail -n 100; false)
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload Build Log on Failure
         if: failure()
