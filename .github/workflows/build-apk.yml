@@ -28,12 +28,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Capacitor & Dependencies
+      - name: Install Capacitor CLI
         run: |
-          npm init -y
           npm install --save @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Create Capacitor Config
+      - name: Create Capacitor Config Pointing to Live Cloudflare
         run: |
           cat << 'EOF' > capacitor.config.json
           {
@@ -41,15 +40,14 @@ jobs:
             "appName": "SavingDuit",
             "webDir": "www",
             "server": {
+              "url": "https://savingduit.gozalirp.workers.dev",
+              "cleartext": false,
               "androidScheme": "https"
             }
           }
           EOF
-
-      - name: Prepare Web Directory (www)
-        run: |
           mkdir -p www
-          cp -r index.html css js manifest.json sw.js icon-192.png icon-512.png www/
+          cp index.html www/
 
       - name: Initialize Android Platform
         run: |
@@ -65,11 +63,10 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --info
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
-        if: always()
         with:
           name: SavingDuit-App
           path: android/app/build/outputs/apk/debug/*.apk
