@@ -1,0 +1,2069 @@
+/* ============================================================
+   views.js — semua halaman
+   ============================================================ */
+(function (root) {
+  'use strict';
+  const U = root.U;
+  const S = root.S;
+  const V = {};
+  const el = function (id) { return document.getElementById(id); };
+  const H = function (s) { return U.esc(s); };
+
+  /* ============================================================
+     STATE per view (filter, tab, dsb)
+     ============================================================ */
+  V.state = {
+    dashboard: { chart: '6m', range: 'month' },
+    transaksi: { preset: 'month', walletId: '', type: 'all', catId: '', q: '', from: '', to: '' },
+    rekap:     { tab: 'hari', ym: '', year: '' },
+    dompet:    {},
+    kategori:  { tab: 'out' },
+    anggaran:  {},
+    target:    {},
+    langganan: {}
+  };
+
+  /* ============================================================
+     TOAST & MODAL & CONFIRM
+     ============================================================ */
+  V.toast = function (msg, kind) {
+    const box = el('toasts');
+    const d = document.createElement('div');
+    d.className = 'toast ' + (kind || '');
+    d.textContent = msg;
+    box.appendChild(d);
+    setTimeout(function () {
+      d.style.transition = 'opacity .25s, transform .25s';
+      d.style.opacity = '0'; d.style.transform = 'translateX(20px)';
+      setTimeout(function () { d.remove(); }, 260);
+    }, 2600);
+  };
+
+  let modalOnClose = null;
+  let modalLocked = false;
+
+  V.modal = {
+    open: function (opt) {
+      opt = opt || {};
+      el('modal-title').innerHTML = opt.title || '';
+      el('modal-body').innerHTML = opt.body || '';
+      el('modal-foot').innerHTML = opt.foot || '';
+      el('modal-wrap').hidden = false;
+      el('modal-wrap').classList.add('show');
+      el('modal-wrap').classList.toggle('locked', !!opt.lock);
+      modalLocked = !!opt.lock;
+      modalOnClose = opt.onClose || null;
+      const first = el('modal-body').querySelector('input,select,textarea');
+      if (first) setTimeout(function () { first.focus(); }, 40);
+    },
+    close: function (force) {
+      if (modalLocked && !force) return;      // modal terkunci hanya bisa ditutup dari dalam
+      modalLocked = false;
+      el('modal-wrap').hidden = true;
+      el('modal-wrap').classList.remove('show', 'locked');
+      el('modal-body').innerHTML = '';
+      el('modal-foot').innerHTML = '';
+      const cb = modalOnClose; modalOnClose = null;
+      if (cb) cb();
+    },
+    locked: function () { return modalLocked; },
+    body: function () { return el('modal-body'); },
+    setFoot: function (html) { el('modal-foot').innerHTML = html; }
+  };
+
+  V.confirm = function (title, msg, okLabel, danger) {
+    return new Promise(function (resolve) {
+      V.modal.open({
+        title: title,
+        body: '<p class="dim" style="font-size:14px;line-height:1.6">' + msg + '</p>',
+        foot: '<button class="btn" data-close>Batal</button>' +
+              '<button class="btn ' + (danger ? 'danger' : 'primary') + '" id="cf-ok">' + (okLabel || 'Lanjut') + '</button>',
+        onClose: function () { resolve(false); }
+      });
+      el('cf-ok').onclick = function () { resolve(true); V.modal.close(); };
+    });
+  };
+
+  /* ============================================================
+     HELPER UMUM
+     ============================================================ */
+  function walletMap(db) { const m = {}; (db.wallets || []).forEach(function (w) { m[w.id] = w; }); return m; }
+  function catMap(db) { const m = {}; (db.categories || []).forEach(function (c) { m[c.id] = c; }); return m; }
+
+  function walletOptions(db, sel, filterFn) {
+    return (db.wallets || []).filter(function (w) { return !w.archived && (!filterFn || filterFn(w)); })
+      .map(function (w) {
+        return '<option value="' + H(w.id) + '"' + (w.id === sel ? ' selected' : '') + '>' +
+          H(w.icon + ' ' + w.name) + '</option>';
+      }).join('');
+  }
+  function categoryOptions(db, sel, type) {
+    return (db.categories || []).filter(function (c) { return !c.archived && (!type || c.type === type); })
+      .map(function (c) {
+        return '<option value="' + H(c.id) + '"' + (c.id === sel ? ' selected' : '') + '>' +
+          H(c.icon + ' ' + c.name) + '</option>';
+      }).join('');
+  }
+
+  function segBtn(active, val, label, cls) {
+    return '<button type="button" data-seg="' + H(val) + '" class="' + (active === val ? 'on ' + (cls || '') : '') + '">' + label + '</button>';
+  }
+
+  // baris transaksi
+  V.txRow = function (db, t, opts) {
+    opts = opts || {};
+    const wm = walletMap(db), cm = catMap(db);
+    const w = wm[t.walletId] || { name: '?', icon: '❔' };
+    const c = cm[t.categoryId];
+    let ico, cls, amt, title, sub;
+
+    if (t.type === 'in') {
+      ico = c ? c.icon : '📥'; cls = 'in'; amt = '+' + U.fmtRp(t.amount);
+      title = c ? c.name : 'Pemasukan';
+      sub = w.icon + ' ' + w.name;
+    } else if (t.type === 'out') {
+      ico = c ? c.icon : '📤'; cls = 'out'; amt = '−' + U.fmtRp(t.amount);
+      title = c ? c.name : 'Pengeluaran';
+      sub = w.icon + ' ' + w.name;
+    } else {
+      const w2 = wm[t.walletTo] || { name: '?', icon: '❔' };
+      ico = '🔄'; cls = 'move'; amt = U.fmtRp(t.amount);
+      title = 'Pindah Dana';
+      sub = w.icon + ' ' + w.name + ' → ' + w2.icon + ' ' + w2.name;
+    }
+    if (t.note) sub += ' · ' + t.note;
+    if (!opts.hideDate) sub = U.fmtDate(t.date) + ' · ' + sub;
+
+    const rcp = t.receiptId && db.receipts && db.receipts[t.receiptId];
+    return '<div class="item" data-tx="' + H(t.id) + '">' +
+      '<div class="ico ' + cls + '">' + (rcp ? '🧾' : ico) + '</div>' +
+      '<div class="body">' +
+        '<div class="t1">' + H(title) + '</div>' +
+        '<div class="t2">' + H(sub) + '</div>' +
+      '</div>' +
+      '<div class="right">' +
+        '<div class="amt ' + cls + '">' + amt + '</div>' +
+        '<div style="margin-top:5px">' +
+          '<button class="btn icon sm ghost" title="Ubah" onclick="V.txForm(\'' + t.id + '\')">✏️</button>' +
+          '<button class="btn icon sm ghost" title="Hapus" onclick="V.txDelete(\'' + t.id + '\')">🗑️</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  };
+
+  function emptyBox(icon, text) {
+    return '<div class="empty"><span class="e-ic">' + icon + '</span><p>' + text + '</p></div>';
+  }
+
+  // grafik batang CSS: data = [{label, in, out, net}]
+  function dualBars(data, opts) {
+    opts = opts || {};
+    if (!data.length) return emptyBox('📉', 'Belum ada data untuk digambar.');
+    const max = Math.max.apply(null, data.map(function (d) { return Math.max(d.income || 0, d.expense || 0); }).concat([1]));
+    const showVal = opts.showVal !== false;
+    return '<div class="bars">' + data.map(function (d) {
+      const wi = U.pct(d.income || 0, max), wo = U.pct(d.expense || 0, max);
+      return '<div class="bar-row">' +
+        '<div class="bar-cat" title="' + H(d.label) + '">' + H(d.label) + '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:4px">' +
+          '<div class="bar-track"><div class="bar-fill in" style="width:' + wi + '%"></div></div>' +
+          '<div class="bar-track"><div class="bar-fill out" style="width:' + wo + '%"></div></div>' +
+        '</div>' +
+        (showVal ? '<div class="right num" style="font-size:11.5px;line-height:1.45">' +
+          '<div style="color:var(--in)">' + U.fmtRpShort(d.income || 0) + '</div>' +
+          '<div style="color:var(--out)">' + U.fmtRpShort(d.expense || 0) + '</div>' +
+        '</div>' : '') +
+      '</div>';
+    }).join('') + '</div>' +
+    '<div class="row" style="margin-top:14px;font-size:11.5px;color:var(--txt-mute);gap:16px">' +
+      '<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--in);margin-right:6px"></i>Pemasukan</span>' +
+      '<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--out);margin-right:6px"></i>Pengeluaran</span>' +
+    '</div>';
+  }
+
+  function catBars(db, from, to) {
+    const rows = S.byCategory(db, from, to, 'out');
+    if (!rows.length) return emptyBox('🍃', 'Belum ada pengeluaran pada periode ini.');
+    const total = U.sum(rows, function (r) { return r.amount; });
+    const max = Math.max.apply(null, rows.map(function (r) { return r.amount; }).concat([1]));
+    return '<div class="bars">' + rows.slice(0, 12).map(function (r) {
+      return '<div class="bar-row">' +
+        '<div class="bar-cat" title="' + H(r.name) + '">' + H(r.icon + ' ' + r.name) + '</div>' +
+        '<div class="bar-track"><div class="bar-fill out" style="width:' + U.pct(r.amount, max) + '%"></div></div>' +
+        '<div class="right num" style="font-size:12px">' + U.fmtRpShort(r.amount) +
+          '<span class="muted" style="font-size:11px"> · ' + U.round1(U.pct(r.amount, total)) + '%</span></div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  // ---- bilah kemajuan (dipakai anggaran & target) ----
+  // pct > 100 tetap digambar penuh, tapi diberi kelas `over`
+  function progBar(pct, cls) {
+    const w = U.clamp(pct, 0, 100);
+    return '<div class="prog"><div class="prog-fill ' + (cls || '') + '" style="width:' + w + '%"></div></div>';
+  }
+
+  function pctTag(pct, over) {
+    const cls = over ? 'over' : (pct >= 80 ? 'warn' : 'ok');
+    return '<span class="tag ' + cls + '">' + U.round1(pct) + '%</span>';
+  }
+
+  // sisa hari -> kalimat manusiawi
+  function sisaHari(n) {
+    if (n === null || n === undefined) return 'tanpa tenggat';
+    if (n < 0) return 'lewat ' + Math.abs(n) + ' hari';
+    if (n === 0) return 'hari ini';
+    if (n === 1) return 'besok';
+    if (n < 31) return n + ' hari lagi';
+    return Math.round(n / 30.44) + ' bulan lagi';
+  }
+
+  function pilihanKategori(db, sel, type) {
+    return '<option value="">— pilih kategori —</option>' + (db.categories || [])
+      .filter(function (c) { return !c.archived && c.type === (type || 'out'); })
+      .map(function (c) {
+        return '<option value="' + H(c.id) + '"' + (c.id === sel ? ' selected' : '') + '>' +
+          H(c.icon + ' ' + c.name) + '</option>';
+      }).join('');
+  }
+
+  function pilihanDompet(db, sel, exclude) {
+    return '<option value="">— pilih dompet —</option>' + (db.wallets || [])
+      .filter(function (w) { return !w.archived && w.id !== exclude; })
+      .map(function (w) {
+        return '<option value="' + H(w.id) + '"' + (w.id === sel ? ' selected' : '') + '>' +
+          H(w.icon + ' ' + w.name) + '</option>';
+      }).join('');
+  }
+
+  function opsiNilai(pairs, sel) {
+    return pairs.map(function (p) {
+      return '<option value="' + H(p[0]) + '"' + (String(p[0]) === String(sel) ? ' selected' : '') + '>' + H(p[1]) + '</option>';
+    }).join('');
+  }
+
+  /* ============================================================
+     FORM TRANSAKSI (tambah / ubah)
+     ============================================================ */
+  V.txForm = function (id, presetType) {
+    const db = root.App.db;
+    const editing = id ? (db.transactions || []).filter(function (t) { return t.id === id; })[0] : null;
+    let form = editing ? Object.assign({}, editing, { amount: editing.amount }) : {
+      id: '', date: U.today(), type: presetType || 'out', amount: '',
+      walletId: (db.wallets[0] || {}).id || '', walletTo: '', categoryId: '',
+      note: '', receiptId: ''
+    };
+
+    // baca nilai yang sedang tampil di form ke dalam `form`
+    // (penting: dipanggil sebelum render() ulang supaya ketikan user tidak hilang)
+    function syncForm() {
+      const g = function (id) { const e = el(id); return e ? e.value : null; };
+      const d = g('f-date'); if (d !== null) form.date = d;
+      const a = g('f-amount'); if (a !== null) form.amount = U.parseAmount(a);
+      const w = g('f-wallet'); if (w !== null) form.walletId = w;
+      const wt = g('f-wallet-to'); if (wt !== null) form.walletTo = wt;
+      const c = g('f-cat'); if (c !== null) form.categoryId = c;
+      const n = g('f-note'); if (n !== null) form.note = n;
+    }
+
+    function render() {
+      const isMove = form.type === 'move';
+      const rcp = form.receiptId && db.receipts[form.receiptId];
+
+      const body =
+        '<div class="seg" id="f-type" style="margin-bottom:16px">' +
+          segBtn(form.type, 'in', '⬇️ Pemasukan', 'in') +
+          segBtn(form.type, 'out', '⬆️ Pengeluaran', 'out') +
+          segBtn(form.type, 'move', '🔄 Pindah Dana', 'move') +
+        '</div>' +
+
+        '<div class="field"><label>Tanggal</label>' +
+          '<input type="date" id="f-date" value="' + H(form.date) + '"></div>' +
+
+        '<div class="field"><label>Nominal</label>' +
+          '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="f-amount" ' +
+          'value="' + (form.amount ? U.fmtNum(form.amount) : '') + '" placeholder="0"></div>' +
+          '<span class="hint" id="f-amount-hint"></span></div>' +
+
+        '<div class="field"><label>' + (isMove ? 'Dari Dompet' : 'Dompet / Bank') + '</label>' +
+          '<select id="f-wallet">' + walletOptions(db, form.walletId) + '</select></div>' +
+
+        (isMove
+          ? '<div class="field"><label>Ke Dompet</label><select id="f-wallet-to">' + walletOptions(db, form.walletTo, function (w) { return w.id !== form.walletId; }) + '</select></div>'
+          : '<div class="field"><label>Kategori</label><select id="f-cat">' + categoryOptions(db, form.categoryId, form.type) + '</select></div>') +
+
+        '<div class="field"><label>Catatan <span class="muted">(opsional)</span></label>' +
+          '<input type="text" id="f-note" value="' + H(form.note) + '" placeholder="contoh: makan siang tim"></div>' +
+
+        '<div class="field"><label>Struk / bukti bayar <span class="muted">(opsional)</span></label>' +
+          (rcp
+            ? '<div class="row"><img src="' + rcp.data + '" alt="struk" style="width:64px;height:64px;object-fit:cover;border-radius:9px;border:1px solid var(--line)">' +
+              '<div style="flex:1;min-width:0"><div style="font-size:12.5px" class="t1">' + H(rcp.name) + '</div>' +
+              '<div class="muted" style="font-size:11.5px">' + (rcp.size / 1024).toFixed(0) + ' KB</div></div>' +
+              '<button type="button" class="btn sm" id="f-rcp-view">Lihat</button>' +
+              '<button type="button" class="btn sm danger" id="f-rcp-del">Hapus</button></div>'
+            : '<input type="file" id="f-rcp" accept="image/*,application/pdf" style="font-size:12.5px">') +
+          '<span class="hint">Gambar disimpan di perangkat ini. Disarankan &lt; 1,5 MB.</span></div>';
+
+      V.modal.open({
+        title: editing ? 'Ubah Transaksi' : 'Catat Transaksi',
+        body: body,
+        foot: '<button class="btn" data-close>Batal</button>' +
+              '<button class="btn primary" id="f-save">Simpan</button>'
+      });
+
+      /* --- bind --- */
+      el('f-type').addEventListener('click', function (e) {
+        const b = e.target.closest('[data-seg]'); if (!b) return;
+        syncForm();
+        form.type = b.dataset.seg;
+        if (form.type === 'move') { form.categoryId = ''; }
+        else {
+          form.walletTo = '';
+          const cats = (db.categories || []).filter(function (c) { return c.type === form.type && !c.archived; });
+          if (!cats.some(function (c) { return c.id === form.categoryId; })) form.categoryId = cats.length ? cats[0].id : '';
+        }
+        render();
+      });
+
+      const amt = el('f-amount');
+      amt.addEventListener('input', function () {
+        const v = U.parseAmount(amt.value);
+        amt.value = v ? U.fmtNum(v) : '';
+        const hint = el('f-amount-hint');
+        hint.textContent = v ? U.fmtRp(v) + '  —  diisi untuk transaksi ini' : '';
+      });
+
+      const wSel = el('f-wallet');
+      if (wSel) wSel.addEventListener('change', function () {
+        syncForm();
+        form.walletId = wSel.value;
+        if (form.type === 'move') { form.walletTo = ''; render(); }
+      });
+
+      const rcpInput = el('f-rcp');
+      if (rcpInput) rcpInput.addEventListener('change', function () {
+        syncForm();
+        V.readReceipt(rcpInput.files[0], rcpInput, function (rid) {
+          if (form.receiptId && form.receiptId !== rid) root.App.deleteReceipt(form.receiptId);
+          form.receiptId = rid; render();
+        });
+      });
+      const rcpDel = el('f-rcp-del');
+      if (rcpDel) rcpDel.addEventListener('click', function () {
+        syncForm();
+        const old = form.receiptId;
+        form.receiptId = '';
+        if (old) root.App.deleteReceipt(old);
+        render();
+      });
+      const rcpView = el('f-rcp-view');
+      if (rcpView) rcpView.addEventListener('click', function () { if (form.receiptId) V.receiptView(form.receiptId); });
+
+      el('f-save').onclick = function () {
+        form.date = el('f-date').value;
+        form.amount = U.parseAmount(el('f-amount').value);
+        form.walletId = el('f-wallet').value;
+        if (form.type === 'move') { form.walletTo = el('f-wallet-to').value; form.categoryId = ''; }
+        else { form.categoryId = el('f-cat').value; form.walletTo = ''; }
+        form.note = el('f-note').value;
+
+        const errs = S.validateTx(form);
+        const keys = Object.keys(errs);
+        if (keys.length) { V.toast(errs[keys[0]], 'err'); return; }
+
+        if (editing) {
+          const idx = db.transactions.findIndex(function (t) { return t.id === id; });
+          db.transactions[idx] = S.mkTx(Object.assign({}, editing, form, { id: id }));
+          V.toast('Transaksi diperbarui', 'ok');
+        } else {
+          db.transactions.push(S.mkTx(form));
+          V.toast('Transaksi disimpan', 'ok');
+        }
+        root.App.saveAndRender();
+        V.modal.close();
+      };
+    }
+    render();
+  };
+
+  V.readReceipt = function (file, input, cb) {
+    if (!file) return;
+    if (file.size > 2.5 * 1024 * 1024) { V.toast('Ukuran struk maksimal 2,5 MB', 'err'); input.value = ''; return; }
+    const fr = new FileReader();
+    fr.onload = function () {
+      const id = U.uid('rcp');
+      root.App.db.receipts[id] = { name: file.name, mime: file.type, size: file.size, data: fr.result };
+      if (root.App.save() === 'slim') V.toast('Penyimpanan hampir penuh — struk lama dipangkas', 'err');
+      cb(id);
+    };
+    fr.onerror = function () { V.toast('Gagal membaca berkas', 'err'); };
+    fr.readAsDataURL(file);
+  };
+
+  V.receiptView = function (rid) {
+    const r = root.App.db.receipts[rid];
+    if (!r) return;
+    const isImg = /^image\//.test(r.mime);
+    V.modal.open({
+      title: '🧾 ' + H(r.name),
+      body: isImg
+        ? '<img src="' + r.data + '" alt="struk" style="width:100%;border-radius:10px;border:1px solid var(--line)">'
+        : '<p class="dim">Berkas PDF tidak bisa dipratinjau di sini.</p>',
+      foot: '<button class="btn" data-close>Tutup</button>' +
+            '<a class="btn primary" href="' + r.data + '" download="' + H(r.name) + '">Unduh</a>'
+    });
+  };
+
+  V.txDelete = async function (id) {
+    const ok = await V.confirm('Hapus transaksi?', 'Transaksi ini akan dihapus permanen dan saldo dompet ikut menyesuaikan.', 'Hapus', true);
+    if (!ok) return false;
+    const db = root.App.db;
+    const t = db.transactions.filter(function (x) { return x.id === id; })[0];
+    db.transactions = db.transactions.filter(function (x) { return x.id !== id; });
+    if (t && t.receiptId) root.App.deleteReceipt(t.receiptId);
+    root.App.saveAndRender();
+    V.toast('Transaksi dihapus', 'ok');
+    return true;
+  };
+
+  /* ============================================================
+     VIEW: DASHBOARD
+     ============================================================ */
+  V.dashboard = function () {
+    const db = root.App.db;
+    const st = V.state.dashboard;
+    const bal = S.walletBalances(db);
+    const total = S.totalBalance(db);
+    const bulan = S.summaryMonth(db);
+    const r2026 = bulan;
+
+    const st4 =
+      '<div class="grid cols-4">' +
+        '<div class="stat"><div class="lbl">Total Saldo</div><div class="val">' + U.fmtRp(total) + '</div>' +
+          '<div class="sub">' + (db.wallets || []).length + ' dompet aktif</div></div>' +
+        '<div class="stat in"><div class="lbl">Pemasukan · ' + U.fmtMonth(U.monthOf(U.today())) + '</div>' +
+          '<div class="val">' + U.fmtRpShort(r2026.income) + '</div>' +
+          '<div class="sub">' + r2026.countIn + ' transaksi</div></div>' +
+        '<div class="stat out"><div class="lbl">Pengeluaran · ' + U.fmtMonth(U.monthOf(U.today())) + '</div>' +
+          '<div class="val">' + U.fmtRpShort(r2026.expense) + '</div>' +
+          '<div class="sub">' + r2026.countOut + ' transaksi</div></div>' +
+        '<div class="stat' + (r2026.net >= 0 ? ' in' : ' out') + '"><div class="lbl">Selisih</div>' +
+          '<div class="val">' + (r2026.net >= 0 ? '+' : '−') + U.fmtRpShort(Math.abs(r2026.net)) + '</div>' +
+          '<div class="sub">' + (r2026.net >= 0 ? 'surplus 💪' : 'defisit ⚠️') + '</div></div>' +
+      '</div>';
+
+    // dompet
+    const walletCards = (db.wallets || []).filter(function (w) { return !w.archived; }).map(function (w) {
+      return '<div class="stat" style="border-left:3px solid ' + H(w.color || 'var(--line)') + '">' +
+        '<div class="lbl">' + H(w.icon + ' ' + w.name) + '</div>' +
+        '<div class="val" style="font-size:18px">' + U.fmtRp(bal[w.id] || 0) + '</div></div>';
+    }).join('');
+
+    // grafik
+    let chartData = [], chartCaption = '';
+    if (st.chart === '6m') {
+      const endYM = U.monthOf(U.today());
+      const d = U.strToDate(endYM + '-01'); d.setMonth(d.getMonth() - 5);
+      const startYM = U.monthOf(U.dateToStr(d));
+      chartData = S.byMonth(db, startYM, endYM).map(function (m) {
+        return { label: U.fmtMonthShort(m.month), income: m.income, expense: m.expense };
+      });
+      chartCaption = '6 bulan terakhir';
+    } else if (st.chart === '12m') {
+      const endYM = U.monthOf(U.today());
+      const d = U.strToDate(endYM + '-01'); d.setMonth(d.getMonth() - 11);
+      const startYM = U.monthOf(U.dateToStr(d));
+      chartData = S.byMonth(db, startYM, endYM).map(function (m) {
+        return { label: U.fmtMonthShort(m.month), income: m.income, expense: m.expense };
+      });
+      chartCaption = '12 bulan terakhir';
+    } else {
+      const r = S.summaryDays(db, 30);
+      chartData = S.byDay(db, U.addDays(U.today(), -29), U.today()).map(function (d) {
+        return { label: U.fmtDate(d.date).replace(/ \d{4}$/, ''), income: d.income, expense: d.expense };
+      });
+      chartCaption = '30 hari terakhir';
+    }
+
+    const recent = S.filterTx(db, {}).slice(0, 10);
+    const netMonth = bulan.net;
+
+    return '' +
+    st4 +
+    '<div class="card mt"><div class="card-head"><h2>Tampilan Saldo Rekening / Tabungan</h2>' +
+      '<button class="btn sm" onclick="App.go(\'dompet\')">Kelola</button></div>' +
+      (walletCards ? '<div class="grid cols-3">' + walletCards + '</div>' : emptyBox('🏦', 'Belum ada dompet. Tambahkan dulu di menu Dompet & Bank.')) +
+    '</div>' +
+
+    '<div class="card mt"><div class="card-head">' +
+      '<h2>Grafik Pengeluaran vs Pemasukan</h2>' +
+      '<span class="muted" style="font-size:12px">' + chartCaption + '</span>' +
+      '<div class="seg" style="width:auto" id="dash-chart">' +
+        segBtn(st.chart, '6m', '6 Bulan') + segBtn(st.chart, '12m', '12 Bulan') + segBtn(st.chart, '30d', '30 Hari') +
+      '</div></div>' +
+      dualBars(chartData) +
+    '</div>' +
+
+    '<div class="grid cols-2 mt">' +
+      '<div class="card"><div class="card-head"><h2>Pengeluaran per Kategori</h2>' +
+        '<span class="muted" style="font-size:12px">' + U.fmtMonth(U.monthOf(U.today())) + '</span></div>' +
+        catBars(db, U.monthStart(U.today()), U.monthEnd(U.today())) + '</div>' +
+      '<div class="card"><div class="card-head"><h2>Catatan Terakhir</h2>' +
+        '<button class="btn sm primary" onclick="V.txForm()">+ Catat</button></div>' +
+        (recent.length ? '<div class="list">' + recent.map(function (t) { return V.txRow(db, t); }).join('') + '</div>'
+                       : emptyBox('📝', 'Belum ada transaksi. Mulai catat pengeluaran pertamamu.')) +
+      '</div>' +
+    '</div>' +
+
+    '<div class="card mt"><div class="card-head"><h2>Ringkasan Cepat</h2></div>' +
+      '<div class="grid cols-4">' +
+        '<div class="stat"><div class="lbl">Hari ini</div><div class="val" style="font-size:17px">' + U.fmtRpShort(S.summaryDays(db, 1).expense) + '</div><div class="sub">pengeluaran</div></div>' +
+        '<div class="stat"><div class="lbl">7 hari</div><div class="val" style="font-size:17px">' + U.fmtRpShort(S.summaryDays(db, 7).expense) + '</div><div class="sub">pengeluaran</div></div>' +
+        '<div class="stat"><div class="lbl">Bulan ini</div><div class="val" style="font-size:17px">' + U.fmtRpShort(bulan.expense) + '</div><div class="sub">pengeluaran</div></div>' +
+        '<div class="stat"><div class="lbl">Tahun ini</div><div class="val" style="font-size:17px">' + U.fmtRpShort(S.summaryYear(db).expense) + '</div><div class="sub">pengeluaran</div></div>' +
+      '</div>' +
+    '</div>' +
+    V.dashTahap2();
+  };
+
+  // ---- ringkasan Tahap 2: anggaran, target, langganan ----
+  V.dashTahap2 = function () {
+    const db = root.App.db;
+    const today = U.today();
+    const bTot = S.budgetTotal(db, today);
+    const bStatus = S.budgetStatus(db, today);
+    const gTot = S.goalTotal(db);
+    const gStatus = S.goalStatus(db, today);
+    const sTotal = S.subMonthlyTotal(db);
+    const jatuh = S.subDueSoon(db, 7, today);
+    const ada = bStatus.length || gStatus.length || sTotal > 0;
+    if (!ada) return '';
+
+    const kartu = [];
+
+    if (bStatus.length) {
+      const lewat = bStatus.filter(function (r) { return r.usage.over; });
+      const dekat = bStatus.filter(function (r) { return !r.usage.over && r.usage.pct >= 80; });
+      kartu.push('<div class="card"><div class="card-head"><h2>🎯 Anggaran Bulan Ini</h2>' +
+        '<button class="btn sm" onclick="App.go(\'anggaran\')">Kelola</button></div>' +
+        progBar(bTot.pct, bTot.left < 0 ? 'over' : (bTot.pct >= 80 ? 'warn' : '')) +
+        '<div class="row" style="justify-content:space-between;margin-top:9px;font-size:13px">' +
+          '<span class="num">' + U.fmtRp(bTot.used) + ' <span class="muted">/ ' + U.fmtRp(bTot.limit) + '</span></span>' +
+          '<span class="num ' + (bTot.left < 0 ? 'val-out' : 'val-in') + '">' +
+            (bTot.left < 0 ? 'lewat ' + U.fmtRp(-bTot.left) : 'sisa ' + U.fmtRp(bTot.left)) + '</span>' +
+        '</div>' +
+        (lewat.length ? '<div class="muted" style="font-size:12px;margin-top:10px;color:var(--out)">Lewat batas: ' +
+          lewat.slice(0, 3).map(function (r) { return H(r.category.name); }).join(', ') +
+          (lewat.length > 3 ? ' +' + (lewat.length - 3) + ' lagi' : '') + '</div>' : '') +
+        (!lewat.length && dekat.length ? '<div class="muted" style="font-size:12px;margin-top:10px;color:var(--warn)">Nyaris penuh: ' +
+          dekat.slice(0, 3).map(function (r) { return H(r.category.name); }).join(', ') + '</div>' : '') +
+      '</div>');
+    }
+
+    if (sTotal > 0) {
+      kartu.push('<div class="card"><div class="card-head"><h2>🔁 Langganan</h2>' +
+        '<button class="btn sm" onclick="App.go(\'langganan\')">Kelola</button></div>' +
+        '<div style="font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px">' + U.fmtRp(sTotal) +
+          '<span class="muted" style="font-size:12px;font-weight:500"> /bulan</span></div>' +
+        '<div class="muted" style="font-size:12px;margin-top:5px">setara ' + U.fmtRpShort(S.subYearlyTotal(db)) + '/tahun</div>' +
+        (jatuh.length ? '<div class="muted" style="font-size:12px;margin-top:10px;color:var(--warn)">' +
+          jatuh.length + ' jatuh tempo 7 hari: ' + jatuh.slice(0, 3).map(function (r) { return H(r.sub.name); }).join(', ') + '</div>'
+          : '<div class="muted" style="font-size:12px;margin-top:10px">Tidak ada yang jatuh tempo minggu ini</div>') +
+      '</div>');
+    }
+
+    if (gStatus.length) {
+      const top = gStatus.filter(function (r) { return !r.progress.done; }).slice(0, 3);
+      kartu.push('<div class="card"><div class="card-head"><h2>🏆 Target Tabungan</h2>' +
+        '<button class="btn sm" onclick="App.go(\'target\')">Kelola</button></div>' +
+        '<div style="font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px">' + U.fmtRpShort(gTot.saved) +
+          '<span class="muted" style="font-size:12px;font-weight:500"> / ' + U.fmtRpShort(gTot.target) + '</span></div>' +
+        '<div class="muted" style="font-size:12px;margin-top:5px">' + U.round1(gTot.pct) + '% terkumpul · ' +
+          gTot.done + ' dari ' + gTot.total + ' target tercapai</div>' +
+        (top.length ? '<div style="margin-top:11px;display:flex;flex-direction:column;gap:9px">' + top.map(function (r) {
+          return '<div><div class="row" style="justify-content:space-between;font-size:12px;margin-bottom:4px">' +
+            '<span>' + H(r.goal.icon + ' ' + r.goal.name) + '</span>' +
+            '<span class="num muted">' + U.round1(r.progress.pct) + '%</span></div>' +
+            progBar(r.progress.pct, r.late ? 'over' : (r.progress.done ? 'in' : 'move')) + '</div>';
+        }).join('') + '</div>' : '') +
+      '</div>');
+    }
+
+    return '<div class="grid cols-3 mt">' + kartu.join('') + '</div>';
+  };
+
+  V.dashboardBind = function () {
+    const box = el('dash-chart');
+    if (box) box.addEventListener('click', function (e) {
+      const b = e.target.closest('[data-seg]'); if (!b) return;
+      V.state.dashboard.chart = b.dataset.seg;
+      root.App.render();
+    });
+  };
+
+  /* ============================================================
+     VIEW: TRANSAKSI
+     ============================================================ */
+  V.transaksi = function () {
+    const db = root.App.db;
+    const st = V.state.transaksi;
+    const r = S.rangeFor(st.preset, U.today());
+    st.from = r.from; st.to = r.to;
+    const sum = S.summary(db, st.from, st.to);
+    let list = sum.list;
+    if (st.walletId) list = list.filter(function (t) { return t.walletId === st.walletId || t.walletTo === st.walletId; });
+    if (st.type !== 'all') list = list.filter(function (t) { return t.type === st.type; });
+    if (st.catId) list = list.filter(function (t) { return t.categoryId === st.catId; });
+    if (st.q) {
+      const q = st.q.toLowerCase();
+      list = list.filter(function (t) {
+        const c = (db.categories || []).filter(function (x) { return x.id === t.categoryId; })[0];
+        return String(t.note || '').toLowerCase().indexOf(q) > -1 || (c && c.name.toLowerCase().indexOf(q) > -1);
+      });
+    }
+    const fIn = U.sum(list.filter(function (t) { return t.type === 'in'; }), function (t) { return Number(t.amount); });
+    const fOut = U.sum(list.filter(function (t) { return t.type === 'out'; }), function (t) { return Number(t.amount); });
+
+    const toolbar =
+      '<div class="card">' +
+        '<div class="row" style="gap:12px">' +
+          '<div class="seg" id="tx-preset" style="flex:1;min-width:260px">' +
+            segBtn(st.preset, 'today', 'Hari ini') + segBtn(st.preset, 'week', 'Minggu') +
+            segBtn(st.preset, 'month', 'Bulan') + segBtn(st.preset, 'year', 'Tahun') +
+            segBtn(st.preset, '7d', '7 Hari') + segBtn(st.preset, 'all', 'Semua') +
+          '</div>' +
+          '<input type="text" id="tx-q" placeholder="🔍 Cari catatan / kategori…" value="' + H(st.q) + '" style="max-width:240px">' +
+          '<button class="btn primary" onclick="V.txForm()">+ Catat Transaksi</button>' +
+        '</div>' +
+        '<div class="row mt" style="gap:12px">' +
+          '<select id="tx-wallet" style="max-width:230px"><option value="">Semua dompet</option>' +
+            walletOptions(db, st.walletId) + '</select>' +
+          '<select id="tx-cat" style="max-width:230px"><option value="">Semua kategori</option>' +
+            categoryOptions(db, st.catId) + '</select>' +
+          '<select id="tx-type" style="max-width:200px">' +
+            '<option value="all"' + (st.type === 'all' ? ' selected' : '') + '>Semua jenis</option>' +
+            '<option value="in"' + (st.type === 'in' ? ' selected' : '') + '>Pemasukan</option>' +
+            '<option value="out"' + (st.type === 'out' ? ' selected' : '') + '>Pengeluaran</option>' +
+            '<option value="move"' + (st.type === 'move' ? ' selected' : '') + '>Pindah dana</option>' +
+          '</select>' +
+          '<span class="spacer"></span>' +
+          '<span class="muted" style="font-size:12.5px">' + S.periodLabel(st.preset, st.from, st.to) +
+            ' · ' + list.length + ' transaksi</span>' +
+        '</div>' +
+      '</div>';
+
+    const strip =
+      '<div class="grid cols-3 mt">' +
+        '<div class="stat in"><div class="lbl">Masuk</div><div class="val">' + U.fmtRpShort(fIn) + '</div></div>' +
+        '<div class="stat out"><div class="lbl">Keluar</div><div class="val">' + U.fmtRpShort(fOut) + '</div></div>' +
+        '<div class="stat' + (fIn - fOut >= 0 ? ' in' : ' out') + '"><div class="lbl">Selisih</div><div class="val">' +
+          (fIn - fOut >= 0 ? '+' : '−') + U.fmtRpShort(Math.abs(fIn - fOut)) + '</div></div>' +
+      '</div>';
+
+    // kelompokkan per tanggal
+    let groups = '';
+    if (list.length) {
+      const byDate = U.groupBy(list, function (t) { return t.date; });
+      const dates = Array.from(byDate.keys()).sort().reverse();
+      groups = '<div class="card mt"><div class="list">';
+      dates.forEach(function (d) {
+        const items = byDate.get(d);
+        const di = U.sum(items.filter(function (t) { return t.type === 'in'; }), function (t) { return Number(t.amount); });
+        const doo = U.sum(items.filter(function (t) { return t.type === 'out'; }), function (t) { return Number(t.amount); });
+        groups += '<div class="row" style="padding:14px 4px 8px;border-bottom:1px solid var(--line)">' +
+          '<strong style="font-size:13px;color:var(--txt-dim)">' + H(U.relativeDate(d)) + '</strong>' +
+          '<span class="muted" style="font-size:11.5px">' + H(U.fmtDate(d)) + '</span>' +
+          '<span class="spacer"></span>' +
+          (di ? '<span class="tag in">+' + U.fmtRpShort(di) + '</span>' : '') +
+          (doo ? '<span class="tag out">−' + U.fmtRpShort(doo) + '</span>' : '') +
+        '</div>';
+        items.forEach(function (t) { groups += V.txRow(db, t, { hideDate: true }); });
+      });
+      groups += '</div></div>';
+    } else {
+      groups = '<div class="card mt">' + emptyBox('🔍', 'Tidak ada transaksi pada filter ini.') + '</div>';
+    }
+
+    return toolbar + strip + groups;
+  };
+
+  V.transaksiBind = function () {
+    const pre = el('tx-preset');
+    if (pre) pre.addEventListener('click', function (e) {
+      const b = e.target.closest('[data-seg]'); if (!b) return;
+      V.state.transaksi.preset = b.dataset.seg; root.App.render();
+    });
+    const w = el('tx-wallet'); if (w) w.onchange = function () { V.state.transaksi.walletId = w.value; root.App.render(); };
+    const c = el('tx-cat');    if (c) c.onchange = function () { V.state.transaksi.catId = c.value; root.App.render(); };
+    const ty = el('tx-type');  if (ty) ty.onchange = function () { V.state.transaksi.type = ty.value; root.App.render(); };
+    const q = el('tx-q');
+    if (q) {
+      let tmr = null;
+      q.oninput = function () {
+        clearTimeout(tmr);
+        tmr = setTimeout(function () {
+          V.state.transaksi.q = q.value;
+          root.App.render();
+          const nx = el('tx-q'); if (nx) { nx.focus(); nx.setSelectionRange(nx.value.length, nx.value.length); }
+        }, 320);
+      };
+    }
+  };
+
+  /* ============================================================
+     VIEW: REKAP
+     ============================================================ */
+  V.rekap = function () {
+    const db = root.App.db;
+    const st = V.state.rekap;
+    if (!st.ym) st.ym = U.monthOf(U.today());
+    if (!st.year) st.year = U.yearOf(U.today());
+    const yr = S.yearRange(db);
+
+    const tabBtns =
+        segBtn(st.tab, 'hari', 'Harian') + segBtn(st.tab, 'minggu', 'Mingguan') +
+        segBtn(st.tab, 'bulan', 'Bulanan') + segBtn(st.tab, 'tahun', 'Tahunan');
+
+    let picker = '', table = '', totalRow = '', caption = '';
+
+    if (st.tab === 'hari') {
+      picker = '<input type="month" id="rk-ym" value="' + H(st.ym) + '" style="max-width:190px">';
+      const from = st.ym + '-01', to = U.monthEnd(from);
+      caption = U.fmtMonth(st.ym);
+      const rows = S.byDay(db, from, to).sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+      if (!rows.length) table = emptyBox('📅', 'Tidak ada transaksi pada bulan ini.');
+      else {
+        table = '<div class="tbl-wrap"><table><thead><tr><th>Tanggal</th><th>Hari</th><th class="n">Masuk</th><th class="n">Keluar</th><th class="n">Selisih</th><th class="n">Jml</th></tr></thead><tbody>' +
+          rows.map(function (d) {
+            return '<tr><td>' + H(U.fmtDate(d.date)) + '</td><td class="dim">' + U.DAYS[U.strToDate(d.date).getDay()] + '</td>' +
+              '<td class="n" style="color:var(--in)">' + (d.income ? U.fmtNum(d.income) : '—') + '</td>' +
+              '<td class="n" style="color:var(--out)">' + (d.expense ? U.fmtNum(d.expense) : '—') + '</td>' +
+              '<td class="n" style="color:' + (d.net >= 0 ? 'var(--in)' : 'var(--out)') + '">' + (d.net >= 0 ? '+' : '−') + U.fmtNum(Math.abs(d.net)) + '</td>' +
+              '<td class="n dim">' + d.count + '</td></tr>';
+          }).join('') + '</tbody></table></div>';
+      }
+      const s = S.summary(db, from, to);
+      totalRow = '<div class="row" style="font-size:13.5px;gap:18px"><span>Total <b>' + s.count + '</b> transaksi</span>' +
+        '<span class="dim">Pemasukan <b style="color:var(--in)">' + U.fmtRp(s.income) + '</b></span>' +
+        '<span class="dim">Pengeluaran <b style="color:var(--out)">' + U.fmtRp(s.expense) + '</b></span>' +
+        '<span class="dim">Selisih <b style="color:' + (s.net >= 0 ? 'var(--in)' : 'var(--out)') + '">' + U.fmtRp(s.net) + '</b></span></div>';
+      totalRow = s.count ? totalRow : '';
+    }
+
+    if (st.tab === 'minggu') {
+      picker = '<input type="month" id="rk-ym" value="' + H(st.ym) + '" style="max-width:190px">';
+      const from = st.ym + '-01', to = U.monthEnd(from);
+      caption = 'Minggu dalam ' + U.fmtMonth(st.ym);
+      const rows = S.byWeek(db, from, to);
+      if (!rows.length) table = emptyBox('📅', 'Tidak ada transaksi pada bulan ini.');
+      else {
+        table = '<div class="tbl-wrap"><table><thead><tr><th>Periode Minggu</th><th class="n">Hari aktif</th><th class="n">Masuk</th><th class="n">Keluar</th><th class="n">Selisih</th><th class="n">Jml</th></tr></thead><tbody>' +
+          rows.map(function (d) {
+            return '<tr><td>' + H(U.fmtDate(d.week)) + ' – ' + H(U.fmtDate(d.end)) + '</td>' +
+              '<td class="n dim">' + d.activeDays + '</td>' +
+              '<td class="n" style="color:var(--in)">' + (d.income ? U.fmtNum(d.income) : '—') + '</td>' +
+              '<td class="n" style="color:var(--out)">' + (d.expense ? U.fmtNum(d.expense) : '—') + '</td>' +
+              '<td class="n" style="color:' + (d.net >= 0 ? 'var(--in)' : 'var(--out)') + '">' + (d.net >= 0 ? '+' : '−') + U.fmtNum(Math.abs(d.net)) + '</td>' +
+              '<td class="n dim">' + d.count + '</td></tr>';
+          }).join('') + '</tbody></table></div>';
+      }
+      const s = S.summary(db, from, to);
+      totalRow = s.count ? '<div class="row" style="font-size:13.5px;gap:18px"><span class="dim">Total <b>' + s.count + '</b> transaksi</span>' +
+        '<span class="dim">Masuk <b style="color:var(--in)">' + U.fmtRp(s.income) + '</b></span>' +
+        '<span class="dim">Keluar <b style="color:var(--out)">' + U.fmtRp(s.expense) + '</b></span></div>' : '';
+    }
+
+    if (st.tab === 'bulan') {
+      picker = '<select id="rk-year" style="max-width:140px">' +
+        Array.from({ length: Number(yr.max) - Number(yr.min) + 1 }, function (_, i) { return String(Number(yr.min) + i); })
+          .map(function (y) { return '<option value="' + y + '"' + (y === st.year ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select>';
+      caption = 'Tahun ' + st.year;
+      const rows = S.byMonth(db, st.year + '-01', st.year + '-12');
+      if (!rows.length) table = emptyBox('📅', 'Tidak ada transaksi pada tahun ini.');
+      else {
+        table = '<div class="tbl-wrap"><table><thead><tr><th>Bulan</th><th class="n">Masuk</th><th class="n">Keluar</th><th class="n">Selisih</th><th class="n">Pindah dana</th><th class="n">Jml</th></tr></thead><tbody>' +
+          rows.map(function (d) {
+            return '<tr><td>' + H(U.fmtMonth(d.month)) + '</td>' +
+              '<td class="n" style="color:var(--in)">' + (d.income ? U.fmtNum(d.income) : '—') + '</td>' +
+              '<td class="n" style="color:var(--out)">' + (d.expense ? U.fmtNum(d.expense) : '—') + '</td>' +
+              '<td class="n" style="color:' + (d.net >= 0 ? 'var(--in)' : 'var(--out)') + '">' + (d.net >= 0 ? '+' : '−') + U.fmtNum(Math.abs(d.net)) + '</td>' +
+              '<td class="n dim">' + (d.moved ? U.fmtNum(d.moved) : '—') + '</td>' +
+              '<td class="n dim">' + d.count + '</td></tr>';
+          }).join('') + '</tbody></table></div>';
+      }
+      const s = S.summaryYear(db, st.year);
+      totalRow = '<div class="row" style="font-size:13.5px;gap:18px"><span class="dim">Setahun: <b>' + s.count + '</b> transaksi</span>' +
+        '<span class="dim">Masuk <b style="color:var(--in)">' + U.fmtRp(s.income) + '</b></span>' +
+        '<span class="dim">Keluar <b style="color:var(--out)">' + U.fmtRp(s.expense) + '</b></span>' +
+        '<span class="dim">Selisih <b style="color:' + (s.net >= 0 ? 'var(--in)' : 'var(--out)') + '">' + U.fmtRp(s.net) + '</b></span></div>';
+      totalRow = s.count ? totalRow : '';
+    }
+
+    if (st.tab === 'tahun') {
+      caption = 'Semua tahun';
+      const rows = S.byYear(db);
+      if (!rows.length) table = emptyBox('📅', 'Belum ada data tahunan.');
+      else {
+        table = '<div class="tbl-wrap"><table><thead><tr><th>Tahun</th><th class="n">Masuk</th><th class="n">Keluar</th><th class="n">Selisih</th><th class="n">Pindah dana</th><th class="n">Jml</th></tr></thead><tbody>' +
+          rows.map(function (d) {
+            return '<tr><td><b>' + H(d.year) + '</b></td>' +
+              '<td class="n" style="color:var(--in)">' + U.fmtNum(d.income) + '</td>' +
+              '<td class="n" style="color:var(--out)">' + U.fmtNum(d.expense) + '</td>' +
+              '<td class="n" style="color:' + (d.net >= 0 ? 'var(--in)' : 'var(--out)') + '"><b>' + (d.net >= 0 ? '+' : '−') + U.fmtNum(Math.abs(d.net)) + '</b></td>' +
+              '<td class="n dim">' + (d.moved ? U.fmtNum(d.moved) : '—') + '</td>' +
+              '<td class="n dim">' + d.count + '</td></tr>';
+          }).join('') + '</tbody></table></div>';
+      }
+    }
+
+    return '<div class="card"><div class="row"><div class="seg" id="rk-tab" style="width:auto">' + tabBtns + '</div>' +
+        '<span class="spacer"></span>' + picker + '</div>' +
+        '<div class="mb" style="margin-top:12px"></div>' +
+        '<div class="tbl-head row" style="margin-bottom:10px"><span class="dim" style="font-size:13px">Rekap ' + H(caption) + '</span></div>' +
+        table + (totalRow ? '<div class="mt" style="border-top:1px solid var(--line);padding-top:14px">' + totalRow + '</div>' : '') +
+      '</div>' +
+      '<div class="card mt"><div class="card-head"><h2>Grafik Rekap</h2>' +
+        '<button class="btn sm" onclick="V.exportCSV()">⬇️ Unduh CSV</button></div>' +
+        (st.tab === 'tahun'
+          ? dualBars(S.byYear(db).map(function (d) { return { label: d.year, income: d.income, expense: d.expense }; }))
+          : st.tab === 'bulan'
+            ? dualBars(S.byMonth(db, st.year + '-01', st.year + '-12').map(function (d) { return { label: U.fmtMonthShort(d.month), income: d.income, expense: d.expense }; }))
+            : st.tab === 'minggu'
+              ? dualBars(S.byWeek(db, st.ym + '-01', U.monthEnd(st.ym + '-01')).map(function (d) { return { label: U.fmtDate(d.week).replace(/ \d{4}$/, ''), income: d.income, expense: d.expense }; }))
+              : dualBars(S.byDay(db, st.ym + '-01', U.monthEnd(st.ym + '-01')).map(function (d) { return { label: String(U.strToDate(d.date).getDate()), income: d.income, expense: d.expense }; }))
+        ) +
+      '</div>';
+  };
+
+  V.rekapBind = function () {
+    const tb = el('rk-tab');
+    if (tb) tb.addEventListener('click', function (e) {
+      const b = e.target.closest('[data-seg]'); if (!b) return;
+      V.state.rekap.tab = b.dataset.seg; root.App.render();
+    });
+    const ym = el('rk-ym'); if (ym) ym.onchange = function () { V.state.rekap.ym = ym.value || V.state.rekap.ym; root.App.render(); };
+    const yr = el('rk-year'); if (yr) yr.onchange = function () { V.state.rekap.year = yr.value; root.App.render(); };
+  };
+
+  V.exportCSV = function () {
+    const db = root.App.db;
+    root.App.download('savingduit-' + U.today() + '.csv', 'text/csv', S.toCSV(db));
+    V.toast('CSV diunduh', 'ok');
+  };
+
+  /* ============================================================
+     VIEW: DOMPET & BANK
+     ============================================================ */
+  V.dompet = function () {
+    const db = root.App.db;
+    const bal = S.walletBalances(db);
+    const total = S.totalBalance(db);
+    const list = (db.wallets || []).filter(function (w) { return !w.archived; });
+
+    const cards = list.map(function (w) {
+      const b = bal[w.id] || 0;
+      const n = S.txCountForWallet(db, w.id);
+      const bulanIn = S.summary(db, U.monthStart(U.today()), U.monthEnd(U.today())).list.filter(function (t) {
+        return t.type === 'in' && t.walletId === w.id;
+      });
+      return '<div class="card" style="border-left:4px solid ' + H(w.color || 'var(--line)') + '">' +
+        '<div class="card-head"><h2>' + H(w.icon + ' ' + w.name) + '</h2>' +
+          '<span class="tag">' + H(w.type) + '</span>' +
+          '<button class="btn icon sm ghost" onclick="V.walletForm(\'' + w.id + '\')">✏️</button>' +
+          '<button class="btn icon sm ghost" onclick="V.walletDelete(\'' + w.id + '\')">🗑️</button>' +
+        '</div>' +
+        '<div style="font-size:25px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.5px">' + U.fmtRp(b) + '</div>' +
+        '<div class="muted" style="font-size:12px;margin-top:8px">' + n + ' transaksi tercatat' +
+          (w.initial ? ' · saldo awal ' + U.fmtRp(w.initial) : '') + '</div>' +
+      '</div>';
+    }).join('');
+
+    // pindah dana cepat
+    const moves = S.filterTx(db, {}).filter(function (t) { return t.type === 'move'; }).slice(0, 8);
+
+    return '<div class="card"><div class="card-head"><h2>Pilihan Dompet / Bank</h2>' +
+        '<span class="total-pill">Total: ' + U.fmtRp(total) + '</span>' +
+        '<button class="btn primary" onclick="V.walletForm()">+ Tambah Dompet</button></div>' +
+      (cards ? '<div class="grid cols-3">' + cards + '</div>'
+             : emptyBox('🏦', 'Belum ada dompet. Tambahkan rekening, e-wallet, atau uang tunai.')) +
+    '</div>' +
+
+    '<div class="card mt"><div class="card-head"><h2>Catatan Perpindahan Dana</h2>' +
+      '<button class="btn sm" onclick="V.txForm(null,\'move\')">+ Pindah Dana</button></div>' +
+      (moves.length ? '<div class="list">' + moves.map(function (t) { return V.txRow(db, t); }).join('') + '</div>'
+                    : emptyBox('🔄', 'Belum ada perpindahan dana antar dompet.')) +
+    '</div>';
+  };
+
+  V.walletForm = function (id) {
+    const db = root.App.db;
+    const w = id ? db.wallets.filter(function (x) { return x.id === id; })[0] : null;
+    const COLORS = ['#22c55e', '#3d7bff', '#a78bfa', '#fbbf24', '#f4586c', '#06b6d4', '#ec4899', '#94a3b8'];
+    const TYPES = [['cash', 'Tunai'], ['bank', 'Rekening Bank'], ['ewallet', 'E-Wallet'], ['credit', 'Kartu Kredit'], ['investment', 'Investasi'], ['other', 'Lainnya']];
+    const f = w || { id: '', name: '', type: 'bank', icon: '🏦', color: '#3d7bff', initial: 0 };
+
+    V.modal.open({
+      title: w ? 'Ubah Dompet' : 'Tambah Dompet',
+      body:
+        '<div class="field"><label>Nama</label><input type="text" id="w-name" value="' + H(f.name) + '" placeholder="contoh: BCA Gozali"></div>' +
+        '<div class="field"><label>Jenis</label><select id="w-type">' +
+          TYPES.map(function (t) { return '<option value="' + t[0] + '"' + (f.type === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') +
+        '</select></div>' +
+        '<div class="field"><label>Ikon (emoji)</label><input type="text" id="w-icon" value="' + H(f.icon) + '" maxlength="3"></div>' +
+        '<div class="field"><label>Warna</label><div class="row" id="w-colors">' +
+          COLORS.map(function (c) {
+            return '<button type="button" data-color="' + c + '" style="width:32px;height:32px;border-radius:9px;border:2px solid ' +
+              (f.color === c ? '#fff' : 'transparent') + ';background:' + c + ';cursor:pointer"></button>';
+          }).join('') +
+        '</div></div>' +
+        '<div class="field"><label>Saldo awal <span class="muted">(opsional)</span></label>' +
+          '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="w-initial" value="' + (f.initial ? U.fmtNum(f.initial) : '') + '" placeholder="0"></div>' +
+          '<span class="hint">Saldo saat ini di dompet ini sebelum dicatat di aplikasi.</span></div>',
+      foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="w-save">Simpan</button>'
+    });
+
+    let color = f.color;
+    el('w-colors').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-color]'); if (!b) return;
+      color = b.dataset.color;
+      Array.prototype.forEach.call(el('w-colors').children, function (c) { c.style.borderColor = 'transparent'; });
+      b.style.borderColor = '#fff';
+    });
+    const initIn = el('w-initial');
+    initIn.addEventListener('input', function () {
+      const v = U.parseAmount(initIn.value); initIn.value = v ? U.fmtNum(v) : '';
+    });
+
+    el('w-save').onclick = function () {
+      const name = el('w-name').value.trim();
+      if (!name) { V.toast('Nama dompet wajib diisi', 'err'); return; }
+      const obj = {
+        id: w ? w.id : U.uid('wlt'),
+        name: name, type: el('w-type').value, icon: el('w-icon').value.trim() || '💳',
+        color: color, initial: U.parseAmount(el('w-initial').value),
+        archived: w ? !!w.archived : false
+      };
+      if (w) { const i = db.wallets.findIndex(function (x) { return x.id === w.id; }); db.wallets[i] = obj; }
+      else db.wallets.push(obj);
+      root.App.saveAndRender();
+      V.toast(w ? 'Dompet diperbarui' : 'Dompet ditambahkan', 'ok');
+      V.modal.close();
+    };
+  };
+
+  V.walletDelete = async function (id) {
+    const db = root.App.db;
+    const w = db.wallets.filter(function (x) { return x.id === id; })[0];
+    const n = S.txCountForWallet(db, id);
+    const aktif = (db.wallets || []).filter(function (x) { return !x.archived; }).length;
+    if (aktif <= 1) { V.toast('Minimal harus ada 1 dompet aktif', 'err'); return; }
+    const ok = await V.confirm('Hapus dompet "' + H(w.name) + '"?',
+      n ? 'Ada <b>' + n + ' transaksi</b> yang memakai dompet ini. Menghapus dompet akan <b>menghapus juga transaksi tersebut</b>. Lanjutkan?'
+        : 'Dompet ini belum dipakai transaksi apa pun.',
+      'Hapus dompet', true);
+    if (!ok) return;
+    const txs = db.transactions.filter(function (t) { return t.walletId === id || t.walletTo === id; });
+    txs.forEach(function (t) { if (t.receiptId) root.App.deleteReceipt(t.receiptId); });
+    db.transactions = db.transactions.filter(function (t) { return t.walletId !== id && t.walletTo !== id; });
+    (db.goals || []).forEach(function (g) { if (g.walletId === id) g.walletId = ''; });
+    (db.subscriptions || []).forEach(function (s) { if (s.walletId === id) s.walletId = ''; });
+    db.wallets = db.wallets.filter(function (x) { return x.id !== id; });
+    root.App.saveAndRender();
+    V.toast('Dompet dihapus', 'ok');
+  };
+
+  /* ============================================================
+     VIEW: KATEGORI
+     ============================================================ */
+  V.kategori = function () {
+    const db = root.App.db;
+    const st = V.state.kategori;
+    const from = U.monthStart(U.today()), to = U.monthEnd(U.today());
+    const cats = (db.categories || []).filter(function (c) { return !c.archived && c.type === st.tab; });
+    const used = {};
+    S.byCategory(db, from, to, st.tab).forEach(function (r) { used[r.categoryId] = r.amount; });
+
+    const rows = cats.map(function (c) {
+      const n = S.txCountForCategory(db, c.id);
+      const amt = used[c.id] || 0;
+      return '<div class="item">' +
+        '<div class="ico ' + (c.type === 'in' ? 'in' : 'out') + '">' + H(c.icon) + '</div>' +
+        '<div class="body"><div class="t1">' + H(c.name) + '</div>' +
+          '<div class="t2">' + n + ' transaksi · bulan ini ' + U.fmtRp(amt) + '</div></div>' +
+        '<div class="right"><button class="btn icon sm ghost" onclick="V.catForm(\'' + c.id + '\')">✏️</button>' +
+        '<button class="btn icon sm ghost" onclick="V.catDelete(\'' + c.id + '\')">🗑️</button></div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="card"><div class="card-head">' +
+        '<div class="seg" style="width:auto" id="ct-tab">' +
+          segBtn(st.tab, 'out', '⬆️ Pengeluaran', 'out') + segBtn(st.tab, 'in', '⬇️ Pemasukan', 'in') +
+        '</div>' +
+        '<span class="spacer"></span>' +
+        '<button class="btn primary" onclick="V.catForm(null,\'' + st.tab + '\')">+ Tambah Kategori</button></div>' +
+      (rows ? '<div class="list">' + rows + '</div>'
+            : emptyBox('🏷️', 'Belum ada kategori. Tambahkan dulu.')) +
+    '</div>' +
+    '<div class="card mt"><div class="card-head"><h2>Pemakaian Kategori Bulan Ini</h2></div>' +
+      catBars(db, from, to) + '</div>';
+  };
+
+  V.kategoriBind = function () {
+    const t = el('ct-tab');
+    if (t) t.addEventListener('click', function (e) {
+      const b = e.target.closest('[data-seg]'); if (!b) return;
+      V.state.kategori.tab = b.dataset.seg; root.App.render();
+    });
+  };
+
+  V.catForm = function (id, presetType) {
+    const db = root.App.db;
+    const c = id ? db.categories.filter(function (x) { return x.id === id; })[0] : null;
+    const f = c || { id: '', name: '', type: presetType || 'out', icon: '🏷️' };
+    const EMOJI = ['🍽️','🚗','🛒','💡','🏠','💊','📚','🎬','📶','🏦','🤲','🐖','👕','✈️','🎁','💼','🏪','📈','➕','➖','🧾','☕','⛽','🅿️','🎮','💄','👶','🐶'];
+
+    V.modal.open({
+      title: c ? 'Ubah Kategori' : 'Tambah Kategori',
+      body:
+        '<div class="field"><label>Nama</label><input type="text" id="c-name" value="' + H(f.name) + '" placeholder="contoh: Kopi &amp; Jajan"></div>' +
+        '<div class="field"><label>Jenis</label><div class="seg" id="c-type">' +
+          segBtn(f.type, 'out', '⬆️ Pengeluaran', 'out') + segBtn(f.type, 'in', '⬇️ Pemasukan', 'in') + '</div></div>' +
+        '<div class="field"><label>Ikon</label>' +
+          '<div class="row" id="c-icons" style="gap:6px">' +
+            EMOJI.map(function (e) {
+              return '<button type="button" data-emoji="' + e + '" style="width:34px;height:34px;font-size:17px;border-radius:8px;cursor:pointer;border:1px solid ' +
+                (f.icon === e ? 'var(--accent)' : 'var(--line)') + ';background:' + (f.icon === e ? 'var(--accent-soft)' : 'var(--panel-2)') + '">' + e + '</button>';
+            }).join('') +
+          '</div>' +
+          '<input type="text" id="c-icon" value="' + H(f.icon) + '" maxlength="3" style="margin-top:8px;max-width:110px"></div>',
+      foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="c-save">Simpan</button>'
+    });
+
+    let type = f.type, icon = f.icon;
+    el('c-type').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-seg]'); if (!b) return;
+      type = b.dataset.seg;
+      Array.prototype.forEach.call(el('c-type').children, function (x) { x.className = ''; });
+      b.className = 'on ' + (type === 'in' ? 'in' : 'out');
+    });
+    el('c-icons').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-emoji]'); if (!b) return;
+      icon = b.dataset.emoji;
+      el('c-icon').value = icon;
+      Array.prototype.forEach.call(el('c-icons').children, function (x) { x.style.borderColor = 'var(--line)'; x.style.background = 'var(--panel-2)'; });
+      b.style.borderColor = 'var(--accent)'; b.style.background = 'var(--accent-soft)';
+    });
+    el('c-icon').addEventListener('input', function () { icon = el('c-icon').value; });
+
+    el('c-save').onclick = function () {
+      const name = el('c-name').value.trim();
+      if (!name) { V.toast('Nama kategori wajib diisi', 'err'); return; }
+      const obj = { id: c ? c.id : U.uid('cat'), name: name, type: type, icon: icon || '🏷️', archived: c ? !!c.archived : false };
+      if (c) { const i = db.categories.findIndex(function (x) { return x.id === c.id; }); db.categories[i] = obj; }
+      else db.categories.push(obj);
+      root.App.saveAndRender();
+      V.toast(c ? 'Kategori diperbarui' : 'Kategori ditambahkan', 'ok');
+      V.modal.close();
+    };
+  };
+
+  V.catDelete = async function (id) {
+    const db = root.App.db;
+    const c = db.categories.filter(function (x) { return x.id === id; })[0];
+    const n = S.txCountForCategory(db, id);
+    const nb = (db.budgets || []).filter(function (b) { return b.categoryId === id; });
+    const ns = (db.subscriptions || []).filter(function (s) { return s.categoryId === id; });
+    const ekstra = (nb.length ? ' Anggaran kategori ini juga ikut dihapus.' : '') +
+                  (ns.length ? ' ' + ns.length + ' langganan jadi tanpa kategori.' : '');
+    const ok = await V.confirm('Hapus kategori "' + H(c.name) + '"?',
+      (n ? 'Ada <b>' + n + ' transaksi</b> memakai kategori ini. Transaksinya <b>tetap ada</b> tapi jadi tanpa kategori.'
+         : 'Kategori ini belum dipakai.') + ekstra,
+      'Hapus', true);
+    if (!ok) return;
+    db.transactions.forEach(function (t) { if (t.categoryId === id) t.categoryId = ''; });
+    (db.subscriptions || []).forEach(function (s) { if (s.categoryId === id) s.categoryId = ''; });
+    db.budgets = (db.budgets || []).filter(function (b) { return b.categoryId !== id; });
+    db.categories = db.categories.filter(function (x) { return x.id !== id; });
+    root.App.saveAndRender();
+    V.toast('Kategori dihapus', 'ok');
+  };
+
+  /* ============================================================
+     VIEW: PENGATURAN
+     ============================================================ */
+  V.pengaturan = function () {
+    const db = root.App.db;
+    const st = db.settings;
+    const bytes = (function () { try { return (localStorage.getItem(root.App.storageKey()) || '').length; } catch (e) { return 0; } })();
+    const rcpCount = Object.keys(db.receipts || {}).length;
+    const rcpBytes = U.sum(Object.keys(db.receipts || {}).map(function (k) { return (db.receipts[k].data || '').length; }));
+
+    return '' +
+    '<div class="card"><div class="card-head"><h2>📦 Backup &amp; Pemulihan</h2></div>' +
+      '<p class="dim" style="font-size:13px;margin-bottom:14px">Data disimpan di perangkat ini (localStorage). ' +
+      'Rutin unduh backup supaya aman kalau browser dibersihkan atau ganti perangkat.</p>' +
+      '<div class="grid cols-4" style="margin-bottom:16px">' +
+        '<div class="stat"><div class="lbl">Transaksi</div><div class="val" style="font-size:18px">' + db.transactions.length + '</div></div>' +
+        '<div class="stat"><div class="lbl">Dompet</div><div class="val" style="font-size:18px">' + db.wallets.length + '</div></div>' +
+        '<div class="stat"><div class="lbl">Kategori</div><div class="val" style="font-size:18px">' + db.categories.length + '</div></div>' +
+        '<div class="stat"><div class="lbl">Ukuran data</div><div class="val" style="font-size:18px">' + (bytes / 1024).toFixed(0) + ' KB</div>' +
+          '<div class="sub">' + rcpCount + ' struk · ' + (rcpBytes / 1024).toFixed(0) + ' KB</div></div>' +
+      '</div>' +
+      '<div class="row">' +
+        '<button class="btn primary" onclick="V.exportJSON()">⬇️ Unduh Backup (JSON)</button>' +
+        '<button class="btn" onclick="V.exportCSV()">⬇️ Ekspor CSV</button>' +
+        '<label class="btn" style="cursor:pointer">📂 Impor Backup<input type="file" id="st-import" accept=".json,application/json" hidden></label>' +
+        '<span class="spacer"></span>' +
+        '<button class="btn danger" onclick="V.resetAll()">⚠️ Reset Semua Data</button>' +
+      '</div>' +
+      '<div class="row mt" style="gap:10px"><label class="row" style="font-size:13px;gap:8px;cursor:pointer">' +
+        '<input type="checkbox" id="st-pw-import" style="width:auto"> Impor menggantikan seluruh data (bukan menggabung)</label></div>' +
+    '</div>' +
+
+    '<div class="card mt"><div class="card-head"><h2>☁️ Sinkronisasi Google Drive</h2>' +
+      '<span class="net-dot' + (st.driveEnabled && st.driveFileId ? ' on' : '') + '"><span></span><em>' +
+        (st.driveEnabled && st.driveFileId ? (st.lastSync ? 'Terhubung · ' + H(U.fmtDate(String(st.lastSync).slice(0, 10))) : 'Terhubung') : 'Belum tersambung') + '</em></span></div>' +
+      '<p class="dim" style="font-size:13px;margin-bottom:14px">' +
+        'Supaya data ikut tersimpan ke Drive, isi <b>OAuth Client ID</b> dari Google Cloud Console di bawah, ' +
+        'lalu klik <b>Sambungkan Drive</b>. Tanpa Client ID, aplikasi tetap berjalan normal dengan penyimpanan lokal.</p>' +
+      '<div class="field"><label>OAuth Client ID</label>' +
+        '<input type="text" id="st-client" value="' + H(st.driveClientId) + '" placeholder="xxxxx.apps.googleusercontent.com">' +
+        '<span class="hint">Buat di console.cloud.google.com → APIs &amp; Services → Credentials → OAuth client ID → Web application. ' +
+        'Tambahkan <code>' + H(location.origin || 'file://') + '</code> ke Authorized JavaScript origins, dan aktifkan <b>Google Drive API</b>.</span></div>' +
+      '<div class="row">' +
+        '<button class="btn primary" id="st-drive-connect" ' + (st.driveClientId ? '' : 'disabled style="opacity:.5"') + '>🔗 Sambungkan Drive</button>' +
+        '<button class="btn" id="st-drive-push" ' + (st.driveFileId ? '' : 'disabled style="opacity:.5"') + '>⬆️ Kirim ke Drive</button>' +
+        '<button class="btn" id="st-drive-pull" ' + (st.driveFileId ? '' : 'disabled style="opacity:.5"') + '>⬇️ Ambil dari Drive</button>' +
+        '<button class="btn danger" id="st-drive-off" ' + (st.driveFileId ? '' : 'disabled style="opacity:.5"') + '>Putuskan</button>' +
+      '</div>' +
+      (st.lastSync ? '<div class="muted mt" style="font-size:12px">Sinkron terakhir: ' + H(new Date(st.lastSync).toLocaleString('id-ID')) + '</div>' : '') +
+    '</div>' +
+
+    '<div class="card mt"><div class="card-head"><h2>ℹ️ Tentang</h2></div>' +
+      '<div class="tbl-wrap"><table><tbody>' +
+        '<tr><td class="dim">Versi aplikasi</td><td>1.0.0 — Tahap 1</td></tr>' +
+        '<tr><td class="dim">Versi skema data</td><td>' + db.version + '</td></tr>' +
+        '<tr><td class="dim">Dibuat</td><td>' + H(db.meta.created ? new Date(db.meta.created).toLocaleString('id-ID') : '-') + '</td></tr>' +
+        '<tr><td class="dim">Terakhir diubah</td><td>' + H(db.meta.updated ? new Date(db.meta.updated).toLocaleString('id-ID') : '-') + '</td></tr>' +
+        '<tr><td class="dim">Penyimpanan</td><td>localStorage' + (st.driveEnabled && st.driveFileId ? ' + Google Drive' : '') + '</td></tr>' +
+      '</tbody></table></div>' +
+      '<p class="dim mt" style="font-size:12.5px">Fitur tahap berikutnya: monitor langganan bulanan, target tabungan, anggaran per kategori, dan grafik lanjutan.</p>' +
+    '</div>';
+  };
+
+  V.pengaturanBind = function () {
+    const imp = el('st-import');
+    if (imp) imp.onchange = function () { V.importJSON(imp.files[0]); };
+    const cl = el('st-client');
+    if (cl) {
+      cl.oninput = function () {
+        const val = cl.value.trim();
+        root.App.db.settings.driveClientId = val;
+        const dc = el('st-drive-connect');
+        if (dc) {
+          dc.disabled = !val;
+          dc.style.opacity = val ? '1' : '.5';
+        }
+      };
+      cl.onchange = function () {
+        root.App.db.settings.driveClientId = cl.value.trim();
+        root.App.save();
+        root.App.render();
+      };
+    }
+    const dc = el('st-drive-connect'); if (dc) dc.onclick = function () { V.driveConnect(); };
+    const dp = el('st-drive-push');    if (dp) dp.onclick = function () { V.drivePush(); };
+    const dl = el('st-drive-pull');    if (dl) dl.onclick = function () { V.drivePull(); };
+    const dof = el('st-drive-off');    if (dof) dof.onclick = function () { V.driveOff(); };
+  };
+
+  V.exportJSON = function () {
+    const db = root.App.db;
+    db.meta.updated = new Date().toISOString();
+    db.settings.lastBackup = db.meta.updated;
+    root.App.save();
+    const f = S.Persist.exportFile(db);
+    root.App.download(f.name, 'application/json', f.text);
+    V.toast('Backup diunduh', 'ok');
+    root.App.render();
+  };
+
+  V.importJSON = function (file) {
+    if (!file) return;
+    // dibaca SEKARANG, bukan di dalam onload: render ulang bisa mengembalikan
+    // state checkbox sebelum berkas selesai dibaca.
+    const replace = !!(el('st-pw-import') && el('st-pw-import').checked);
+    const fr = new FileReader();
+    fr.onload = async function () {
+      let raw;
+      try { raw = JSON.parse(fr.result); }
+      catch (e) { V.toast('Berkas bukan JSON yang valid', 'err'); return; }
+      const db = root.App.db;
+      const n = (raw.transactions || []).length;
+
+      const ok = await V.confirm('Impor backup?',
+        replace
+          ? 'Seluruh data saat ini <b>diganti</b> dengan isi berkas (' + n + ' transaksi). Tindakan ini tidak bisa dibatalkan.'
+          : 'Digabung dengan data saat ini. Transaksi dari berkas akan ditambahkan (' + n + ' transaksi).',
+        'Impor', replace);
+      if (!ok) return;
+
+      if (replace) {
+        root.App.db = S.normalize(raw);
+      } else {
+        const inc = S.normalize(raw);
+        const haveIds = {};
+        db.transactions.forEach(function (t) { haveIds[t.id] = 1; });
+        inc.transactions.forEach(function (t) { if (!haveIds[t.id]) db.transactions.push(t); });
+        const haveW = {}; db.wallets.forEach(function (w) { haveW[w.name + '|' + w.type] = 1; });
+        inc.wallets.forEach(function (w) { if (!haveW[w.name + '|' + w.type]) db.wallets.push(w); });
+        const haveC = {}; db.categories.forEach(function (c) { haveC[c.name + '|' + c.type] = 1; });
+        inc.categories.forEach(function (c) { if (!haveC[c.name + '|' + c.type]) db.categories.push(c); });
+        Object.assign(db.receipts, inc.receipts);
+      }
+      root.App.db.meta.updated = new Date().toISOString();
+      root.App.saveAndRender();
+      V.toast('Impor selesai', 'ok');
+    };
+    fr.readAsText(file);
+  };
+
+  V.resetAll = async function () {
+    const ok = await V.confirm('Reset semua data?',
+      'Semua dompet, kategori, transaksi, dan struk akan <b>dihapus</b> dan diganti dengan contoh awal. ' +
+      'Pastikan kamu sudah mengunduh backup.', 'Ya, reset', true);
+    if (!ok) return;
+    root.App.db = S.seedDB();
+    root.App.saveAndRender();
+    V.toast('Data direset ke awal', 'ok');
+  };
+
+  /* ---------- Google Drive ---------- */
+  V.driveConnect = function () {
+    const cl = el('st-client');
+    if (cl && cl.value.trim()) {
+      root.App.db.settings.driveClientId = cl.value.trim();
+      root.App.save();
+    }
+    const cid = root.App.db.settings.driveClientId;
+    if (!cid) { V.toast('Isi OAuth Client ID dulu', 'err'); return; }
+    if (!root.GDrive) { V.toast('Modul Drive belum dimuat pada versi ini', 'err'); return; }
+    V.toast('Membuka login Google...', 'info');
+    root.GDrive.connect(cid).then(function () {
+      root.App.db.settings.driveEnabled = true;
+      root.App.save();
+      V.toast('Drive berhasil tersambung! Menyiapkan berkas...', 'ok');
+      return root.GDrive.ensureFile(root.App.db).then(function () {
+        root.App.save();
+        root.App.render();
+        V.toast('Google Drive siap digunakan ☁️', 'ok');
+      });
+    }).catch(function (e) {
+      V.toast('Gagal menyambung: ' + e.message, 'err');
+    });
+  };
+  V.drivePush = function () {
+    if (!root.GDrive) { V.toast('Modul Drive belum dimuat', 'err'); return; }
+    root.GDrive.push(root.App.db).then(function () {
+      root.App.db.settings.lastSync = new Date().toISOString();
+      root.App.save(); V.toast('Tersimpan ke Drive', 'ok'); root.App.render();
+    }).catch(function (e) { V.toast('Gagal kirim: ' + e.message, 'err'); });
+  };
+  V.drivePull = function () {
+    if (!root.GDrive) { V.toast('Modul Drive belum dimuat', 'err'); return; }
+    root.GDrive.pull().then(async function (remote) {
+      if (!remote) { V.toast('Belum ada file di Drive', 'err'); return; }
+      const ok = await V.confirm('Ambil data dari Drive?', 'Data lokal akan diganti dengan versi dari Drive.', 'Ambil', true);
+      if (!ok) return;
+      root.App.db = S.normalize(remote);
+      root.App.db.settings.lastSync = new Date().toISOString();
+      root.App.saveAndRender();
+      V.toast('Data diambil dari Drive', 'ok');
+    }).catch(function (e) { V.toast('Gagal ambil: ' + e.message, 'err'); });
+  };
+  V.driveOff = async function () {
+    const ok = await V.confirm('Putuskan Drive?', 'Data lokal tetap ada, hanya sinkronisasi yang dimatikan.', 'Putuskan', true);
+    if (!ok) return;
+    const db = root.App.db;
+    db.settings.driveEnabled = false; db.settings.driveFileId = ''; db.settings.lastSync = '';
+    root.App.saveAndRender();
+    V.toast('Drive diputus', 'ok');
+  };
+
+  /* ============================================================
+     VIEW: ANGGARAN (batas pengeluaran per kategori)
+     ============================================================ */
+  V.anggaran = function () {
+    const db = root.App.db;
+    const today = U.today();
+    const rows = S.budgetStatus(db, today);
+    const tot = S.budgetTotal(db, today);
+
+    const kartu = rows.map(function (r) {
+      const u = r.usage, c = r.category;
+      const habis = u.limit > 0 && u.left <= 0;
+      return '<div class="card card-sm">' +
+        '<div class="card-head">' +
+          '<div class="ico-badge ' + (u.over ? 'out' : 'in') + '">' + H(c.icon) + '</div>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div class="t1">' + H(c.name) + (r.valid ? '' : ' <span class="tag out">kategori hilang</span>') + '</div>' +
+            '<div class="t2">' + (r.budget.period === 'year' ? 'per tahun' : 'per bulan') +
+              (r.budget.note ? ' · ' + H(r.budget.note) : '') + '</div>' +
+          '</div>' +
+          pctTag(u.pct, u.over) +
+          '<button class="btn icon sm ghost" onclick="V.budgetForm(\'' + r.budget.id + '\')">✏️</button>' +
+          '<button class="btn icon sm ghost" onclick="V.budgetDelete(\'' + r.budget.id + '\')">🗑️</button>' +
+        '</div>' +
+        progBar(u.pct, u.over ? 'over' : (u.pct >= 80 ? 'warn' : '')) +
+        '<div class="row" style="justify-content:space-between;margin-top:9px;font-size:12.5px">' +
+          '<span class="num">' + U.fmtRp(u.used) + ' <span class="muted">dari</span> ' + U.fmtRp(u.limit) + '</span>' +
+          '<span class="num ' + (habis ? 'val-out' : 'val-in') + '">' +
+            (habis ? 'lewat ' + U.fmtRp(-u.left) : 'sisa ' + U.fmtRp(u.left)) + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    const catOut = (db.categories || []).filter(function (c) { return !c.archived && c.type === 'out'; });
+    const dipakai = {};
+    (db.budgets || []).forEach(function (b) { dipakai[b.categoryId] = true; });
+    const belum = catOut.filter(function (c) { return !dipakai[c.id]; });
+
+    return '<div class="card"><div class="card-head"><h2>Anggaran per Kategori</h2>' +
+        '<span class="muted" style="font-size:12px">' + U.fmtMonth(U.monthOf(today)) + '</span>' +
+        '<button class="btn primary" onclick="V.budgetForm()">+ Tambah Anggaran</button></div>' +
+      (rows.length
+        ? '<div class="grid cols-3">' + kartu + '</div>'
+        : emptyBox('🎯', 'Belum ada anggaran. Pasang batas pengeluaran supaya lebih terkendali.')) +
+      (rows.length ? '<div class="grid cols-4 mt">' +
+        '<div class="stat"><div class="lbl">Total anggaran</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.limit) + '</div></div>' +
+        '<div class="stat out"><div class="lbl">Terpakai</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.used) + '</div>' +
+          '<div class="sub">' + U.round1(tot.pct) + '% dari anggaran</div></div>' +
+        '<div class="stat' + (tot.left < 0 ? ' out' : ' in') + '"><div class="lbl">' + (tot.left < 0 ? 'Lebih' : 'Sisa') + '</div>' +
+          '<div class="val" style="font-size:17px">' + U.fmtRpShort(Math.abs(tot.left)) + '</div></div>' +
+        '<div class="stat"><div class="lbl">Kategori dianggarkan</div><div class="val" style="font-size:17px">' + rows.filter(function (r) { return r.valid; }).length + '</div>' +
+          '<div class="sub">dari ' + catOut.length + ' kategori pengeluaran</div></div>' +
+      '</div>' : '') +
+    '</div>' +
+
+    (belum.length ? '<div class="card mt"><div class="card-head"><h2>Belum Dianggarkan</h2>' +
+      '<span class="muted" style="font-size:12px">klik untuk memasang batas</span></div>' +
+      '<div class="row" style="gap:8px">' + belum.map(function (c) {
+        return '<button class="btn sm" onclick="V.budgetForm(null,\'' + c.id + '\')">' + H(c.icon + ' ' + c.name) + '</button>';
+      }).join('') + '</div></div>' : '') +
+
+    (rows.length ? '<div class="card mt"><div class="card-head"><h2>Pemakaian Anggaran Bulan Ini</h2></div>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>Kategori</th><th>Batas</th><th>Terpakai</th><th>Sisa</th><th style="width:150px">Progres</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        const u = r.usage;
+        return '<tr><td>' + H(r.category.icon + ' ' + r.category.name) + '</td>' +
+          '<td class="num">' + U.fmtRp(u.limit) + '</td>' +
+          '<td class="num">' + U.fmtRp(u.used) + '</td>' +
+          '<td class="num ' + (u.left < 0 ? 'val-out' : '') + '">' + U.fmtRp(u.left) + '</td>' +
+          '<td>' + progBar(u.pct, u.over ? 'over' : (u.pct >= 80 ? 'warn' : '')) + '</td></tr>';
+      }).join('') + '</tbody></table></div></div>' : '');
+  };
+
+  V.budgetForm = function (id, presetCat) {
+    const db = root.App.db;
+    const b = id ? (db.budgets || []).filter(function (x) { return x.id === id; })[0] : null;
+    const catOut = (db.categories || []).filter(function (c) { return !c.archived && c.type === 'out'; });
+    if (!catOut.length) { V.toast('Belum ada kategori pengeluaran — tambahkan dulu di menu Kategori', 'err'); return; }
+    const f = b || { id: '', categoryId: presetCat || '', limit: '', period: 'month', note: '' };
+
+    V.modal.open({
+      title: b ? 'Ubah Anggaran' : 'Tambah Anggaran',
+      body:
+        '<div class="field"><label>Kategori pengeluaran</label>' +
+          '<select id="b-cat">' + pilihanKategori(db, f.categoryId, 'out') + '</select></div>' +
+        '<div class="field"><label>Batas anggaran</label>' +
+          '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="b-limit" value="' +
+            (f.limit ? U.fmtNum(f.limit) : '') + '" placeholder="contoh: 1.500.000"></div>' +
+          '<span class="hint">Batas pengeluaran untuk kategori ini.</span></div>' +
+        '<div class="field"><label>Periode</label><select id="b-period">' +
+          opsiNilai([['month', 'Per bulan'], ['year', 'Per tahun']], f.period) + '</select></div>' +
+        '<div class="field"><label>Catatan <span class="muted">(opsional)</span></label>' +
+          '<input type="text" id="b-note" value="' + H(f.note) + '" placeholder="contoh: jatah makan sebulan"></div>',
+      foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="b-save">Simpan</button>'
+    });
+
+    const limIn = el('b-limit');
+    limIn.addEventListener('input', function () {
+      const v = U.parseAmount(limIn.value); limIn.value = v ? U.fmtNum(v) : '';
+    });
+
+    el('b-save').onclick = function () {
+      const catId = el('b-cat').value;
+      const limit = U.parseAmount(limIn.value);
+      if (!catId) { V.toast('Pilih kategori dulu', 'err'); return; }
+      if (!(limit > 0)) { V.toast('Batas anggaran harus lebih dari 0', 'err'); return; }
+      const lain = (db.budgets || []).filter(function (x) { return x.categoryId === catId && (!b || x.id !== b.id); })[0];
+      if (lain) { V.toast('Kategori ini sudah punya anggaran — ubah yang ada saja', 'err'); return; }
+      const obj = {
+        id: b ? b.id : U.uid('bud'),
+        categoryId: catId, limit: limit,
+        period: el('b-period').value, note: el('b-note').value.trim()
+      };
+      if (b) { const i = db.budgets.findIndex(function (x) { return x.id === b.id; }); db.budgets[i] = obj; }
+      else db.budgets.push(obj);
+      root.App.saveAndRender();
+      V.toast(b ? 'Anggaran diperbarui' : 'Anggaran ditambahkan', 'ok');
+      V.modal.close();
+    };
+  };
+
+  V.budgetDelete = async function (id) {
+    const db = root.App.db;
+    const b = (db.budgets || []).filter(function (x) { return x.id === id; })[0];
+    if (!b) return;
+    const c = db.categories.filter(function (x) { return x.id === b.categoryId; })[0];
+    const ok = await V.confirm('Hapus anggaran ' + H(c ? c.name : 'kategori ini') + '?',
+      'Transaksi yang sudah dicatat <b>tidak terhapus</b>, hanya batas anggarannya yang dihilangkan.', 'Hapus', true);
+    if (!ok) return;
+    db.budgets = db.budgets.filter(function (x) { return x.id !== id; });
+    root.App.saveAndRender();
+    V.toast('Anggaran dihapus', 'ok');
+  };
+
+  /* ============================================================
+     VIEW: TARGET TABUNGAN
+     ============================================================ */
+  V.target = function () {
+    const db = root.App.db;
+    const today = U.today();
+    const list = S.goalStatus(db, today);
+    const tot = S.goalTotal(db);
+
+    const kartu = list.map(function (r) {
+      const g = r.goal, p = r.progress;
+      const badge = p.done ? '<span class="tag ok">tercapai</span>'
+                  : r.late ? '<span class="tag over">terlambat</span>'
+                  : (r.daysLeft !== null && r.daysLeft <= 31 ? '<span class="tag warn">' + H(sisaHari(r.daysLeft)) + '</span>' : '');
+      return '<div class="card card-sm">' +
+        '<div class="card-head">' +
+          '<div class="ico-badge ' + (p.done ? 'in' : 'move') + '">' + H(g.icon || '🎯') + '</div>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div class="t1">' + H(g.name) + ' ' + badge + '</div>' +
+            '<div class="t2">' + (g.due ? 'tenggat ' + H(U.fmtDate(g.due)) + ' · ' + H(sisaHari(r.daysLeft)) : 'tanpa tenggat') +
+              (r.wallet ? ' · ' + H(r.wallet.icon + ' ' + r.wallet.name) : '') + '</div>' +
+          '</div>' +
+          '<button class="btn icon sm ghost" onclick="V.goalForm(\'' + g.id + '\')">✏️</button>' +
+          '<button class="btn icon sm ghost" onclick="V.goalDelete(\'' + g.id + '\')">🗑️</button>' +
+        '</div>' +
+        progBar(p.pct, p.done ? 'in' : (r.late ? 'over' : '')) +
+        '<div class="row" style="justify-content:space-between;margin-top:9px;font-size:13px">' +
+          '<span class="num"><b>' + U.fmtRp(p.saved) + '</b> <span class="muted">dari</span> ' + U.fmtRp(p.target) + '</span>' +
+          '<span class="num muted">' + U.round1(p.rawPct) + '%</span>' +
+        '</div>' +
+        '<div class="row mt" style="gap:7px">' +
+          '<button class="btn sm primary" onclick="V.goalAdd(\'' + g.id + '\')">+ Nabung</button>' +
+          (p.saved > 0 ? '<button class="btn sm" onclick="V.goalAdd(\'' + g.id + '\',true)">− Tarik</button>' : '') +
+          '<span class="spacer"></span>' +
+          (p.done ? '<span class="muted" style="font-size:12px">Selesai! 🎉</span>'
+                  : '<span class="muted" style="font-size:12px">' + (r.monthlyNeed === null ? 'sisa ' + U.fmtRp(p.left)
+                     : 'perlu ' + U.fmtRp(r.monthlyNeed) + '/bulan') + '</span>') +
+        '</div>' +
+        (g.note ? '<div class="muted" style="font-size:12px;margin-top:9px">' + H(g.note) + '</div>' : '') +
+      '</div>';
+    }).join('');
+
+    return '<div class="card"><div class="card-head"><h2>Target Tabungan</h2>' +
+        '<button class="btn primary" onclick="V.goalForm()">+ Tambah Target</button></div>' +
+      (list.length
+        ? '<div class="grid cols-3">' + kartu + '</div>'
+        : emptyBox('🎯', 'Belum ada target tabungan. Misalnya: dana darurat, laptop baru, liburan.')) +
+      (list.length ? '<div class="grid cols-4 mt">' +
+        '<div class="stat"><div class="lbl">Total target</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.target) + '</div>' +
+          '<div class="sub">' + tot.total + ' target</div></div>' +
+        '<div class="stat in"><div class="lbl">Terkumpul</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.saved) + '</div>' +
+          '<div class="sub">' + U.round1(tot.pct) + '% dari total target</div></div>' +
+        '<div class="stat"><div class="lbl">Kurang</div><div class="val" style="font-size:17px">' + U.fmtRpShort(Math.max(0, tot.target - tot.saved)) + '</div></div>' +
+        '<div class="stat"><div class="lbl">Tercapai</div><div class="val" style="font-size:17px">' + tot.done + ' <span class="muted" style="font-size:13px">/ ' + tot.total + '</span></div></div>' +
+      '</div>' : '') +
+    '</div>';
+  };
+
+  V.goalForm = function (id) {
+    const db = root.App.db;
+    const g = id ? (db.goals || []).filter(function (x) { return x.id === id; })[0] : null;
+    const f = g || { id: '', name: '', icon: '🎯', target: '', saved: '', walletId: '', due: '', note: '' };
+
+    V.modal.open({
+      title: g ? 'Ubah Target' : 'Tambah Target Tabungan',
+      body:
+        '<div class="field"><label>Nama target</label>' +
+          '<input type="text" id="g-name" value="' + H(f.name) + '" placeholder="contoh: Dana darurat"></div>' +
+        '<div class="row" style="gap:12px;align-items:flex-start">' +
+          '<div class="field" style="flex:0 0 92px"><label>Ikon</label>' +
+            '<input type="text" id="g-icon" value="' + H(f.icon) + '" maxlength="3"></div>' +
+          '<div class="field" style="flex:1"><label>Target dana</label>' +
+            '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="g-target" value="' +
+              (f.target ? U.fmtNum(f.target) : '') + '" placeholder="contoh: 20.000.000"></div></div>' +
+        '</div>' +
+        '<div class="field"><label>Sudah terkumpul <span class="muted">(opsional)</span></label>' +
+          '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="g-saved" value="' +
+            (f.saved ? U.fmtNum(f.saved) : '') + '" placeholder="0"></div></div>' +
+        '<div class="field"><label>Dompet tujuan <span class="muted">(opsional)</span></label>' +
+          '<select id="g-wallet">' + pilihanDompet(db, f.walletId) + '</select>' +
+          '<span class="hint">Penanda saja — uangnya tetap dihitung di saldo dompet.</span></div>' +
+        '<div class="field"><label>Tenggat <span class="muted">(opsional)</span></label>' +
+          '<input type="date" id="g-due" value="' + H(f.due) + '">' +
+          '<span class="hint">Dengan tenggat, aplikasi menghitung berapa yang perlu ditabung per bulan.</span></div>' +
+        '<div class="field"><label>Catatan <span class="muted">(opsional)</span></label>' +
+          '<input type="text" id="g-note" value="' + H(f.note) + '" placeholder="contoh: untuk beli laptop kerja"></div>',
+      foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="g-save">Simpan</button>'
+    });
+
+    ['g-target', 'g-saved'].forEach(function (id2) {
+      const inp = el(id2);
+      inp.addEventListener('input', function () {
+        const v = U.parseAmount(inp.value); inp.value = v ? U.fmtNum(v) : '';
+      });
+    });
+
+    el('g-save').onclick = function () {
+      const name = el('g-name').value.trim();
+      const target = U.parseAmount(el('g-target').value);
+      if (!name) { V.toast('Nama target wajib diisi', 'err'); return; }
+      if (!(target > 0)) { V.toast('Target dana harus lebih dari 0', 'err'); return; }
+      const obj = {
+        id: g ? g.id : U.uid('goal'),
+        name: name, icon: el('g-icon').value.trim() || '🎯',
+        target: target, saved: U.parseAmount(el('g-saved').value),
+        walletId: el('g-wallet').value, due: el('g-due').value,
+        note: el('g-note').value.trim()
+      };
+      if (g) { const i = db.goals.findIndex(function (x) { return x.id === g.id; }); db.goals[i] = obj; }
+      else db.goals.push(obj);
+      root.App.saveAndRender();
+      V.toast(g ? 'Target diperbarui' : 'Target ditambahkan', 'ok');
+      V.modal.close();
+    };
+  };
+
+  // + Nabung / − Tarik dari sebuah target
+  V.goalAdd = function (id, minus) {
+    const db = root.App.db;
+    const g = (db.goals || []).filter(function (x) { return x.id === id; })[0];
+    if (!g) return;
+    const p = S.goalProgress(g);
+    V.modal.open({
+      title: (minus ? 'Tarik dari ' : 'Nabung ke ') + H(g.name),
+      body:
+        '<div class="field"><label>Nominal</label>' +
+          '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="ga-amt" value="" placeholder="0"></div>' +
+          '<span class="hint">Terkumpul sekarang ' + U.fmtRp(p.saved) + ' dari ' + U.fmtRp(p.target) +
+            ' · sisa ' + U.fmtRp(p.left) + '</span></div>' +
+        (minus ? '' : '<div class="row" style="gap:7px;margin-bottom:13px">' + [50000, 100000, 500000, 1000000].map(function (v) {
+          return '<button class="btn sm" data-cepat="' + v + '">+' + U.fmtRpShort(v) + '</button>';
+        }).join('') + '</div>'),
+      foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="ga-save">' +
+        (minus ? 'Tarik' : 'Nabung') + '</button>'
+    });
+
+    const inp = el('ga-amt');
+    inp.addEventListener('input', function () {
+      const v = U.parseAmount(inp.value); inp.value = v ? U.fmtNum(v) : '';
+    });
+    const cepat = el('modal-body').querySelector('[data-cepat]');
+    if (cepat) el('modal-body').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-cepat]'); if (!b) return;
+      const v = U.parseAmount(inp.value) + Number(b.dataset.cepat);
+      inp.value = U.fmtNum(v);
+    });
+
+    el('ga-save').onclick = function () {
+      const amt = U.parseAmount(inp.value);
+      if (!(amt > 0)) { V.toast('Nominal harus lebih dari 0', 'err'); return; }
+      if (minus) {
+        const baru = Math.max(0, Number(g.saved || 0) - amt);
+        const nyata = Number(g.saved || 0) - baru;
+        g.saved = baru;
+        V.toast('Ditarik ' + U.fmtRp(nyata) + ' dari ' + g.name, 'ok');
+      } else {
+        g.saved = Number(g.saved || 0) + amt;
+        V.toast('Ditabung ' + U.fmtRp(amt) + ' ke ' + g.name, 'ok');
+      }
+      root.App.saveAndRender();
+      V.modal.close();
+    };
+    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 60);
+  };
+
+  V.goalDelete = async function (id) {
+    const db = root.App.db;
+    const g = (db.goals || []).filter(function (x) { return x.id === id; })[0];
+    if (!g) return;
+    const ok = await V.confirm('Hapus target "' + H(g.name) + '"?',
+      'Catatan target ini akan dihapus. <b>Saldo dompet dan transaksi tidak berubah.</b>', 'Hapus', true);
+    if (!ok) return;
+    db.goals = db.goals.filter(function (x) { return x.id !== id; });
+    root.App.saveAndRender();
+    V.toast('Target dihapus', 'ok');
+  };
+
+  /* ============================================================
+     VIEW: LANGGANAN BULANAN
+     ============================================================ */
+  V.langganan = function () {
+    const db = root.App.db;
+    const today = U.today();
+    const list = S.subStatus(db, today);
+    const totalBulan = S.subMonthlyTotal(db);
+    const totalTahun = S.subYearlyTotal(db);
+    const semua = (db.subscriptions || []).filter(function (s) { return s.active === false; });
+    const dekat = S.subDueSoon(db, 7, today);
+
+    const kartu = list.map(function (r) {
+      const s = r.sub;
+      const siklus = { month: '/bulan', year: '/tahun', week: '/minggu' }[s.cycle || 'month'];
+      const badge = r.paidThisMonth
+        ? '<span class="tag ok">sudah dibayar</span>'
+        : r.daysLeft < 0 ? '<span class="tag over">terlambat</span>'
+        : r.daysLeft <= 3 ? '<span class="tag over">' + H(sisaHari(r.daysLeft)) + '</span>'
+        : r.daysLeft <= 7 ? '<span class="tag warn">' + H(sisaHari(r.daysLeft)) + '</span>'
+        : '<span class="tag">' + H(sisaHari(r.daysLeft)) + '</span>';
+      return '<div class="card card-sm' + (r.paidThisMonth ? ' dim-card' : '') + '">' +
+        '<div class="card-head">' +
+          '<div class="ico-badge ' + (r.paidThisMonth ? 'in' : 'out') + '">' + H(s.icon || '🔁') + '</div>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div class="t1">' + H(s.name) + ' ' + badge + '</div>' +
+            '<div class="t2">Jatuh tempo ' + H(U.fmtDate(r.due)) +
+              (r.category ? ' · ' + H(r.category.icon + ' ' + r.category.name) : '') + '</div>' +
+          '</div>' +
+          '<button class="btn icon sm ghost" onclick="V.subForm(\'' + s.id + '\')">✏️</button>' +
+          '<button class="btn icon sm ghost" onclick="V.subDelete(\'' + s.id + '\')">🗑️</button>' +
+        '</div>' +
+        '<div style="font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px">' +
+          U.fmtRp(s.amount) + '<span class="muted" style="font-size:12px;font-weight:500"> ' + siklus + '</span></div>' +
+        ((s.cycle || 'month') !== 'month'
+          ? '<div class="muted" style="font-size:12px;margin-top:5px">setara ' + U.fmtRpShort(S.subMonthlyCost(s)) + '/bulan</div>' : '') +
+        (s.note ? '<div class="muted" style="font-size:12px;margin-top:6px">' + H(s.note) + '</div>' : '') +
+        '<div class="row mt" style="gap:7px">' +
+          (r.paidThisMonth
+            ? '<button class="btn sm" onclick="V.subUnpay(\'' + s.id + '\',\'' + U.monthOf(today) + '\')">Batalkan tanda lunas</button>'
+            : '<button class="btn sm primary" onclick="V.subPay(\'' + s.id + '\')">✓ Tandai dibayar</button>') +
+          '<span class="spacer"></span>' +
+          '<button class="btn sm ghost" onclick="V.subToggle(\'' + s.id + '\')">' + (s.active === false ? 'Aktifkan' : 'Matikan') + '</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    const kartuMati = semua.map(function (s) {
+      return '<div class="item">' +
+        '<div class="ico out">' + H(s.icon || '🔁') + '</div>' +
+        '<div class="body"><div class="t1">' + H(s.name) + '</div>' +
+          '<div class="t2">' + U.fmtRp(s.amount) + ' · dimatikan, tidak dihitung</div></div>' +
+        '<div class="right"><button class="btn sm ghost" onclick="V.subToggle(\'' + s.id + '\')">Aktifkan</button>' +
+        '<button class="btn icon sm ghost" onclick="V.subDelete(\'' + s.id + '\')">🗑️</button></div>' +
+      '</div>';
+    }).join('');
+
+    return (dekat.length ? '<div class="card alert"><div class="card-head"><h2>⏰ Segera Jatuh Tempo</h2>' +
+        '<span class="tag warn">' + dekat.length + ' langganan</span></div>' +
+      '<div class="muted" style="font-size:13px">Total ' + U.fmtRp(U.sum(dekat, function (r) { return Number(r.sub.amount); })) +
+        ' akan keluar dalam 7 hari ke depan: ' + dekat.map(function (r) { return H(r.sub.name); }).join(', ') + '.</div></div>' : '') +
+
+    '<div class="card' + (dekat.length ? ' mt' : '') + '"><div class="card-head"><h2>Langganan Bulanan</h2>' +
+        '<button class="btn primary" onclick="V.subForm()">+ Tambah Langganan</button></div>' +
+      (list.length
+        ? '<div class="grid cols-3">' + kartu + '</div>'
+        : emptyBox('🔁', 'Belum ada langganan tercatat. Netflix, Spotify, iCloud, sewa domain — masukkan di sini supaya tidak lupa.')) +
+      (list.length ? '<div class="grid cols-3 mt">' +
+        '<div class="stat out"><div class="lbl">Total per bulan</div><div class="val" style="font-size:18px">' + U.fmtRpShort(totalBulan) + '</div>' +
+          '<div class="sub">' + list.length + ' langganan aktif</div></div>' +
+        '<div class="stat out"><div class="lbl">Total per tahun</div><div class="val" style="font-size:18px">' + U.fmtRpShort(totalTahun) + '</div>' +
+          '<div class="sub">setara ' + U.fmtRpShort(totalTahun / 12) + '/bulan</div></div>' +
+        '<div class="stat"><div class="lbl">Sudah dibayar bulan ini</div><div class="val" style="font-size:18px">' +
+          list.filter(function (r) { return r.paidThisMonth; }).length + ' <span class="muted" style="font-size:13px">/ ' + list.length + '</span></div></div>' +
+      '</div>' : '') +
+    '</div>' +
+
+    (semua.length ? '<div class="card mt"><div class="card-head"><h2>Langganan Dimatikan</h2></div>' +
+      '<div class="list">' + kartuMati + '</div></div>' : '');
+  };
+
+  V.subForm = function (id) {
+    const db = root.App.db;
+    const s = id ? (db.subscriptions || []).filter(function (x) { return x.id === id; })[0] : null;
+    const f = s || { id: '', name: '', icon: '🔁', amount: '', cycle: 'month', day: U.strToDate(U.today()).getDate(),
+                    walletId: '', categoryId: '', note: '', active: true };
+
+    V.modal.open({
+      title: s ? 'Ubah Langganan' : 'Tambah Langganan',
+      body:
+        '<div class="row" style="gap:12px;align-items:flex-start">' +
+          '<div class="field" style="flex:0 0 92px"><label>Ikon</label>' +
+            '<input type="text" id="s-icon" value="' + H(f.icon) + '" maxlength="3"></div>' +
+          '<div class="field" style="flex:1"><label>Nama langganan</label>' +
+            '<input type="text" id="s-name" value="' + H(f.name) + '" placeholder="contoh: Netflix"></div>' +
+        '</div>' +
+        '<div class="row" style="gap:12px;align-items:flex-start">' +
+          '<div class="field" style="flex:1"><label>Nominal</label>' +
+            '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="s-amount" value="' +
+              (f.amount ? U.fmtNum(f.amount) : '') + '" placeholder="contoh: 54.000"></div></div>' +
+          '<div class="field" style="flex:1"><label>Siklus</label><select id="s-cycle">' +
+            opsiNilai(S.SUB_CYCLES, f.cycle) + '</select></div>' +
+        '</div>' +
+        '<div class="field"><label>Tanggal jatuh tempo</label>' +
+          '<input type="number" id="s-day" min="1" max="31" value="' + H(f.day) + '">' +
+          '<span class="hint" id="s-day-hint"></span></div>' +
+        '<div class="field"><label>Dompet pembayar</label><select id="s-wallet">' + pilihanDompet(db, f.walletId) + '</select></div>' +
+        '<div class="field"><label>Kategori</label><select id="s-cat">' + pilihanKategori(db, f.categoryId, 'out') + '</select></div>' +
+        '<div class="field"><label>Catatan <span class="muted">(opsional)</span></label>' +
+          '<input type="text" id="s-note" value="' + H(f.note) + '" placeholder="contoh: paket keluarga 4 layar"></div>',
+      foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="s-save">Simpan</button>'
+    });
+
+    const amtIn = el('s-amount');
+    amtIn.addEventListener('input', function () {
+      const v = U.parseAmount(amtIn.value); amtIn.value = v ? U.fmtNum(v) : '';
+    });
+
+    const hint = function () {
+      const c = el('s-cycle').value, d = Number(el('s-day').value) || 1;
+      const h = el('s-day-hint');
+      if (c === 'month') h.textContent = 'Tanggal 1–31 setiap bulan. Untuk tanggal 29–31, bulan yang lebih pendek memakai hari terakhir.';
+      else if (c === 'year') h.textContent = 'Tanggal 1–28; bulan mengikuti bulan saat langganan ini pertama dicatat.';
+      else h.textContent = 'Mingguan: 1 = Senin, 7 = Minggu.';
+      el('s-day').max = c === 'week' ? '7' : (c === 'year' ? '28' : '31');
+      if (c === 'week') el('s-day').value = U.clamp(d, 1, 7);
+      if (c === 'year') el('s-day').value = U.clamp(d, 1, 28);
+    };
+    el('s-cycle').addEventListener('change', hint);
+    hint();
+
+    el('s-save').onclick = function () {
+      const name = el('s-name').value.trim();
+      const amount = U.parseAmount(amtIn.value);
+      if (!name) { V.toast('Nama langganan wajib diisi', 'err'); return; }
+      if (!(amount > 0)) { V.toast('Nominal harus lebih dari 0', 'err'); return; }
+      const cycle = el('s-cycle').value;
+      const maxDay = cycle === 'week' ? 7 : (cycle === 'year' ? 28 : 31);
+      const obj = {
+        id: s ? s.id : U.uid('sub'),
+        name: name, icon: el('s-icon').value.trim() || '🔁',
+        amount: amount, cycle: cycle,
+        day: U.clamp(Number(el('s-day').value) || 1, 1, maxDay),
+        ym: U.monthOf(U.today()),
+        walletId: el('s-wallet').value, categoryId: el('s-cat').value,
+        note: el('s-note').value.trim(),
+        active: s ? s.active !== false : true
+      };
+      if (s) { const i = db.subscriptions.findIndex(function (x) { return x.id === s.id; }); db.subscriptions[i] = obj; }
+      else db.subscriptions.push(obj);
+      root.App.saveAndRender();
+      V.toast(s ? 'Langganan diperbarui' : 'Langganan ditambahkan', 'ok');
+      V.modal.close();
+    };
+  };
+
+  // Tandai sebuah langganan lunas bulan ini = catat transaksi + penanda di catatan
+  V.subPay = function (id) {
+    const db = root.App.db;
+    const s = (db.subscriptions || []).filter(function (x) { return x.id === id; })[0];
+    if (!s) return;
+    const today = U.today();
+    if (S.subPaidIn(db, s, U.monthOf(today))) { V.toast('Bulan ini sudah ditandai lunas', 'err'); return; }
+    const walletId = s.walletId || ((db.wallets || [])[0] || {}).id;
+    if (!walletId) { V.toast('Belum ada dompet — tambahkan dulu di menu Dompet & Bank', 'err'); return; }
+    const tx = S.mkTx({
+      date: today, type: 'out', amount: s.amount, walletId: walletId,
+      categoryId: s.categoryId || '',
+      note: s.name + ' /sub:' + s.id + '/ ' + U.monthOf(today)
+    });
+    db.transactions.push(tx);
+    s.lastPaid = today;
+    root.App.saveAndRender();
+    V.toast('Dibayar: ' + s.name + ' ' + U.fmtRp(s.amount), 'ok');
+  };
+
+  // Batalkan tanda lunas: buang transaksi penandanya
+  V.subUnpay = async function (id, ym) {
+    const db = root.App.db;
+    const s = (db.subscriptions || []).filter(function (x) { return x.id === id; })[0];
+    if (!s) return;
+    const key = '/sub:' + s.id + '/ ' + ym;
+    const tx = (db.transactions || []).filter(function (t) { return String(t.note || '').indexOf(key) > -1; })[0];
+    if (!tx) { V.toast('Tidak ada penanda pembayaran untuk dibatalkan', 'err'); return; }
+    const ok = await V.confirm('Batalkan tanda lunas ' + H(s.name) + '?',
+      'Transaksi pengeluaran ' + U.fmtRp(tx.amount) + ' pada ' + H(U.fmtDate(tx.date)) + ' akan <b>dihapus</b>.',
+      'Batalkan', true);
+    if (!ok) return;
+    db.transactions = db.transactions.filter(function (t) { return t.id !== tx.id; });
+    s.lastPaid = '';
+    root.App.saveAndRender();
+    V.toast('Tanda lunas dibatalkan', 'ok');
+  };
+
+  V.subToggle = function (id) {
+    const db = root.App.db;
+    const s = (db.subscriptions || []).filter(function (x) { return x.id === id; })[0];
+    if (!s) return;
+    s.active = s.active === false;
+    root.App.saveAndRender();
+    V.toast(s.active ? s.name + ' diaktifkan lagi' : s.name + ' dimatikan (tidak dihitung)', 'ok');
+  };
+
+  V.subDelete = async function (id) {
+    const db = root.App.db;
+    const s = (db.subscriptions || []).filter(function (x) { return x.id === id; })[0];
+    if (!s) return;
+    const ok = await V.confirm('Hapus langganan "' + H(s.name) + '"?',
+      'Catatan langganannya dihapus. <b>Transaksi pembayaran yang sudah tercatat tetap ada.</b>', 'Hapus', true);
+    if (!ok) return;
+    db.subscriptions = db.subscriptions.filter(function (x) { return x.id !== id; });
+    root.App.saveAndRender();
+    V.toast('Langganan dihapus', 'ok');
+  };
+
+  /* ============================================================
+     VIEW: PROFIL — beberapa "akun" lokal
+     Tiap profil menyimpan datanya sendiri (lihat S.Profiles).
+     ============================================================ */
+  const IKON_PROFIL = ['🏠', '💼', '👦', '👧', '💰', '🎓', '🏢', '🧑', '👨‍👩‍👧', '🐷'];
+  const WARNA_PROFIL = ['#5b8def', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#14b8a6', '#ec4899', '#64748b'];
+
+  function pilihanIkon(kini) {
+    return '<div class="ikon-pilih" id="p-ikon">' + IKON_PROFIL.map(function (ic) {
+      return '<button type="button" class="ikon-btn' + (ic === kini ? ' on' : '') + '" data-ikon="' + ic + '">' + ic + '</button>';
+    }).join('') + '</div>';
+  }
+  function pilihanWarna(kini) {
+    return '<div class="warna-pilih" id="p-warna">' + WARNA_PROFIL.map(function (c) {
+      return '<button type="button" class="warna-btn' + (c === kini ? ' on' : '') + '" data-warna="' + c + '" style="background:' + c + '"></button>';
+    }).join('') + '</div>';
+  }
+
+  V.profil = function () {
+    const P = S.Profiles;
+    const list = P.list();
+    const aktif = P.activeId();
+    const berSandi = P.countPinned();
+
+    const kartu = list.map(function (p) {
+      const ini = p.id === aktif;
+      const terkunci = p.pinHash && P.isLocked(p.id);
+      const isi = (function () {
+        try {
+          const d = S.Persist.loadFor(p.id);
+          if (!d) return { tx: 0, saldo: 0, kosong: true };
+          return { tx: (d.transactions || []).length, saldo: S.totalBalance(d), kosong: false };
+        } catch (e) { return { tx: 0, saldo: 0, kosong: true }; }
+      })();
+
+      return '<div class="profil-card' + (ini ? ' on' : '') + '" style="--pc:' + H(p.color) + '">' +
+        '<div class="pc-ic">' + H(p.icon) + '</div>' +
+        '<div class="pc-main">' +
+          '<div class="pc-nama">' + H(p.name) +
+            (ini ? ' <span class="tag ok">aktif</span>' : '') +
+            (p.pinHash ? ' <span class="tag">🔒 bersandi</span>' : '') +
+            (terkunci ? ' <span class="tag warn">terkunci</span>' : '') +
+          '</div>' +
+          '<div class="pc-info muted">' +
+            (isi.kosong ? 'Belum ada data' : isi.tx + ' transaksi · saldo ' + U.fmtRp(isi.saldo)) +
+          '</div>' +
+        '</div>' +
+        '<div class="pc-act">' +
+          (ini ? '' : '<button class="btn sm" onclick="V.profilPakai(\'' + p.id + '\')">Pakai</button>') +
+          '<button class="btn icon sm ghost" title="Ubah" onclick="V.profilForm(\'' + p.id + '\')">✏️</button>' +
+          (list.length > 1
+            ? '<button class="btn icon sm ghost" title="Hapus" onclick="V.profilDelete(\'' + p.id + '\')">🗑️</button>'
+            : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="card"><div class="card-head">' +
+        '<h2>Profil</h2><span class="spacer"></span>' +
+        '<button class="btn primary" onclick="V.profilForm()">+ Profil Baru</button></div>' +
+      '<p class="muted" style="margin:-4px 0 14px">Setiap profil punya catatan, dompet, anggaran, dan target sendiri. ' +
+        'Data antar profil <b>terpisah total</b> — tidak bisa saling melihat.</p>' +
+      '<div class="profil-list">' + kartu + '</div>' +
+    '</div>' +
+
+    '<div class="card mt"><div class="card-head"><h2>Pengamanan</h2></div>' +
+      '<p class="muted" style="margin:-4px 0 12px">' +
+        (berSandi
+          ? 'Ada ' + berSandi + ' profil yang dilindungi sandi. Tombol <b>🔒 Kunci</b> di sidebar akan menyembunyikan semua catatan sampai sandi dimasukkan. Berguna kalau komputernya dipakai bersama.'
+          : 'Belum ada profil yang bersandi. Tambahkan sandi lewat tombol ✏️ di atas supaya catatan tidak bisa dibuka orang lain.') +
+      '</p>' +
+      (berSandi ? '<button class="btn" onclick="V.profilKunci()">🔒 Kunci Sekarang</button>' : '') +
+      '<div class="hint" style="margin-top:10px">Catatan: sandi ini menjaga dari orang yang memakai browser yang sama. ' +
+        'Ia <b>bukan</b> enkripsi — orang yang sangat paham teknis tetap bisa membaca data di browser ini.</div>' +
+    '</div>';
+  };
+
+  V.profilForm = function (id) {
+    const P = S.Profiles;
+    const p = id ? P.get(id) : null;
+    const list = P.list();
+    const f = p || { id: '', name: '', icon: IKON_PROFIL[0], color: WARNA_PROFIL[0] };
+    const bolehSandi = list.length > 1 || !!p;
+
+    V.modal.open({
+      title: p ? 'Ubah Profil' : 'Profil Baru',
+      body:
+        '<div class="field"><label>Nama profil</label>' +
+          '<input type="text" id="p-nama" value="' + H(f.name) + '" placeholder="contoh: Pribadi, Usaha, Anak" maxlength="24"></div>' +
+        '<div class="field"><label>Ikon</label>' + pilihanIkon(f.icon) + '</div>' +
+        '<div class="field"><label>Warna</label>' + pilihanWarna(f.color) + '</div>' +
+        '<div class="field"><label>Sandi <span class="muted">(opsional)</span></label>' +
+          '<input type="password" id="p-pin" inputmode="numeric" autocomplete="new-password" ' +
+            'placeholder="' + (p && p.pinHash ? 'biarkan kosong bila tidak ingin mengubah' : 'contoh: 1234 (boleh kosong)') + '">' +
+          (p && p.pinHash ? '<span class="hint">Kosongkan = sandi tidak diubah. Isi <b>0</b> lalu simpan = hapus sandi.</span>' : '<span class="hint">4–8 angka. Kosongkan kalau tidak perlu sandi.</span>') +
+        '</div>',
+      foot: '<button class="btn" data-close>Batal</button>' +
+            '<button class="btn primary" id="p-save">Simpan</button>'
+    });
+
+    // ikon & warna: pilih lewat tombol, bukan teks
+    let ikon = f.icon, warna = f.color;
+    el('p-ikon').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-ikon]'); if (!b) return;
+      ikon = b.dataset.ikon;
+      Array.prototype.forEach.call(el('p-ikon').children, function (x) { x.classList.toggle('on', x === b); });
+    });
+    el('p-warna').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-warna]'); if (!b) return;
+      warna = b.dataset.warna;
+      Array.prototype.forEach.call(el('p-warna').children, function (x) { x.classList.toggle('on', x === b); });
+    });
+
+    el('p-save').onclick = function () {
+      const nama = el('p-nama').value.trim();
+      const pinRaw = el('p-pin').value.trim();
+
+      if (!nama) { V.toast('Nama profil tidak boleh kosong', 'err'); return; }
+      if (pinRaw && !/^[0-9]{4,8}$/.test(pinRaw)) {
+        if (pinRaw !== '0') { V.toast('Sandi harus 4–8 angka', 'err'); return; }
+      }
+
+      if (p) {
+        // pin: undefined = jangan ubah | '' = hapus | '0' = hapus | angka = ganti
+        let pin;
+        if (pinRaw === '') pin = undefined;
+        else if (pinRaw === '0') pin = '';
+        else pin = pinRaw;
+        S.Profiles.update(p.id, { name: nama, icon: ikon, color: warna }, pin);
+        V.toast('Profil diperbarui', 'ok');
+      } else {
+        const baru = S.Profiles.create(nama, ikon, warna, pinRaw || '');
+        V.toast('Profil "' + nama + '" dibuat (masih kosong)', 'ok');
+        V.modal.close();
+        root.App.pindahProfil(baru.id, true);
+        return;
+      }
+      V.modal.close();
+      if (p && p.id === S.Profiles.activeId()) root.App.muatProfil();
+      V.updateProfilBtn();
+      root.App.render();
+    };
+  };
+
+  V.profilPakai = function (id) {
+    const P = S.Profiles;
+    if (id === P.activeId()) { V.toast('Profil ini sudah aktif'); return; }
+    V.modal.open({
+      title: 'Pindah ke profil ini?',
+      body: '<p>Data yang sekarang terbuka akan diganti dengan data profil <b>' +
+            H((P.get(id) || {}).name || '') + '</b>.</p>' +
+            '<p class="muted" style="margin-top:8px">Catatanmu tidak hilang — hanya disimpan, dan bisa dibuka lagi kapan saja.</p>',
+      foot: '<button class="btn" data-close>Batal</button>' +
+            '<button class="btn primary" id="pp-ok">Pindah</button>'
+    });
+    el('pp-ok').onclick = function () { V.modal.close(); root.App.pindahProfil(id); };
+  };
+
+  V.profilDelete = async function (id) {
+    const P = S.Profiles;
+    const p = P.get(id);
+    if (!p) return;
+    if (P.list().length <= 1) { V.toast('Minimal harus ada 1 profil', 'err'); return; }
+
+    V.modal.open({
+      title: 'Hapus profil "' + H(p.name) + '"?',
+      body: '<p style="color:var(--out)"><b>Seluruh data profil ini akan hilang permanen:</b> semua transaksi, dompet, anggaran, target, langganan, dan struk.</p>' +
+            '<p style="margin-top:10px">Tidak ada cara mengembalikannya. Kalau ragu, unduh dulu backupnya lewat profil tersebut.</p>' +
+            '<div class="field" style="margin-top:14px"><label>Ketik ULANG nama profil <b>' + H(p.name) + '</b> untuk memastikan</label>' +
+            '<input type="text" id="pd-konfirm" placeholder="' + H(p.name) + '" autocomplete="off"></div>',
+      foot: '<button class="btn" data-close>Batal</button>' +
+            '<button class="btn danger" id="pd-ok" disabled>Hapus Permanen</button>'
+    });
+
+    const inp = el('pd-konfirm'), btn = el('pd-ok');
+    inp.addEventListener('input', function () { btn.disabled = inp.value.trim() !== p.name; });
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !btn.disabled) btn.click(); });
+    btn.onclick = function () {
+      if (inp.value.trim() !== p.name) return;
+      const wasActive = P.activeId() === id;
+      S.Profiles.remove(id);
+      V.modal.close();
+      if (wasActive) root.App.muatProfil();
+      root.App.render();
+      V.toast('Profil dihapus', 'ok');
+    };
+  };
+
+  /* Minta sandi sebelum membuka profil yang terkunci. */
+  V.profilGate = function (onOk) {
+    const P = S.Profiles;
+    const p = P.active();
+    if (!p) { if (onOk) onOk(); return; }
+
+    V.modal.open({
+      title: p.icon + '  ' + p.name,
+      body: '<p class="muted">Profil ini dilindungi sandi. Masukkan sandi untuk melihat catatan.</p>' +
+            '<div class="field" style="margin-top:14px"><label>Sandi</label>' +
+            '<input type="password" id="pg-pin" inputmode="numeric" autocomplete="current-password" placeholder="••••"></div>' +
+            '<div class="hint" id="pg-err" style="color:var(--out)"></div>',
+      foot: '<button class="btn" id="pg-lain">Ganti Profil</button>' +
+            '<button class="btn primary" id="pg-ok">Buka</button>',
+      lock: true
+    });
+
+    const inp = el('pg-pin');
+    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 50);
+
+    function coba() {
+      if (P.checkPin(p.id, inp.value)) {
+        P.unlock(p.id);
+        V.modal.close(true);              // modal terkunci: tutup paksa
+        root.App.applyLockUI();
+        root.App.render();
+        V.updateProfilBtn();
+        V.toast('Selamat datang, ' + p.name, 'ok');
+        if (onOk) onOk();
+      } else {
+        el('pg-err').textContent = 'Sandi salah. Coba lagi.';
+        inp.value = ''; inp.focus();
+      }
+    }
+    el('pg-ok').onclick = coba;
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') coba(); });
+    el('pg-lain').onclick = function () { V.modal.close(); root.App.go('profil'); };
+  };
+
+  /* Perbarui tombol profil di sidebar. */
+  V.updateProfilBtn = function () {
+    const p = S.Profiles.active();
+    const ic = el('pb-ic'), nm = el('pb-nama');
+    if (ic) ic.textContent = p ? p.icon : '👤';
+    if (nm) nm.textContent = p ? p.name : 'Profil';
+    const k = el('btn-kunci');
+    if (k) k.hidden = !(p && p.pinHash) || S.Profiles.isLocked(p.id);
+  };
+
+  V.profilKunci = function () {
+    const P = S.Profiles;
+    const p = P.active();
+    if (!p || !p.pinHash) { V.toast('Profil ini tidak bersandi', 'err'); return; }
+    P.lock(p.id);
+    V.toast('Catatan dikunci 🔒', 'ok');
+    root.App.applyLockUI();
+    root.App.render();
+    V.profilGate();
+  };
+
+  root.V = V;
+})(typeof window !== 'undefined' ? window : globalThis);

@@ -1,0 +1,6 @@
+node_modules/
+cloudflared.exe
+data/
+*.log
+screen.png
+snap.ps1
