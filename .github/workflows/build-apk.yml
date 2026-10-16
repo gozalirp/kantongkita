@@ -51,6 +51,18 @@ jobs:
         run: |
           npx cap add android
           npx cap sync android
+          # Fix Kotlin stdlib duplicate classes conflict
+          cat << 'EOF' >> android/app/build.gradle
+
+          configurations.all {
+              resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+                  def requested = details.requested
+                  if (requested.group == 'org.jetbrains.kotlin') {
+                      details.useVersion '1.8.22'
+                  }
+              }
+          }
+          EOF
 
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@v3
