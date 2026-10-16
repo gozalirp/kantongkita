@@ -48,6 +48,10 @@
       this.db.meta.updated = new Date().toISOString();
       const r = S.Persist.save(this.db);
       if (r === 'slim') V.toast('Penyimpanan penuh — struk dihapus otomatis, transaksi tetap aman', 'err');
+      
+      // Auto-Sync ke Cloudflare D1 di background (Hybrid Offline-First)
+      this.syncCloudPush();
+
       if (root.GDrive && this.db.settings.driveEnabled && this.db.settings.driveFileId) {
         clearTimeout(this._pushT);
         const self = this;
@@ -60,6 +64,52 @@
         }, 4000);
       }
       return r;
+    },
+
+    /* Auto-Sync Cloudflare Push (Background) */
+    syncCloudPush: function () {
+      clearTimeout(this._cloudPushT);
+      const self = this;
+      this._cloudPushT = setTimeout(function () {
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(self.db)
+        }).then(function (res) {
+          if (res.ok) {
+            App.updateNetDot(true, 'Cloudflare Aktif');
+          }
+        }).catch(function () {
+          App.updateNetDot(false, 'Offline (Lokal)');
+        });
+      }, 1500);
+    },
+
+    /* Auto-Sync Cloudflare Pull (Background saat buka aplikasi) */
+    syncCloudPull: function () {
+      const self = this;
+      fetch('/api/sync')
+        .then(function (res) { return res.json(); })
+        .then(function (res) {
+          if (res && res.ok && res.data) {
+            const cloudUpdated = res.data.meta && res.data.meta.updated;
+            const localUpdated = self.db && self.db.meta && self.db.meta.updated;
+            // Jika data di cloud lebih baru, perbarui data lokal
+            if (!localUpdated || (cloudUpdated && cloudUpdated > localUpdated)) {
+              self.db = S.normalize(res.data);
+              S.Persist.save(self.db);
+              self.render();
+              V.toast('Data disinkronkan otomatis dari Cloud');
+            }
+            App.updateNetDot(true, 'Cloudflare Aktif');
+          } else {
+            // Jika cloud kosong, kirim data lokal sekarang ke cloud
+            if (self.db) self.syncCloudPush();
+          }
+        })
+        .catch(function () {
+          App.updateNetDot(false, 'Offline (Lokal)');
+        });
     },
 
     saveAndRender: function () { this.save(); this.render(); },
@@ -80,12 +130,16 @@
     },
 
     /* ---------- net indicator ---------- */
-    updateNetDot: function (online) {
+    updateNetDot: function (online, label) {
       const d = document.getElementById('net-dot');
       if (!d) return;
       const on = !!online;
       d.classList.toggle('on', on);
-      d.querySelector('em').textContent = on ? 'Drive aktif' : 'Lokal';
+      if (label) {
+        d.querySelector('em').textContent = label;
+      } else {
+        d.querySelector('em').textContent = on ? 'Tersinkron' : 'Lokal';
+      }
     },
 
     /* ---------- profil ---------- */
@@ -200,6 +254,9 @@
 
       this.navigate();
       V.updateProfilBtn && V.updateProfilBtn();
+
+      // Coba sinkronisasi otomatis dari Cloudflare D1
+      this.syncCloudPull();
 
       // profil bersandi yang belum dibuka -> langsung minta sandi
       if (this.terkunci) setTimeout(function () { V.profilGate(); }, 200);
