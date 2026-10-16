@@ -59,7 +59,14 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace || (echo "=== GRADLE ERROR LOG ===" && ./gradlew assembleDebug --info > ../gradle_error.log 2>&1; cat ../gradle_error.log | tail -n 50; exit 1)
+          ./gradlew assembleDebug --stacktrace || (echo "=== GRADLE ERROR LOG ===" && ./gradlew assembleDebug --info > ../gradle_error.log 2>&1; cat ../gradle_error.log | tail -n 100; false)
+
+      - name: Upload Build Log on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-error-log
+          path: gradle_error.log
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
