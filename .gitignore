@@ -1,6 +1,6 @@
 node_modules/
-cloudflared.exe
-data/
-*.log
+.wrangler/
 screen.png
 snap.ps1
+cloudflared.exe
+*.log
