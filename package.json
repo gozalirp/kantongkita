@@ -1,0 +1,10 @@
+{
+  "name": "savingduit",
+  "version": "1.0.0",
+  "description": "SavingDuit - Aplikasi Keuangan Pribadi",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "deploy": "wrangler pages deploy . --project-name=savingduit"
+  }
+}
