@@ -438,46 +438,19 @@
     const bulan = S.summaryMonth(db);
     const r2026 = bulan;
 
-    // HERO MASTER WALLET CARD (Fintech Black Titanium Card)
-    const activeProfile = S.Profiles.get(S.Profiles.activeId()) || { name: 'Pribadi' };
-    const heroCard =
-      '<div class="fintech-hero-card">' +
-        '<div class="fhc-glow"></div>' +
-        '<div class="fhc-header">' +
-          '<div class="fhc-chip-wrap">' +
-            '<div class="fhc-chip"></div>' +
-            '<span class="fhc-contactless">🛜</span>' +
-          '</div>' +
-          '<span class="fhc-brand">SavingDuit <em>BLACK</em></span>' +
-        '</div>' +
-        '<div class="fhc-balance-wrap">' +
-          '<span class="fhc-bal-label">TOTAL SALDO AKTIF</span>' +
-          '<h1 class="fhc-balance">' + U.fmtRp(total) + '</h1>' +
-        '</div>' +
-        '<div class="fhc-footer">' +
-          '<div class="fhc-holder">' +
-            '<span class="fhc-hl">PROFIL UTAMA</span>' +
-            '<strong class="fhc-name">' + H(activeProfile.name).toUpperCase() + '</strong>' +
-          '</div>' +
-          '<div class="fhc-quick-actions">' +
-            '<button class="fhc-qbtn in" onclick="V.txForm({type:\'in\'})" title="Pemasukan"><span>⬇️</span> Terima</button>' +
-            '<button class="fhc-qbtn out" onclick="V.txForm({type:\'out\'})" title="Pengeluaran"><span>⬆️</span> Kirim</button>' +
-            '<button class="fhc-qbtn move" onclick="V.txForm({type:\'move\'})" title="Transfer"><span>🔁</span> Pindah</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-
     const st4 =
-      '<div class="grid cols-3 mt">' +
-        '<div class="stat in"><div class="lbl">Pemasukan Bulan Ini</div>' +
+      '<div class="grid cols-4">' +
+        '<div class="stat"><div class="lbl">Total Saldo</div><div class="val">' + U.fmtRp(total) + '</div>' +
+          '<div class="sub">' + (db.wallets || []).length + ' dompet aktif</div></div>' +
+        '<div class="stat in"><div class="lbl">Pemasukan · ' + U.fmtMonth(U.monthOf(U.today())) + '</div>' +
           '<div class="val">' + U.fmtRpShort(r2026.income) + '</div>' +
           '<div class="sub">' + r2026.countIn + ' transaksi</div></div>' +
-        '<div class="stat out"><div class="lbl">Pengeluaran Bulan Ini</div>' +
+        '<div class="stat out"><div class="lbl">Pengeluaran · ' + U.fmtMonth(U.monthOf(U.today())) + '</div>' +
           '<div class="val">' + U.fmtRpShort(r2026.expense) + '</div>' +
           '<div class="sub">' + r2026.countOut + ' transaksi</div></div>' +
-        '<div class="stat' + (r2026.net >= 0 ? ' in' : ' out') + '"><div class="lbl">Arus Kas Bersih</div>' +
+        '<div class="stat' + (r2026.net >= 0 ? ' in' : ' out') + '"><div class="lbl">Selisih</div>' +
           '<div class="val">' + (r2026.net >= 0 ? '+' : '−') + U.fmtRpShort(Math.abs(r2026.net)) + '</div>' +
-          '<div class="sub">' + (r2026.net >= 0 ? 'surplus dana 💪' : 'defisit kas ⚠️') + '</div></div>' +
+          '<div class="sub">' + (r2026.net >= 0 ? 'surplus 💪' : 'defisit ⚠️') + '</div></div>' +
       '</div>';
 
     // dompet
@@ -517,7 +490,6 @@
     const netMonth = bulan.net;
 
     return '' +
-    heroCard +
     st4 +
     '<div class="card mt"><div class="card-head"><h2>Tampilan Saldo Rekening / Tabungan</h2>' +
       '<button class="btn sm" onclick="App.go(\'dompet\')">Kelola</button></div>' +
