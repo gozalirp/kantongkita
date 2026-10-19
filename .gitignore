@@ -24,4 +24,5 @@ capacitor.config.json
 
 # Screenshot sementara untuk dokumen Word (di-generate ulang, lihat docs-build/gen-docx.js)
 docs-build/*.png
-public/__shot.html
+# Berkas sementara uji tata letak HP (tests/hp-layout.js)
+tests/hp-hasil.txt

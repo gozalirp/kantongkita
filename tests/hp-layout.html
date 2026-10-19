@@ -1,0 +1,315 @@
+<!-- Uji tata letak SavingDuit pada ukuran HP (Xiaomi 13T, iPhone 11 Pro, dll).
+     Dijalankan lewat:  node tests/hp-layout.js   lalu buka
+     http://localhost:8899/__hp.html  di Chrome headless.
+     Hasil tertulis di tests/hp-hasil.txt.
+
+     Berkas ini sengaja disimpan di tests/ (bukan public/) supaya tidak
+     pernah ikut ter-deploy: ia menyuntik data contoh ke localStorage. -->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Uji Tata Letak di HP — SavingDuit</title>
+<style>
+  body{font:13px/1.5 monospace;margin:0;padding:12px;background:#fff;color:#111}
+  #hasil{white-space:pre;font-size:12px}
+  iframe{border:1px solid #ccc;position:fixed;left:-9999px;top:0}
+</style>
+</head>
+<body>
+<div id="hasil">menjalankan…</div>
+<iframe id="frame" title="aplikasi"></iframe>
+<script>
+/* ============================================================
+   Uji otomatis: apakah tampilan pas di Xiaomi 13T & iPhone 11 Pro.
+   Takik disimulasikan lewat variabel --sat/--sab/--sal/--sar yang
+   dipasang di :root style.css (di HP asli nilainya dari env()).
+   ============================================================ */
+
+var PID = 'uji';
+var DBID = 'savingduit.db.v1::' + PID;
+
+/* ---------- data contoh (dompet & kategori dibuat otomatis oleh store) ---------- */
+function seed() {
+  var hari = function (n) {
+    var d = new Date(); d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
+  };
+  localStorage.setItem('savingduit.profiles', JSON.stringify([
+    { id: PID, name: 'Pribadi', icon: '🏠', color: '#80B8FF', created: Date.now() }
+  ]));
+  localStorage.setItem('savingduit.profile.active', JSON.stringify(PID));
+  localStorage.setItem('savingduit.session', PID);
+  localStorage.setItem('savingduit.profile.locked', false);
+
+  var dompet = [
+    { id: 'w1', name: 'Dompet Tunai', type: 'cash', icon: '💵', color: '#22c55e', initial: 750000, archived: false },
+    { id: 'w2', name: 'Bank BCA', type: 'bank', icon: '🏦', color: '#2563eb', initial: 4200000, archived: false },
+    { id: 'w3', name: 'Gopay', type: 'ewallet', icon: '📱', color: '#8b5cf6', initial: 320000, archived: false }
+  ];
+  var kat = [
+    { id: 'c1', name: 'Makan & Minum', type: 'out', icon: '🍽️', archived: false },
+    { id: 'c2', name: 'Transportasi', type: 'out', icon: '🚌', archived: false },
+    { id: 'c3', name: 'Belanja', type: 'out', icon: '🛒', archived: false },
+    { id: 'c4', name: 'Tagihan', type: 'out', icon: '🧾', archived: false },
+    { id: 'c5', name: 'Gaji', type: 'in', icon: '💰', archived: false },
+    { id: 'c6', name: 'Bonus', type: 'in', icon: '🎁', archived: false }
+  ];
+  var tx = [], n = 0;
+  var pola = [
+    [0, 'in', 8500000, 'w2', 'c5', 'Gaji bulanan'],
+    [1, 'out', 28500, 'w1', 'c1', 'Nasi padang + es teh'],
+    [2, 'out', 120000, 'w2', 'c4', 'Token listrik'],
+    [3, 'out', 45000, 'w1', 'c2', 'Ojek online ke kantor'],
+    [5, 'out', 315000, 'w2', 'c3', 'Belanja bulanan Indomaret'],
+    [7, 'out', 18000, 'w1', 'c1', 'Kopi susu'],
+    [9, 'in', 750000, 'w2', 'c6', 'Bonus proyek'],
+    [12, 'out', 65000, 'w1', 'c1', 'Makan siang tim'],
+    [15, 'out', 250000, 'w2', 'c4', 'Internet bulanan'],
+    [18, 'out', 32000, 'w3', 'c2', 'Ojek pulang'],
+    [22, 'out', 189000, 'w2', 'c3', 'Sepatu lari'],
+    [26, 'in', 8500000, 'w2', 'c5', 'Gaji bulan lalu']
+  ];
+  pola.forEach(function (p) {
+    tx.push({
+      id: 'tx' + (++n), date: hari(p[0]), type: p[1], amount: p[2],
+      walletId: p[3], walletTo: null, categoryId: p[4], note: p[5],
+      receiptId: null, createdAt: Date.now() - p[0] * 86400000, updatedAt: Date.now() - p[0] * 86400000
+    });
+  });
+  tx.push({
+    id: 'tx-pindah', date: hari(4), type: 'move', amount: 500000, walletId: 'w2',
+    walletTo: 'w3', categoryId: null, note: 'Top up Gopay', receiptId: null,
+    createdAt: Date.now(), updatedAt: Date.now()
+  });
+
+  localStorage.setItem(DBID, JSON.stringify({
+    wallets: dompet, categories: kat, transactions: tx,
+    budgets: [
+      { id: 'b1', categoryId: 'c1', limit: 2000000, period: 'month', note: 'Makan sebulan' },
+      { id: 'b2', categoryId: 'c2', limit: 400000, period: 'month', note: 'Transport' }
+    ],
+    goals: [
+      { id: 'g1', name: 'Laptop Baru', icon: '💻', target: 15000000, saved: 4250000, walletId: 'w2', due: hari(-120), note: 'Kerja' },
+      { id: 'g2', name: 'Dana Darurat', icon: '🛟', target: 20000000, saved: 18000000, walletId: 'w2', due: hari(-300), note: '6 bulan biaya' }
+    ],
+    subscriptions: [
+      { id: 's1', name: 'Netflix', icon: '🎬', amount: 54000, cycle: 'month', day: 5, ym: null, walletId: 'w2', categoryId: 'c4', note: '', active: true },
+      { id: 's2', name: 'Spotify', icon: '🎵', amount: 29900, cycle: 'month', day: 12, ym: null, walletId: 'w3', categoryId: 'c4', note: '', active: true }
+    ],
+    receipts: {}
+  }));
+}
+
+/* ---------- perangkat uji ---------- */
+var PERANGKAT = [
+  { nama: 'iPhone 11 Pro',      l: 375, t: 812, sat: 44, sab: 34, sal: 0,  sar: 0 },
+  { nama: 'Xiaomi 13T',         l: 444, t: 986, sat: 0,  sab: 0,  sal: 0,  sar: 0 },
+  { nama: 'Xiaomi 13T +status', l: 444, t: 986, sat: 32, sab: 24, sal: 0,  sar: 0 },
+  { nama: 'iPhone 11 Pro ⌐',    l: 812, t: 375, sat: 0,  sab: 21, sal: 44, sar: 44 }
+];
+var TAMPILAN = ['dashboard', 'transaksi', 'rekap', 'anggaran', 'target',
+                'langganan', 'dompet', 'kategori', 'pengaturan', 'profil'];
+var LEBAR_UJI = [320, 360, 375, 393, 412, 444];
+var LEBAR_VIEW = ['dashboard', 'transaksi', 'rekap', 'anggaran', 'target', 'langganan'];
+
+var frame = document.getElementById('frame');
+var tunggu = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+function lapor(t) { return fetch('/__hasil', { method: 'POST', body: t }).catch(function () {}); }
+window.onerror = function (m, s, l) {
+  lapor('JS ERROR: ' + m + ' @ ' + s + ':' + l);
+};
+
+function buka(l, t, tampilan, inset) {
+  return new Promise(function (selesai) {
+    frame.style.width = l + 'px';
+    frame.style.height = t + 'px';
+    frame.onload = function () {
+      var d, w;
+      try { d = frame.contentDocument; w = frame.contentWindow; } catch (e) { selesai({ galat: 'akses ditolak' }); return; }
+      if (inset) {
+        var r = d.documentElement.style;
+        r.setProperty('--sat', inset.sat + 'px');
+        r.setProperty('--sab', inset.sab + 'px');
+        r.setProperty('--sal', inset.sal + 'px');
+        r.setProperty('--sar', inset.sar + 'px');
+      }
+      tunggu(650).then(function () { selesai({ d: d, w: w }); });
+    };
+    frame.src = 'index.html?u=' + Date.now() + '#/' + tampilan;
+  });
+}
+
+function periksa(ctx, dev, tampilan) {
+  var d = ctx.d, w = ctx.w, g = {};
+  var W = w.innerWidth, H = w.innerHeight;
+  var de = d.documentElement;
+
+  g.lebar = W; g.tinggi = H;
+  g.judul = (d.getElementById('page-title') || {}).textContent || '?';
+  g.cuplikan = (d.getElementById('content') || {}).textContent.slice(0, 40).replace(/\s+/g, ' ').trim();
+
+  /* 1. luapan mendatar di seluruh dokumen */
+  g.luapan = Math.max(0, de.scrollWidth - W);
+
+  /* 2. elemen yang melewati tepi kanan (tabel memang boleh menggeser).
+        Hanya elemen TERLUAR yang dilaporkan — anak-anaknya cuma ikut terdorong,
+        jadi penyebab sebenarnya adalah induknya. */
+  function namaEl(e) {
+    var k = e.tagName.toLowerCase();
+    if (e.id) k += '#' + e.id;
+    var cn = (typeof e.className === 'string' ? e.className : '').trim();
+    if (cn) k += '.' + cn.split(/\s+/).join('.');
+    return k;
+  }
+  function keluar(e) {
+    var r = e.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return false;
+    return r.right > W + 1 || r.left < -1;
+  }
+  var lewat = [];
+  Array.prototype.forEach.call(d.querySelectorAll('#content *'), function (e) {
+    if (e.closest('.tbl-wrap')) return;
+    if (!keluar(e)) return;
+    var p = e.parentElement;
+    if (p && p !== d.body && !p.closest('.tbl-wrap') && keluar(p)) return;
+    var r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+    var ip = e.parentElement, ci = ip ? getComputedStyle(ip) : null;
+    lewat.push(namaEl(e) + '  w=' + Math.round(r.width) + ' mulai=' + Math.round(r.left) +
+      ' | min-width=' + cs.minWidth +
+      (ci ? '  || INDUK ' + namaEl(ip) + ' display=' + ci.display +
+            ' kolom=' + ci.gridTemplateColumns + ' min-width=' + ci.minWidth : ''));
+  });
+  g.lewat = lewat.slice(0, 4);
+  g.jumlahLewat = lewat.length;
+
+  /* 3. bilah bawah: area ketuk harus tetap 68px walau ada bilah gestur */
+  var nav = d.getElementById('bottom-nav');
+  var navR = nav.getBoundingClientRect(), cs = getComputedStyle(nav);
+  g.tinggiBilah = Math.round(navR.height);
+  g.areaKetukBilah = Math.round(navR.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
+  g.targetKetuk = {};
+  ['dashboard', 'transaksi', 'rekap', 'pengaturan'].forEach(function (v) {
+    var it = d.querySelector('.bnav-item[data-bview="' + v + '"]');
+    if (it) g.targetKetuk[v] = Math.round(it.getBoundingClientRect().height);
+  });
+  var fab = d.querySelector('.bnav-fab');
+  if (fab) g.targetKetuk.fab = Math.round(fab.getBoundingClientRect().width);
+
+  /* 4. apakah isi terakhir tertutup bilah bawah? */
+  var isi = d.getElementById('content');
+  isi.scrollTop = isi.scrollHeight;
+  var bawah = isi.lastElementChild ? isi.lastElementChild.getBoundingClientRect() : null;
+  g.sisaBawah = bawah ? Math.round(navR.top - bawah.bottom) : null;
+  g.tertutupBilah = g.sisaBawah !== null && g.sisaBawah < -1;
+
+  /* 5. apakah bagian atas tertutup takik? */
+  isi.scrollTop = 0;
+  var h1 = d.querySelector('.topbar h1');
+  var tb = d.querySelector('.topbar').getBoundingClientRect();
+  g.atasTopbar = Math.round(tb.top);
+  g.isiAtasTerlihat = h1 ? Math.round(h1.getBoundingClientRect().top) : null;
+  g.tertutupTakik = g.isiAtasTerlihat !== null && g.isiAtasTerlihat < 0;
+
+  /* 6. menyetel bilah atas yang lengket: judul tidak boleh menabrak tepi atas */
+  g.paddingAtasBilah = Math.round(parseFloat(getComputedStyle(d.querySelector('.topbar')).paddingTop));
+  return g;
+}
+
+function baris(nama, g, catatan) {
+  var tanda = [];
+  if (g.luapan > 1) tanda.push('LUAPAN MENDATAR ' + g.luapan + 'px');
+  if (g.jumlahLewat) tanda.push(g.jumlahLewat + ' elemen keluar layar');
+  if (g.tertutupBilah) tanda.push('isi tertutup bilah bawah (' + g.sisaBawah + 'px)');
+  if (g.tertutupTakik) tanda.push('TERTUTUP TAKIK');
+  if (g.areaKetukBilah < 60) tanda.push('area ketuk bilah bawah cuma ' + g.areaKetukBilah + 'px');
+  if (g.paddingAtasBilah < (catatan ? catatan.sat : 0)) tanda.push('padding atas ' + g.paddingAtasBilah + ' < takik ' + (catatan ? catatan.sat : 0));
+  var status = tanda.length ? 'RUSAK' : 'OK';
+  var t = '[' + status + '] ' + nama.padEnd(24) + ' ' + (g.lebar + 'x' + g.tinggi).padEnd(9) +
+          ' nav=' + g.tinggiBilah + 'px (area ' + g.areaKetukBilah + 'px) pad-atas=' + g.paddingAtasBilah +
+          ' sisa-bawah=' + (g.sisaBawah === null ? '-' : g.sisaBawah + 'px');
+  if (tanda.length) t += '\n         → ' + tanda.join(' | ');
+  if (g.lewat.length) t += '\n         → lewat: ' + g.lewat.join(', ');
+  return t;
+}
+
+async function utama() {
+  seed();
+  await lapor('denyut: data contoh disuntik, mulai menguji');
+  var keluaran = ['=== UJI TATA LETAK DI HP (Xiaomi 13T & iPhone 11 Pro) ==='];
+  var rusak = 0, total = 0;
+
+  keluaran.push('========== A. DUA HP YANG ANDA PAKAI (semua halaman) ==========');
+  for (var i = 0; i < 2; i++) {
+    var dev = PERANGKAT[i];
+    for (var j = 0; j < TAMPILAN.length; j++) {
+      var v = TAMPILAN[j];
+      var ctx = await buka(dev.l, dev.t, v, dev);
+      if (ctx.galat) { keluaran.push('[GALAT] ' + dev.nama + ' ' + v + ': ' + ctx.galat); rusak++; total++; continue; }
+      var g = periksa(ctx, dev, v);
+      total++;
+      var t = baris(dev.nama + ' / ' + v, g, dev);
+      if (t.indexOf('[OK]') === -1) rusak++;
+      keluaran.push(t);
+      await lapor('denyut: ' + dev.nama + ' / ' + v + ' selesai (' + total + ' diperiksa, ' + rusak + ' bermasalah)');
+    }
+  }
+
+  keluaran.push('');
+  keluaran.push('========== B. HP LAIN & POSISI MIRING ==========');
+  await lapor('denyut: bagian A selesai (' + total + ' diperiksa, ' + rusak + ' bermasalah)');
+  for (var k = 2; k < PERANGKAT.length; k++) {
+    var dev2 = PERANGKAT[k];
+    for (var m = 0; m < 3; m++) {
+      var v2 = ['dashboard', 'rekap', 'transaksi'][m];
+      var ctx2 = await buka(dev2.l, dev2.t, v2, dev2);
+      var g2 = periksa(ctx2, dev2, v2);
+      total++;
+      var t2 = baris(dev2.nama + ' / ' + v2, g2, dev2);
+      if (t2.indexOf('[OK]') === -1) rusak++;
+      keluaran.push(t2);
+      await lapor('denyut: ' + dev2.nama + ' / ' + v2 + ' selesai (' + total + ' diperiksa, ' + rusak + ' bermasalah)');
+    }
+  }
+
+  keluaran.push('');
+  keluaran.push('========== C. SAPI LUAS LAYAR 320–480px (luapan saja) ==========');
+  await lapor('denyut: bagian B selesai (' + total + ' diperiksa, ' + rusak + ' bermasalah)');
+  for (var n2 = 0; n2 < LEBAR_UJI.length; n2++) {
+    for (var v3 = 0; v3 < LEBAR_VIEW.length; v3++) {
+      var L = LEBAR_UJI[n2], vv = LEBAR_VIEW[v3];
+      var ctx3 = await buka(L, 800, vv, null);
+      var g3 = periksa(ctx3, {}, vv);
+      total++;
+      var tanda3 = [];
+      if (g3.luapan > 1) tanda3.push('luapan ' + g3.luapan + 'px');
+      if (g3.jumlahLewat) tanda3.push(g3.jumlahLewat + ' elemen keluar');
+      if (tanda3.length) rusak++;
+      keluaran.push('[' + (tanda3.length ? 'RUSAK' : 'OK') + '] lebar ' + L + 'px / ' + vv +
+        '  area-nav=' + g3.areaKetukBilah + 'px' + (tanda3.length ? '  → ' + tanda3.join(' | ') : '') +
+        (g3.lewat.length ? '\n         → ' + g3.lewat.join(', ') : ''));
+    }
+    await lapor('denyut: sapuan lebar ' + L + 'px selesai');
+  }
+
+  keluaran.push('');
+  keluaran.push('========== RINGKASAN ==========');
+  keluaran.push('diperiksa: ' + total + '  |  bermasalah: ' + rusak + '  |  bersih: ' + (total - rusak));
+  var teks = '=== UJI TATA LETAK DI HP (Xiaomi 13T & iPhone 11 Pro) ===\ndiperiksa: ' + total + '  |  bermasalah: ' + rusak + '\n\n' + keluaran.join('\n');
+  document.getElementById('hasil').textContent = teks;
+  document.title = 'selesai-' + rusak + '-' + total;
+  // kirim ke server kecil supaya bisa dibaca dari luar (dump-dom terlalu dini)
+  return fetch('/__hasil', { method: 'POST', body: teks }).catch(function () {});
+}
+
+(async function () {
+  try { await utama(); }
+  catch (e) {
+    var pesan = '=== UJI TATA LETAK DI HP ===\nERROR: ' + e.message + '\n' + (e.stack || '');
+    document.getElementById('hasil').textContent = pesan;
+    try { await fetch('/__hasil', { method: 'POST', body: pesan }); } catch (e2) {}
+  }
+})();
+</script>
+</body>
+</html>

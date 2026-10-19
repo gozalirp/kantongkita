@@ -45,6 +45,16 @@
   --shadow:0 12px 32px -8px rgba(24, 39, 75, 0.14);
   --shadow-sm:0 2px 10px -2px rgba(24, 39, 75, 0.10);
   --sidebar-w:240px;
+
+  /* ---------- AREA AMAN PERANGKAT ----------
+     Takik (notch) iPhone 11 Pro dan bilah gestur Android. Dipakai lewat
+     variabel, bukan env() langsung, supaya bisa DIUJI: di peramban biasa
+     env() bernilai 0px, sedangkan penguji bisa menyetel --sat/--sab untuk
+     meniru takik iPhone (atas 44px, bawah 34px). */
+  --sat:env(safe-area-inset-top, 0px);
+  --sab:env(safe-area-inset-bottom, 0px);
+  --sal:env(safe-area-inset-left, 0px);
+  --sar:env(safe-area-inset-right, 0px);
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -106,7 +116,8 @@ input,select,textarea{font:inherit}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
 .topbar{
   display:flex;align-items:center;gap:14px;
-  padding:15px 22px;border-bottom:1px solid var(--line);
+  padding:calc(15px + var(--sat)) calc(22px + var(--sar)) 15px calc(22px + var(--sal));
+  border-bottom:1px solid var(--line);
   background:linear-gradient(180deg,var(--bg-2),var(--bg));
 }
 .topbar h1{font-size:19px;font-weight:650;flex:1;letter-spacing:.2px}
@@ -326,11 +337,12 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
    memakai `display:none` dari stylesheet bawaan browser dengan prioritas
    paling rendah, jadi `display:grid` akan MENIMPA-nya dan overlay tampil
    terus walau sudah diberi `hidden`. Tampilkan lewat .modal-wrap.show. */
-.modal-wrap{position:fixed;inset:0;z-index:60;display:none;place-items:center;padding:18px;
+.modal-wrap{position:fixed;inset:0;z-index:60;display:none;place-items:center;
+  padding:calc(18px + var(--sat)) calc(18px + var(--sar)) calc(18px + var(--sab)) calc(18px + var(--sal));
   background:rgba(15,23,42,.35);backdrop-filter:blur(3px)}
 .modal-wrap.show{display:grid;animation:fade .14s}
 .modal{background:var(--bg-2);border:1px solid var(--line);border-radius:24px;
-  width:100%;max-width:470px;max-height:90vh;display:flex;flex-direction:column;
+  width:100%;max-width:470px;max-height:calc(90vh - var(--sat) - var(--sab));display:flex;flex-direction:column;
   box-shadow: var(--shadow);animation:pop .2s cubic-bezier(0.16, 1, 0.3, 1)}
 .modal-head{display:flex;align-items:center;padding:17px 19px;border-bottom:1px solid var(--line)}
 .modal-head h2{font-size:16px;flex:1;font-weight:650}
@@ -413,12 +425,24 @@ body.terkunci #btn-add-tx{display:none}
 @media (max-width:860px){
   .sidebar{display:none !important}
   .hamburger{display:none !important}
-  .content{padding:14px 14px 90px 14px; -webkit-overflow-scrolling: touch;}
-  .topbar{padding:14px 16px; position: sticky; top: 0; z-index: 20; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); background: rgba(255, 255, 255, 0.85); border-bottom: 1px solid rgba(15, 23, 42, 0.07);}
+  .content{padding:14px calc(14px + var(--sar)) calc(90px + var(--sab)) calc(14px + var(--sal)); -webkit-overflow-scrolling: touch;}
+  .topbar{padding:calc(14px + var(--sat)) calc(16px + var(--sar)) 14px calc(16px + var(--sal)); position: sticky; top: 0; z-index: 20; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); background: rgba(255, 255, 255, 0.85); border-bottom: 1px solid rgba(15, 23, 42, 0.07);}
   .topbar h1{font-size:17px}
-  .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns:1fr}
+  /* minmax(0,1fr) + min-width:0 WAJIB. Dengan `1fr` saja, ukuran jalur
+     grid dipaksa oleh lebar-minimum isi (mis. baris grafik), sehingga
+     kartu melebar jadi ~512px di layar 375px dan terpotong di tepi kanan. */
+  .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns:minmax(0,1fr)}
+  .grid > *{min-width:0}
+  /* Kepala kartu: izinkan turun baris. Tanpa ini, kontrol bersegmen
+     (mis. pemilih 6 Bulan/12 Bulan/30 Hari) menabrak tepi kanan. */
+  .card-head{flex-wrap:wrap;row-gap:10px}
+  .card-head .seg{flex:1 1 auto;min-width:0}
+  /* Filter bersegmen bisa punya 6 tombol (Hari ini … Semua). Semuanya
+     nowrap, jadi totalnya ~400px dan menembus layar iPhone 11 Pro (375px). */
+  .seg{flex-wrap:wrap}
+  .seg button{padding:8px 8px}
   .bar-row{grid-template-columns:88px 1fr auto}
-  .toasts{left:16px;right:16px;bottom:76px;align-items:stretch}
+  .toasts{left:16px;right:16px;bottom:calc(76px + var(--sab));align-items:stretch}
   .stat .val{font-size:19px}
 
   /* Bottom Navigation Bar like Gojek/BCA/Shopee */
@@ -428,7 +452,9 @@ body.terkunci #btn-add-tx{display:none}
     bottom: 0;
     left: 0;
     right: 0;
-    height: 68px;
+    /* 68px area ketuk + area aman, supaya ikon & label tidak terjepit
+       di HP berbilah gestur (Android baru / iPhone tanpa tombol). */
+    height: calc(68px + var(--sab));
     background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -436,7 +462,9 @@ body.terkunci #btn-add-tx{display:none}
     z-index: 40;
     align-items: center;
     justify-content: space-around;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: var(--sab);
+    padding-left: var(--sal);
+    padding-right: var(--sar);
     box-shadow: 0 -6px 20px rgba(24, 39, 75, 0.08);
   }
   .bnav-item {
