@@ -278,6 +278,7 @@
           '<button class="btn primary" style="margin-top:14px" onclick="V.profilGate()">Buka dengan Sandi</button></div></div>'
         : eval(PREFIX[name]);
       U.polishIcons(document);
+      if (name === 'dashboard') this.cekJKeluarga();
       const content = document.getElementById('content');
       content.dataset.page = name;
       const descriptions = {
@@ -323,6 +324,25 @@
       const sb = document.querySelector('.sidebar');
       if (sb) sb.classList.remove('open');
       document.querySelector('.scrim').classList.remove('show');
+    },
+
+    /* Kartu "Buat akun / Masuk" di beranda disembunyikan kalau sudah login.
+       Offline atau server tidak menjawab: kartu dibiarkan apa adanya. */
+    cekJKeluarga: function () {
+      const card = document.querySelector('#content .fam-masuk');
+      if (!card) return;
+      const lalu = this._famCek;
+      if (lalu && Date.now() - lalu.at < 60000) {
+        if (lalu.login) card.hidden = true;
+        return;
+      }
+      fetch('/api/family/me', { credentials: 'same-origin' })
+        .then(function (r) {
+          const login = r.status === 200;
+          card.hidden = login;
+          App._famCek = { at: Date.now(), login: login };
+        })
+        .catch(function () {});
     },
 
     /* ---------- init ---------- */

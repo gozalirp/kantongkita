@@ -765,6 +765,7 @@ button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;transform:none;box-
 .fam-masuk-txt{display:flex;flex-direction:column;gap:2px;min-width:190px;flex:1}
 .fam-masuk-txt strong{font-size:14px;color:var(--txt)}
 .fam-masuk-txt span{font-size:12.5px;color:var(--txt-mute);line-height:1.45}
+.fam-masuk[hidden]{display:none}
 .fam-masuk-btn{display:flex;gap:8px;flex-wrap:wrap}
 .fam-masuk .btn{white-space:nowrap;text-decoration:none;flex:1 1 auto;min-width:104px}
 @media (max-width:400px){.fam-masuk-btn{width:100%}.fam-masuk .btn{flex:1 1 0;min-width:0}}
