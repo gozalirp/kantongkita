@@ -6,9 +6,7 @@ const el = id => document.getElementById(id);
 const ACTION = {
   login:    { title: 'Masuk', submit: 'Masuk', code: false,
               passHint: 'Minimal 12 karakter.' },
-  activate: { title: 'Buat akun', submit: 'Buat akun', code: true,
-              codeLabel: 'Kode aktivasi',
-              codeHint: 'Kode privat dari pemilik aplikasi. Dipakai sekali saja.',
+  activate: { title: 'Buat akun', submit: 'Buat akun', code: false,
               passHint: 'Buat password baru minimal 12 karakter.' },
   join:     { title: 'Gabung keluarga', submit: 'Gabung', code: true,
               codeLabel: 'Kode undangan',

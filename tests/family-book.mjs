@@ -1,6 +1,5 @@
 /* Uji API buku bersama: aktivasi → simpan → baca → bentrok versi → tolak data rusak */
 const B = 'http://127.0.0.1:8801';
-const AKT = 'kode-aktivasi-lokal-uji';
 let lulus = 0, gagal = 0;
 const cek = (nama, syarat, info) => {
   if (syarat) { lulus++; console.log('  OK   ' + nama); }
@@ -32,7 +31,7 @@ const buku = {
 (async () => {
   console.log('1. Aktivasi');
   const user = 'uji_' + Math.random().toString(36).slice(2, 7);
-  const a = await panggil('activate', { method: 'POST', body: { username: user, password: 'rahasia-panjang-123', code: AKT } });
+  const a = await panggil('activate', { method: 'POST', body: { username: user, password: 'rahasia-panjang-123' } });
   cek('aktivasi berhasil', a.status === 200, a);
   cek('kode pemulihan 64 karakter', (a.body.recovery || '').length === 64, (a.body.recovery || '').length);
   /* Aktivasi tidak membuat sesi (memang begitu alurnya) — masuk dulu. */

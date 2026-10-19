@@ -25,7 +25,7 @@ const db = (sql) => execSync(
 (async () => {
   const pass = 'rahasia-panjang-123';
   const user = 'lama_' + Math.random().toString(36).slice(2, 6);
-  await J('activate', { method: 'POST', body: { username: user, password: pass, code: 'kode-aktivasi-lokal-uji' } });
+  await J('activate', { method: 'POST', body: { username: user, password: pass, } });
   const lg = await J('login', { method: 'POST', body: { username: user, password: pass } });
   cek('login', lg.status === 200);
 

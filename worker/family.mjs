@@ -81,7 +81,9 @@ export async function family(request, env) {
       }
       let familyId, invitation;
       if (path === 'activate') {
-        if (!env.FAMILY_ACTIVATION_HASH || typeof body.code !== 'string' || await digest(body.code) !== env.FAMILY_ACTIVATION_HASH) return fail('Kode aktivasi tidak valid', 403);
+        /* Tanpa kode aktivasi: siapa pun yang memegang alamat aplikasi boleh
+           membuat SATU keluarga. Penjaga "hanya satu keluarga" tetap ada di
+           family_activation, jadi aplikasi ini tidak berubah jadi pendaftaran umum. */
         if (await q('SELECT id FROM family_activation WHERE id=1').first()) return fail('Keluarga sudah diaktifkan', 409);
         familyId = crypto.randomUUID();
       } else {

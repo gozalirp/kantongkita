@@ -1,9 +1,8 @@
 // End-to-end family flow against a real Worker runtime (wrangler dev or production).
-// Usage: BASE_URL=http://127.0.0.1:8790 ACTIVATION=<code> node tests/family-e2e.mjs
+// Usage: BASE_URL=http://127.0.0.1:8790 node tests/family-e2e.mjs
 import assert from 'node:assert/strict';
 const base = process.env.BASE_URL;
-const activation = process.env.ACTIVATION;
-if (!base || !activation) throw Error('BASE_URL and ACTIVATION are required');
+if (!base) throw Error('BASE_URL is required');
 let pass = 0;
 const check = (label, ok) => { assert.ok(ok, label); console.log('  ✓', label); pass++; };
 async function call(path, { body, cookie, origin = base } = {}) {
@@ -24,7 +23,7 @@ const stamp = Date.now().toString(36).slice(-5);
 const ownerPassword = 'password-rumah-panjang';
 const partnerPassword = 'password-istri-panjang';
 
-const activationAttempt = await call('activate', { body: { username: 'suami_' + stamp, password: ownerPassword, code: activation } });
+const activationAttempt = await call('activate', { body: { username: 'suami_' + stamp, password: ownerPassword } });
 check('aktivasi keluarga ditolak setelah keluarga ada atau berhasil', [409, 200].includes(activationAttempt.status));
 let ownerName = 'suami_' + stamp;
 if (activationAttempt.status === 409) {
@@ -32,7 +31,6 @@ if (activationAttempt.status === 409) {
   ownerName = process.env.OWNER_USERNAME;
   if (!ownerName) { console.log('  • keluarga sudah aktif: lewati pengujian pembuatan akun'); process.exit(0); }
 }
-check('kode aktivasi salah ditolak', (await call('activate', { body: { username: 'x_' + stamp, password: ownerPassword, code: 'kode-palsu' } })).status === 403);
 const login = await call('login', { body: { username: ownerName, password: ownerPassword } });
 check('login pemilik berhasil', login.status === 200 && !!login.cookie);
 check('password salah ditolak', (await call('login', { body: { username: ownerName, password: 'password-keliru-panjang' } })).status === 401);
@@ -46,7 +44,7 @@ if (invite.status === 409) { console.log('  • keluarga sudah berisi dua anggot
 const join = await call('join', { body: { username: 'istri_' + stamp, password: partnerPassword, code: invite.data.code } });
 check('pasangan bergabung lewat undangan', join.status === 200 && typeof join.data.recovery === 'string');
 check('undangan tidak bisa dipakai ulang', [403, 409].includes((await call('join', { body: { username: 'orang_' + stamp, password: partnerPassword, code: invite.data.code } })).status));
-check('aktivasi ulang ditolak karena keluarga sudah ada', (await call('activate', { body: { username: 'lain_' + stamp, password: ownerPassword, code: activation } })).status === 409);
+check('aktivasi ulang ditolak karena keluarga sudah ada', (await call('activate', { body: { username: 'lain_' + stamp, password: ownerPassword } })).status === 409);
 const partner = (await call('login', { body: { username: 'istri_' + stamp, password: partnerPassword } })).cookie;
 check('login pasangan berhasil', !!partner);
 check('pasangan tidak boleh mengundang', (await call('invite', { cookie: partner, body: {} })).status === 403);
