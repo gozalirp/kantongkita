@@ -766,3 +766,107 @@ button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;transform:none;box-
 .fam-masuk-txt strong{font-size:14px;color:var(--txt)}
 .fam-masuk-txt span{font-size:12.5px;color:var(--txt-mute);line-height:1.45}
 .fam-masuk .btn{white-space:nowrap;text-decoration:none}
+
+/* ============================================================
+   Halaman Keuangan Keluarga (/keluarga.html)
+   Prefix .k- agar tidak bertabrakan dengan style aplikasi utama.
+   ============================================================ */
+body.kb{overflow:auto;min-height:100dvh;padding:0}
+.k-page{max-width:980px;margin:0 auto;padding:clamp(20px,4vw,40px) clamp(16px,4vw,28px) 56px;
+  display:grid;gap:clamp(18px,3vw,32px);grid-template-columns:1fr}
+.k-hero{display:flex;flex-direction:column;gap:10px;padding-top:4px}
+.k-brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:15px;
+  color:var(--txt);text-decoration:none;margin-bottom:6px}
+.k-logo{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:17px;
+  background:var(--accent-gradient);box-shadow:0 6px 16px -6px rgba(81,71,217,.55)}
+.k-hero h1{font-size:clamp(24px,4.6vw,32px);line-height:1.15;letter-spacing:-.6px}
+.k-sub{color:var(--txt-dim);font-size:14.5px;max-width:34ch}
+.k-points{list-style:none;display:flex;flex-direction:column;gap:9px;margin-top:8px}
+.k-points li{font-size:13px;color:var(--txt-mute);line-height:1.5;padding-left:24px;position:relative}
+.k-points li::before{content:"";position:absolute;left:0;top:6px;width:14px;height:14px;
+  border-radius:50%;background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px rgba(89,85,239,.45)}
+.k-points b{color:var(--txt);font-weight:650}
+.k-back{margin-top:6px;font-size:13px;color:var(--accent-ink);text-decoration:none;align-self:flex-start;
+  padding:6px 0;border-bottom:1px solid transparent}
+.k-back:hover{border-bottom-color:currentColor}
+
+.k-col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.k-card{background:var(--panel);border:1px solid #E7E9F4;border-radius:var(--r);
+  box-shadow:0 3px 16px #29235B08;padding:clamp(16px,3.4vw,24px)}
+.k-title{font-size:16px;font-weight:700;letter-spacing:-.3px;margin-bottom:16px}
+.k-muted{font-size:12.5px;color:var(--txt-mute);margin:-8px 0 14px;line-height:1.55}
+
+/* tab pilihan keperluan */
+.k-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;background:#F0F1FA;
+  border:1px solid #E0E2F0;border-radius:var(--r-sm);padding:4px;margin-bottom:18px}
+.k-tabs label{position:relative;display:block;cursor:pointer;min-width:0}
+.k-tabs input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.k-tabs span{display:flex;align-items:center;justify-content:center;min-height:44px;
+  text-align:center;padding:8px 6px;border-radius:9px;font-size:12.5px;
+  font-weight:600;color:var(--txt-dim);transition:.15s;line-height:1.2}
+.k-tabs label:hover span{color:var(--txt)}
+.k-tabs input:checked + span{background:var(--panel);color:var(--accent-ink);
+  box-shadow:0 2px 8px -2px rgba(41,35,91,.18)}
+.k-tabs input:focus-visible + span{outline:3px solid var(--accent-ink);outline-offset:2px}
+
+/* isian */
+.k-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;min-width:0}
+.k-field > label{font-size:12.5px;font-weight:650;color:var(--txt)}
+.k-field .hint{font-size:11.5px;color:var(--txt-mute);line-height:1.5}
+.k-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0}
+.k-money{display:flex;align-items:center;gap:2px;background:#F8F9FE;border:1px solid #DDE0ED;
+  border-radius:var(--r-sm);padding-left:12px;min-height:44px;transition:.13s}
+.k-money:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.k-money b{font-size:13px;font-weight:650;color:var(--txt-mute)}
+.k-money input{border:0;background:transparent;min-height:42px;padding-left:6px;width:100%}
+.k-money input:focus{box-shadow:none}
+
+.k-submit{width:100%;margin-top:4px}
+.k-actions{display:flex;flex-wrap:wrap;gap:8px}
+
+/* status */
+.k-status{margin-top:14px;font-size:13px;line-height:1.55;color:var(--txt-dim);
+  overflow-wrap:anywhere;padding:0 2px}
+.k-status:empty{display:none}
+.k-status.ok{color:var(--in)}
+.k-status.err{color:var(--out)}
+
+/* kode pemulihan */
+.k-recovery{margin-top:16px;padding:14px 16px;border-radius:var(--r-sm);
+  background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.42)}
+.k-recovery strong{font-size:13px;color:var(--warn);display:block;margin-bottom:5px}
+.k-recovery p{font-size:12px;color:var(--txt-dim);line-height:1.55;margin-bottom:10px}
+.k-code{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.k-code code{flex:1;min-width:190px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12.5px;letter-spacing:.4px;background:var(--panel);border:1px dashed var(--line-strong);
+  border-radius:9px;padding:9px 11px;overflow-wrap:anywhere;color:var(--txt)}
+
+/* daftar transaksi */
+.k-tx{list-style:none;display:flex;flex-direction:column;gap:8px}
+.k-tx li{display:flex;flex-direction:column;gap:3px;padding:11px 13px;border-radius:var(--r-sm);
+  background:var(--bg);border:1px solid var(--line);font-size:13px;min-width:0}
+.k-tx .tx-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.k-tx .tx-amt{font-weight:700;letter-spacing:-.2px}
+.k-tx .tx-amt.in{color:var(--in)}
+.k-tx .tx-amt.out{color:var(--out)}
+.k-tx .tx-meta{font-size:11.5px;color:var(--txt-mute)}
+.k-tx .tx-note{font-size:12.5px;color:var(--txt-dim);overflow-wrap:anywhere}
+
+.k-guide summary{cursor:pointer;font-size:14px;font-weight:650;color:var(--txt);list-style:none;
+  display:flex;align-items:center;gap:8px}
+.k-guide summary::-webkit-details-marker{display:none}
+.k-guide summary::after{content:"+";margin-left:auto;color:var(--txt-mute);font-size:16px;font-weight:400}
+.k-guide[open] summary::after{content:"–"}
+.k-guide ol{margin-top:14px;padding-left:20px;display:flex;flex-direction:column;gap:9px;
+  font-size:12.5px;color:var(--txt-dim);line-height:1.6}
+
+@media (min-width:820px){
+  .k-page{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);align-items:start;
+    gap:clamp(28px,4vw,52px);padding-top:clamp(40px,7vh,80px)}
+  .k-hero{position:sticky;top:clamp(40px,7vh,80px)}
+  .k-tabs{grid-template-columns:repeat(4,1fr)}
+}
+@media (max-width:360px){
+  .k-tabs span{font-size:11.5px;padding:8px 4px}
+  .k-grid2{grid-template-columns:1fr}
+}

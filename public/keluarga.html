@@ -1,1 +1,130 @@
-<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SavingDuit — Keluarga</title><link rel="stylesheet" href="/css/style.css"><body><main style="max-width:720px;margin:32px auto;padding:20px"><h1>Keuangan keluarga</h1><p>Akun privat tanpa email. <a href="/">Kembali ke catatan lokal</a></p><p><strong>Versi awal:</strong> buku transaksi keluarga terpisah dari data lokal. Belum ada impor, edit/hapus, dompet, atau antrean offline.</p><section id="auth"><form id="account"><label>Keperluan <select name="action"><option value="login">Login</option><option value="activate">Aktivasi keluarga pertama</option><option value="join">Terima undangan pasangan</option><option value="recover">Pulihkan password</option></select></label><p><label>Username <input name="username" required autocomplete="username" pattern="[a-zA-Z0-9_]{3,32}"></label></p><p><label>Password <input name="password" type="password" required minlength="12" maxlength="128" autocomplete="current-password"></label></p><p><label>Kode aktivasi / undangan / pemulihan (bukan untuk login)<input name="code" autocomplete="off"></label></p><button>Proses</button></form></section><p id="status" role="status" style="overflow-wrap:anywhere"></p><section id="family" hidden><h2 id="identity"></h2><button id="invite">Buat undangan pasangan</button> <button id="refresh">Muat ulang</button> <button id="logout">Logout</button><form id="transaction"><h2>Catat transaksi</h2><label>Tanggal <input name="date" type="date" required></label><p><label>Jenis <select name="type"><option value="out">Pengeluaran</option><option value="in">Pemasukan</option></select></label></p><p><label>Nominal rupiah <input name="amount" type="number" min="1" step="1" required></label></p><p><label>Catatan penggunaan <textarea name="note" maxlength="500" required></textarea></label></p><button>Simpan</button></form><h2>Transaksi bersama</h2><ul id="transactions"></ul></section><details><summary>Panduan penggunaan</summary><ol><li>Pemilik memakai kode aktivasi privat untuk membuat akun pertama. Gunakan password minimal 12 karakter.</li><li>Simpan kode pemulihan di tempat pribadi. Kode ditampilkan setelah pendaftaran atau pemulihan, bukan dikirim melalui email.</li><li>Login lalu buat undangan. Berikan hanya kepada pasangan; berlaku 24 jam dan sekali pakai. Undangan baru membatalkan yang lama.</li><li>Pasangan memilih Terima undangan dan membuat username/password sendiri. Maksimal dua anggota.</li><li>Transaksi memerlukan internet. Muat ulang untuk melihat catatan pasangan. Jika ada konflik, periksa daftar terbaru sebelum menyimpan ulang. Jika koneksi putus setelah menekan Simpan, periksa daftar sebelum mencoba lagi agar tidak dobel.</li><li>Catatan lokal lama tidak otomatis dipindahkan. Tetap buat backup dari aplikasi utama.</li><li>Gunakan Logout pada perangkat bersama. Jangan bagikan password, kode pemulihan, atau kode aktivasi.</li></ol></details></main><script src="/js/keluarga.js"></script></body></html>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F4F5FC">
+<title>SavingDuit — Keuangan Keluarga</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="kb">
+<main class="k-page">
+
+  <section class="k-hero">
+    <a class="k-brand" href="/"><span class="k-logo">💰</span><span>SavingDuit</span></a>
+    <h1>Keuangan keluarga</h1>
+    <p class="k-sub">Satu buku catatan untuk berdua, akun privat tanpa email.</p>
+    <ul class="k-points">
+      <li><b>Berdua saja</b> — maksimal dua anggota, tanpa pendaftaran umum</li>
+      <li><b>Rahasia</b> — password disimpan sebagai sandi acak, tidak bisa dibaca siapa pun</li>
+      <li><b>Tanpa email</b> — pemulihan memakai kode pribadi yang kalian simpan</li>
+    </ul>
+    <a class="k-back" href="/">← Kembali ke catatan lokal</a>
+  </section>
+
+  <div class="k-col">
+
+    <section class="k-card" id="auth">
+      <h2 class="k-title">Masuk ke buku keluarga</h2>
+      <form id="account">
+        <div class="k-tabs" role="tablist" aria-label="Pilih keperluan">
+          <label><input type="radio" name="action" value="login" checked><span>Masuk</span></label>
+          <label><input type="radio" name="action" value="activate"><span>Aktivasi</span></label>
+          <label><input type="radio" name="action" value="join"><span>Undangan</span></label>
+          <label><input type="radio" name="action" value="recover"><span>Lupa sandi</span></label>
+        </div>
+
+        <div class="k-field">
+          <label for="f-user">Username</label>
+          <input id="f-user" name="username" type="text" required autocomplete="username"
+                 pattern="[a-zA-Z0-9_]{3,32}" spellcheck="false" placeholder="mis. gozali">
+          <span class="hint">3–32 karakter: huruf, angka, atau garis bawah.</span>
+        </div>
+
+        <div class="k-field">
+          <label for="f-pass">Password</label>
+          <input id="f-pass" name="password" type="password" required minlength="12" maxlength="128"
+                 autocomplete="current-password" placeholder="minimal 12 karakter">
+          <span class="hint" id="pass-hint">Minimal 12 karakter. Jangan pakai password yang sama dengan akun lain.</span>
+        </div>
+
+        <div class="k-field" id="code-field" hidden>
+          <label for="f-code" id="code-label">Kode</label>
+          <input id="f-code" name="code" type="text" autocomplete="off" spellcheck="false" placeholder="tempel kode di sini">
+          <span class="hint" id="code-hint"></span>
+        </div>
+
+        <button class="btn primary k-submit" id="submit" type="submit">Masuk</button>
+      </form>
+
+      <p class="k-status" id="status" role="status" aria-live="polite"></p>
+
+      <div class="k-recovery" id="recovery-box" hidden>
+        <strong>Simpan kode pemulihan ini sekarang</strong>
+        <p>Hanya ditampilkan sekali dan tidak dikirim lewat email. Tanpa kode ini, akun tidak bisa dipulihkan.</p>
+        <div class="k-code"><code id="recovery"></code><button class="btn sm" type="button" id="copy">Salin</button></div>
+      </div>
+    </section>
+
+    <section id="family" hidden>
+      <div class="k-card">
+        <h2 class="k-title" id="identity"></h2>
+        <p class="k-muted">Muat ulang untuk melihat catatan terbaru dari pasangan.</p>
+        <div class="k-actions">
+          <button class="btn primary sm" id="invite">Buat undangan pasangan</button>
+          <button class="btn sm" id="refresh">Muat ulang</button>
+          <button class="btn sm" id="logout">Logout</button>
+        </div>
+      </div>
+
+      <form class="k-card" id="transaction">
+        <h2 class="k-title">Catat transaksi</h2>
+        <div class="k-grid2">
+          <div class="k-field">
+            <label for="t-date">Tanggal</label>
+            <input id="t-date" name="date" type="date" required>
+          </div>
+          <div class="k-field">
+            <label for="t-type">Jenis</label>
+            <select id="t-type" name="type">
+              <option value="out">Pengeluaran</option>
+              <option value="in">Pemasukan</option>
+            </select>
+          </div>
+        </div>
+        <div class="k-field">
+          <label for="t-amount">Nominal</label>
+          <div class="k-money"><b>Rp</b><input id="t-amount" name="amount" type="number" min="1" step="1" required placeholder="0"></div>
+        </div>
+        <div class="k-field">
+          <label for="t-note">Catatan penggunaan</label>
+          <textarea id="t-note" name="note" maxlength="500" required placeholder="mis. belanja pasar mingguan"></textarea>
+          <span class="hint">Maksimal 500 karakter.</span>
+        </div>
+        <button class="btn primary k-submit" type="submit">Simpan transaksi</button>
+      </form>
+
+      <div class="k-card">
+        <h2 class="k-title">Transaksi bersama</h2>
+        <ul class="k-tx" id="transactions"></ul>
+      </div>
+    </section>
+
+    <details class="k-card k-guide">
+      <summary>Panduan penggunaan</summary>
+      <ol>
+        <li>Pemilik memakai kode aktivasi privat untuk membuat akun pertama. Gunakan password minimal 12 karakter.</li>
+        <li>Simpan kode pemulihan di tempat pribadi. Kode ditampilkan setelah pendaftaran atau pemulihan, bukan dikirim melalui email.</li>
+        <li>Masuk lalu buat undangan. Berikan hanya kepada pasangan; berlaku 24 jam dan sekali pakai. Undangan baru membatalkan yang lama.</li>
+        <li>Pasangan memilih Undangan dan membuat username/password sendiri. Maksimal dua anggota.</li>
+        <li>Transaksi memerlukan internet. Muat ulang untuk melihat catatan pasangan. Jika ada konflik, periksa daftar terbaru sebelum menyimpan ulang. Jika koneksi putus setelah menekan Simpan, periksa daftar sebelum mencoba lagi agar tidak dobel.</li>
+        <li>Catatan lokal lama tidak otomatis dipindahkan. Tetap buat backup dari aplikasi utama.</li>
+        <li>Gunakan Logout pada perangkat bersama. Jangan bagikan password, kode pemulihan, atau kode aktivasi.</li>
+      </ol>
+    </details>
+
+  </div>
+</main>
+<script src="/js/keluarga.js"></script>
+</body>
+</html>
