@@ -758,3 +758,11 @@ button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;transform:none;box-
 /* Menu: halaman terakhir ditawarkan lagi di paling atas. */
 .menu-terakhir{background:#F3F1FF;border-color:#DDD8F8}
 .menu-terakhir .menu-link{background:#FFFFFF}
+
+/* Pintu masuk keuangan keluarga di Dashboard */
+.fam-masuk{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between;
+  padding:14px 16px;margin:16px 0;background:var(--panel-2);border:1px solid var(--line);border-radius:16px}
+.fam-masuk-txt{display:flex;flex-direction:column;gap:2px;min-width:190px;flex:1}
+.fam-masuk-txt strong{font-size:14px;color:var(--txt)}
+.fam-masuk-txt span{font-size:12.5px;color:var(--txt-mute);line-height:1.45}
+.fam-masuk .btn{white-space:nowrap;text-decoration:none}

@@ -509,6 +509,9 @@
       '<header class="planner-welcome"><div><span class="planner-eyebrow">CATATAN KEUANGAN PRIBADI</span>' +
         '<h2>Rencana uangmu, lebih terarah.</h2><p>Pantau saldo dan wujudkan targetmu, sedikit demi sedikit.</p></div>' +
         '<button class="btn primary" onclick="V.txForm()">+ Catat transaksi</button></header>' +
+      '<div class="card fam-masuk"><div class="fam-masuk-txt"><strong>Keuangan keluarga</strong>' +
+        '<span>Masuk dengan akun kalian untuk mencatat bersama pasangan.</span></div>' +
+        '<a class="btn sm primary" href="/keluarga.html">Login / Mulai</a></div>' +
       st4 +
       '<div class="planner-layout"><div class="planner-main">' +
         '<section class="card planner-wallets"><div class="card-head"><h2>Dompet &amp; tabungan</h2>' +

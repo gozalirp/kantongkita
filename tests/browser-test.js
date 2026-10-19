@@ -300,6 +300,8 @@ function s18(){try{
 function s19(){try{
   say('T dashboard-ringkasan-tahap2|'+(d.querySelectorAll('#content .prog').length>0?'ADA':'TIDAK ADA'));
   say('T dashboard-anggaran-muncul|'+(/Anggaran Bulan Ini/.test(d.getElementById('content').innerHTML)?'YA':'TIDAK'));
+  var fam=d.querySelector('#content .fam-masuk a');
+  say('T dashboard-keluarga|'+(fam&&/keluarga\.html/.test(fam.getAttribute('href'))&&fam.getBoundingClientRect().height>10?'ADA':'TIDAK'));
   var bad=L.filter(function(x){return String(x).indexOf('TERTUTUP')>-1||String(x).indexOf('ERR')>-1||String(x).indexOf('ukuran-0')>-1;});
   say('T ringkas|'+(bad.length?bad.length+' MASALAH':'BERSIH'));
   // lanjut uji profil
@@ -659,6 +661,8 @@ function runHeadless(chrome, url) {
      'dapat ' + v('dashboard-ringkasan-tahap2'));
   ok('kartu Anggaran Bulan Ini muncul', v('dashboard-anggaran-muncul') === 'YA',
      'dapat ' + v('dashboard-anggaran-muncul'));
+  ok('pintu masuk keuangan keluarga ada di dashboard', v('dashboard-keluarga') === 'ADA',
+     'dapat ' + v('dashboard-keluarga'));
 
   section('11. Ringkasan: tidak ada elemen tertutup / ukuran nol');
   ok('tidak ada elemen yang tertutup atau berukuran nol', v('ringkas') === 'BERSIH',
