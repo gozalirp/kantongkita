@@ -1,22 +1,28 @@
 'use strict';
 let revision = 0;
+let aksi = 'login';
 const el = id => document.getElementById(id);
 
 const ACTION = {
-  login:    { label: 'Masuk',   submit: 'Masuk',            code: false, passHint: 'Masukkan password akun keluarga kalian.' },
-  activate: { label: 'Aktivasi', submit: 'Buat keluarga',   code: true,
-              codeLabel: 'Kode aktivasi privat',
-              codeHint: 'Kode dari pemilik aplikasi. Hanya dipakai sekali, saat membuat keluarga.',
-              passHint: 'Buat password baru minimal 12 karakter, hanya kalian yang tahu.' },
-  join:     { label: 'Undangan', submit: 'Gabung keluarga', code: true,
+  login:    { title: 'Masuk', submit: 'Masuk', code: false,
+              passHint: 'Minimal 12 karakter.' },
+  activate: { title: 'Buat akun', submit: 'Buat akun', code: true,
+              codeLabel: 'Kode aktivasi',
+              codeHint: 'Kode privat dari pemilik aplikasi. Dipakai sekali saja.',
+              passHint: 'Buat password baru minimal 12 karakter.' },
+  join:     { title: 'Gabung keluarga', submit: 'Gabung', code: true,
               codeLabel: 'Kode undangan',
-              codeHint: 'Dari pasangan. Berlaku 24 jam dan hanya bisa dipakai sekali.',
-              passHint: 'Buat password sendiri minimal 12 karakter, tidak harus sama dengan pasangan.' },
-  recover:  { label: 'Lupa sandi', submit: 'Pulihkan akun', code: true,
+              codeHint: 'Dari pasangan. Berlaku 24 jam dan sekali pakai.',
+              passHint: 'Buat password sendiri minimal 12 karakter.' },
+  recover:  { title: 'Pulihkan akun', submit: 'Pulihkan', code: true,
               codeLabel: 'Kode pemulihan',
               codeHint: 'Kode yang ditampilkan sekali saat akun dibuat. Bukan password.',
               passHint: 'Masukkan password BARU minimal 12 karakter.' }
 };
+
+/* Beranda bisa membuka halaman ini langsung pada keperluan tertentu:
+   ?aksi=aktivasi | masuk | undangan | pulih */
+const DARI_TAUTAN = { aktivasi: 'activate', masuk: 'login', undangan: 'join', pulih: 'recover' };
 
 const status = (text, kind) => {
   const node = el('status');
@@ -36,19 +42,14 @@ async function api(path, body) {
   return data;
 }
 
-function currentAction() {
-  const picked = document.querySelector('input[name="action"]:checked');
-  return picked ? picked.value : 'login';
-}
-
-/* Beranda bisa membuka halaman ini langsung pada keperluan tertentu:
-   ?aksi=aktivasi | masuk | undangan | pulih */
-const DARI_TAUTAN = { aktivasi: 'activate', masuk: 'login', undangan: 'join', pulih: 'recover' };
-
+/* Tab di layar hanya dua: Masuk dan Buat akun. Gabung lewat undangan dan
+   pemulihan akun menumpang formulir yang sama, dibuka dari pintasan kecil. */
 function pilihAksi(name) {
-  const input = document.querySelector('input[name="action"][value="' + name + '"]');
-  if (!input) return;
-  input.checked = true;
+  if (!ACTION[name]) return;
+  aksi = name;
+  const tab = name === 'login' ? 'login' : 'activate';
+  const input = document.querySelector('input[name="action"][value="' + tab + '"]');
+  if (input) input.checked = true;
   syncActionUI();
 }
 
@@ -59,15 +60,21 @@ function aksiDariTautan() {
 }
 
 function syncActionUI() {
-  const action = currentAction();
-  const conf = ACTION[action];
+  const conf = ACTION[aksi];
+  el('auth-title').textContent = conf.title;
   el('code-field').hidden = !conf.code;
   el('f-code').required = conf.code;
   el('code-label').textContent = conf.codeLabel || 'Kode';
   el('code-hint').textContent = conf.codeHint || '';
   el('pass-hint').textContent = conf.passHint;
+  /* Petunjuk username cuma perlu sekali, bukan di setiap keadaan. */
+  el('user-hint').hidden = aksi !== 'activate';
   el('submit').textContent = conf.submit;
-  el('f-pass').setAttribute('autocomplete', action === 'login' ? 'current-password' : 'new-password');
+  el('f-pass').setAttribute('autocomplete', aksi === 'login' ? 'current-password' : 'new-password');
+  /* Pintasan yang sedang dipakai disembunyikan agar tidak membingungkan. */
+  el('switch').hidden = aksi !== 'login';
+  document.querySelectorAll('.k-mini a').forEach(a => { a.hidden = a.dataset.action === aksi; });
+  document.querySelector('.k-mini').hidden = aksi !== 'login';
   status('');
 }
 
@@ -91,13 +98,14 @@ async function load() {
   });
   el('invite').hidden = me.user.role !== 'owner' || me.members.length === 2;
   el('transactions').replaceChildren();
-  if (!result.data.transactions.length) {
+  const daftar = (result.data && result.data.transactions) || [];
+  if (!daftar.length) {
     const li = document.createElement('li');
     li.className = 'k-muted';
     li.textContent = 'Belum ada catatan. Transaksi pertama kalian akan muncul di sini.';
     el('transactions').append(li);
   }
-  for (const t of result.data.transactions.slice().reverse()) {
+  for (const t of daftar.slice().reverse()) {
     const li = document.createElement('li');
     const top = document.createElement('div');
     top.className = 'tx-top';
@@ -124,14 +132,22 @@ async function busy(button, action) {
 }
 
 document.querySelectorAll('input[name="action"]').forEach(input => {
-  input.addEventListener('change', syncActionUI);
+  input.addEventListener('change', () => pilihAksi(input.value));
+});
+
+document.querySelectorAll('[data-action]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    pilihAksi(a.dataset.action);
+    el('f-user').focus();
+  });
 });
 
 el('account').addEventListener('submit', e => {
   e.preventDefault();
   const form = e.target;
   const values = Object.fromEntries(new FormData(form));
-  values.action = currentAction();
+  values.action = aksi;
   if (!ACTION[values.action].code) delete values.code;
   busy(el('submit'), async () => {
     status('Memproses…');
@@ -144,8 +160,7 @@ el('account').addEventListener('submit', e => {
       return;
     }
     showRecovery(result.recovery);
-    document.querySelector('input[name="action"][value="login"]').checked = true;
-    syncActionUI();
+    pilihAksi('login');
     status('Akun siap. Simpan kode pemulihan di bawah, lalu masuk dengan password barusan.', 'ok');
   });
 });
@@ -192,8 +207,7 @@ el('logout').addEventListener('click', () => busy(el('logout'), async () => {
   el('auth').hidden = false;
   el('transactions').replaceChildren();
   el('account').reset();
-  document.querySelector('input[name="action"][value="login"]').checked = true;
-  syncActionUI();
+  pilihAksi('login');
   status('Sudah logout.', 'ok');
 }));
 

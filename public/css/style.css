@@ -784,14 +784,23 @@ body.kb{overflow:auto;min-height:100dvh;padding:0}
   background:var(--accent-gradient);box-shadow:0 6px 16px -6px rgba(81,71,217,.55)}
 .k-hero h1{font-size:clamp(24px,4.6vw,32px);line-height:1.15;letter-spacing:-.6px}
 .k-sub{color:var(--txt-dim);font-size:14.5px;max-width:34ch}
-.k-points{list-style:none;display:flex;flex-direction:column;gap:9px;margin-top:8px}
-.k-points li{font-size:13px;color:var(--txt-mute);line-height:1.5;padding-left:24px;position:relative}
-.k-points li::before{content:"";position:absolute;left:0;top:6px;width:14px;height:14px;
-  border-radius:50%;background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px rgba(89,85,239,.45)}
 .k-points b{color:var(--txt);font-weight:650}
 .k-back{margin-top:6px;font-size:13px;color:var(--accent-ink);text-decoration:none;align-self:flex-start;
   padding:6px 0;border-bottom:1px solid transparent}
 .k-back:hover{border-bottom-color:currentColor}
+
+/* Pintasan di bawah tombol utama: buat akun, undangan, lupa password */
+.k-switch{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:13px;color:var(--txt-mute);text-align:center}
+.k-switch[hidden],.k-mini[hidden]{display:none}
+.k-switch a{color:var(--accent-ink);font-weight:650;text-decoration:none}
+.k-switch a:hover{text-decoration:underline}
+.k-mini{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:10px;font-size:12px;color:var(--txt-mute)}
+.k-mini a{color:var(--txt-dim);text-decoration:none;padding:6px 2px;min-height:32px;
+  display:inline-flex;align-items:center}
+.k-mini a:hover{color:var(--accent-ink);text-decoration:underline}
+.k-mini a[hidden]{display:none}
 
 .k-col{display:flex;flex-direction:column;gap:16px;min-width:0}
 .k-card{background:var(--panel);border:1px solid #E7E9F4;border-radius:var(--r);
@@ -799,8 +808,8 @@ body.kb{overflow:auto;min-height:100dvh;padding:0}
 .k-title{font-size:16px;font-weight:700;letter-spacing:-.3px;margin-bottom:16px}
 .k-muted{font-size:12.5px;color:var(--txt-mute);margin:-8px 0 14px;line-height:1.55}
 
-/* tab pilihan keperluan */
-.k-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;background:#F0F1FA;
+/* tab pilihan keperluan: hanya dua, jadi selalu dua kolom */
+.k-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#F0F1FA;
   border:1px solid #E0E2F0;border-radius:var(--r-sm);padding:4px;margin-bottom:18px}
 .k-tabs label{position:relative;display:block;cursor:pointer;min-width:0}
 .k-tabs input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
@@ -816,6 +825,7 @@ body.kb{overflow:auto;min-height:100dvh;padding:0}
 .k-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;min-width:0}
 .k-field > label{font-size:12.5px;font-weight:650;color:var(--txt)}
 .k-field .hint{font-size:11.5px;color:var(--txt-mute);line-height:1.5}
+.k-field .hint[hidden]{display:none}
 .k-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0}
 .k-money{display:flex;align-items:center;gap:2px;background:#F8F9FE;border:1px solid #DDE0ED;
   border-radius:var(--r-sm);padding-left:12px;min-height:44px;transition:.13s}
@@ -867,11 +877,22 @@ body.kb{overflow:auto;min-height:100dvh;padding:0}
   .k-page{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);align-items:start;
     gap:clamp(28px,4vw,52px);padding-top:clamp(40px,7vh,80px)}
   .k-hero{position:sticky;top:clamp(40px,7vh,80px)}
-  .k-tabs{grid-template-columns:repeat(4,1fr)}
 }
-@media (max-width:360px){
+@media (max-width:400px){
   .k-tabs span{font-size:11.5px;padding:8px 4px}
   .k-grid2{grid-template-columns:1fr}
+}
+/* Ponsel pendek: rapatkan agar kartu akun muat satu layar tanpa scroll. */
+@media (max-width:420px) and (max-height:820px){
+  .k-page{padding-top:14px;gap:14px}
+  .k-hero{gap:6px}
+  .k-hero h1{font-size:22px}
+  .k-sub{font-size:13px}
+  .k-card{padding:16px}
+  .k-title{font-size:15px;margin-bottom:13px}
+  .k-tabs{margin-bottom:14px}
+  .k-tabs span{min-height:40px}
+  .k-field{margin-bottom:12px}
 }
 
 /* ---------- Pilih mode: catatan pribadi / buku keluarga ---------- */

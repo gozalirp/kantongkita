@@ -13,39 +13,31 @@
   <section class="k-hero">
     <a class="k-brand" href="/"><span class="k-logo">💰</span><span>SavingDuit</span></a>
     <h1>Keuangan keluarga</h1>
-    <p class="k-sub">Satu buku catatan untuk berdua, akun privat tanpa email.</p>
-    <ul class="k-points">
-      <li><b>Berdua saja</b> — maksimal dua anggota, tanpa pendaftaran umum</li>
-      <li><b>Rahasia</b> — password disimpan sebagai sandi acak, tidak bisa dibaca siapa pun</li>
-      <li><b>Tanpa email</b> — pemulihan memakai kode pribadi yang kalian simpan</li>
-    </ul>
-    <a class="k-back" href="/">← Kembali ke catatan lokal</a>
+    <p class="k-sub">Satu buku catatan untuk berdua.</p>
   </section>
 
   <div class="k-col">
 
     <section class="k-card" id="auth">
-      <h2 class="k-title">Masuk ke buku keluarga</h2>
+      <h2 class="k-title" id="auth-title">Masuk</h2>
       <form id="account">
         <div class="k-tabs" role="tablist" aria-label="Pilih keperluan">
           <label><input type="radio" name="action" value="login" checked><span>Masuk</span></label>
-          <label><input type="radio" name="action" value="activate"><span>Aktivasi</span></label>
-          <label><input type="radio" name="action" value="join"><span>Undangan</span></label>
-          <label><input type="radio" name="action" value="recover"><span>Lupa sandi</span></label>
+          <label><input type="radio" name="action" value="activate"><span>Buat akun</span></label>
         </div>
 
         <div class="k-field">
           <label for="f-user">Username</label>
           <input id="f-user" name="username" type="text" required autocomplete="username"
                  pattern="[a-zA-Z0-9_]{3,32}" spellcheck="false" placeholder="mis. gozali">
-          <span class="hint">3–32 karakter: huruf, angka, atau garis bawah.</span>
+          <span class="hint" id="user-hint">3–32 karakter: huruf, angka, atau garis bawah.</span>
         </div>
 
         <div class="k-field">
           <label for="f-pass">Password</label>
           <input id="f-pass" name="password" type="password" required minlength="12" maxlength="128"
                  autocomplete="current-password" placeholder="minimal 12 karakter">
-          <span class="hint" id="pass-hint">Minimal 12 karakter. Jangan pakai password yang sama dengan akun lain.</span>
+          <span class="hint" id="pass-hint">Minimal 12 karakter.</span>
         </div>
 
         <div class="k-field" id="code-field" hidden>
@@ -64,7 +56,9 @@
         <p>Hanya ditampilkan sekali dan tidak dikirim lewat email. Tanpa kode ini, akun tidak bisa dipulihkan.</p>
         <div class="k-code"><code id="recovery"></code><button class="btn sm" type="button" id="copy">Salin</button></div>
       </div>
-    </section>
+
+      <p class="k-switch" id="switch">Belum punya akun? <a href="#" data-action="activate">Buat akun</a></p>
+      <p class="k-mini"><a href="#" data-action="join">Punya kode undangan?</a><span aria-hidden="true">·</span><a href="#" data-action="recover">Lupa password?</a></p>    </section>
 
     <section id="family" hidden>
       <div class="k-card">
@@ -114,11 +108,11 @@
     <details class="k-card k-guide">
       <summary>Panduan penggunaan</summary>
       <ol>
-        <li>Pemilik memakai kode aktivasi privat untuk membuat akun pertama. Gunakan password minimal 12 karakter.</li>
-        <li>Simpan kode pemulihan di tempat pribadi. Kode ditampilkan setelah pendaftaran atau pemulihan, bukan dikirim melalui email.</li>
-        <li>Masuk lalu buat undangan. Berikan hanya kepada pasangan; berlaku 24 jam dan sekali pakai. Undangan baru membatalkan yang lama.</li>
-        <li>Pasangan memilih Undangan dan membuat username/password sendiri. Maksimal dua anggota.</li>
-        <li>Transaksi memerlukan internet. Muat ulang untuk melihat catatan pasangan. Jika ada konflik, periksa daftar terbaru sebelum menyimpan ulang. Jika koneksi putus setelah menekan Simpan, periksa daftar sebelum mencoba lagi agar tidak dobel.</li>
+        <li>Pemilik memakai kode aktivasi privat untuk membuat akun pertama. Password minimal 12 karakter.</li>
+        <li>Simpan kode pemulihan yang muncul setelahnya. Kode itu tidak dikirim lewat email.</li>
+        <li>Masuk, lalu buat undangan dan berikan hanya kepada pasangan. Berlaku 24 jam dan sekali pakai.</li>
+        <li>Pasangan memilih "Punya kode undangan?" lalu membuat username/password sendiri. Maksimal dua anggota.</li>
+        <li>Catatan bersama memerlukan internet. Muat ulang untuk melihat catatan pasangan. Jika muncul pesan konflik, periksa daftar terbaru sebelum menyimpan ulang.</li>
         <li>Catatan lokal lama tidak otomatis dipindahkan. Tetap buat backup dari aplikasi utama.</li>
         <li>Gunakan Logout pada perangkat bersama. Jangan bagikan password, kode pemulihan, atau kode aktivasi.</li>
       </ol>
