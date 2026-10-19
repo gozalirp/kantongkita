@@ -26,10 +26,10 @@ function buatStorage(kuota) {
   };
 }
 
-const U = require(path.join(__dirname, '..', 'js', 'util.js'));
+const U = require(path.join(__dirname, '..', 'public', 'js', 'util.js'));
 globalThis.U = U;
 globalThis.localStorage = buatStorage(0);          // 0 = tanpa batas
-const S = require(path.join(__dirname, '..', 'js', 'store.js'));
+const S = require(path.join(__dirname, '..', 'public', 'js', 'store.js'));
 const P = S.Profiles;
 
 /* ============================================================ */
@@ -50,8 +50,8 @@ section('2. Data lama (tanpa profil) dipindahkan ke profil pertama');
   const S2 = buatStorage(0);
   S2.setItem('savingduit.db.v1', JSON.stringify({ version: 1, wallets: [{ id: 'w', name: 'Tunai', balance: 0 }], transactions: [{ id: 't1' }], categories: [], receipts: {} }));
   globalThis.localStorage = S2;
-  delete require.cache[require.resolve(path.join(__dirname, '..', 'js', 'store.js'))];
-  const S3 = require(path.join(__dirname, '..', 'js', 'store.js'));
+  delete require.cache[require.resolve(path.join(__dirname, '..', 'public', 'js', 'store.js'))];
+  const S3 = require(path.join(__dirname, '..', 'public', 'js', 'store.js'));
   const l = S3.Profiles.list();
   eq('satu profil dibuat', l.length, 1);
   eq('data lama pindah ke profil itu', S3.Persist.loadFor(l[0].id).transactions.length, 1);
@@ -59,16 +59,16 @@ section('2. Data lama (tanpa profil) dipindahkan ke profil pertama');
   ok('kunci profil aktif dipakai', S3.Persist.key() === 'savingduit.db.v1::' + l[0].id, S3.Persist.key());
 
   // ulang lagi: jangan sampai data hilang / dobel
-  delete require.cache[require.resolve(path.join(__dirname, '..', 'js', 'store.js'))];
-  const S4 = require(path.join(__dirname, '..', 'js', 'store.js'));
+  delete require.cache[require.resolve(path.join(__dirname, '..', 'public', 'js', 'store.js'))];
+  const S4 = require(path.join(__dirname, '..', 'public', 'js', 'store.js'));
   eq('migrasi tidak diulang (data tetap 1 transaksi)', S4.Persist.loadFor(l[0].id).transactions.length, 1);
   eq('profil tetap satu', S4.Profiles.list().length, 1);
 }
 
 /* kembali ke storage semula */
 globalThis.localStorage = buatStorage(0);
-delete require.cache[require.resolve(path.join(__dirname, '..', 'js', 'store.js'))];
-const S5 = require(path.join(__dirname, '..', 'js', 'store.js'));
+delete require.cache[require.resolve(path.join(__dirname, '..', 'public', 'js', 'store.js'))];
+const S5 = require(path.join(__dirname, '..', 'public', 'js', 'store.js'));
 const P5 = S5.Profiles;
 
 section('3. Membuat profil + sandi');
@@ -258,8 +258,8 @@ section('11. Penyimpanan penuh tetap menyelamatkan transaksi');
 {
   const kecil = buatStorage(4000);
   globalThis.localStorage = kecil;
-  delete require.cache[require.resolve(path.join(__dirname, '..', 'js', 'store.js'))];
-  const S6 = require(path.join(__dirname, '..', 'js', 'store.js'));
+  delete require.cache[require.resolve(path.join(__dirname, '..', 'public', 'js', 'store.js'))];
+  const S6 = require(path.join(__dirname, '..', 'public', 'js', 'store.js'));
   S6.Profiles.list();
   const db = S6.seedDB();
   // struk besar supaya kuota jebol

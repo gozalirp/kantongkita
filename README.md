@@ -17,7 +17,13 @@ Live App: **[https://savingduit.gozalirp.workers.dev](https://savingduit.gozalir
 ---
 
 ## 🛠️ Struktur Berkas
+
+Frontend dan backend dipisah dalam dua folder terpisah, tetap dalam satu proyek.
+
+### 🎨 `public/` — Frontend
 - `index.html` — Halaman utama aplikasi (Single Page App).
+- `manifest.json` & `sw.js` — Konfigurasi Progressive Web App (PWA).
+- `icon-192.png` & `icon-512.png` — Icon aplikasi resolusi tinggi.
 - `css/` — Tampilan antarmuka responsif dan modern.
 - `js/`
   - `app.js` — Logika bootstrap, router navigasi, dan auto-sync Cloudflare D1.
@@ -25,16 +31,23 @@ Live App: **[https://savingduit.gozalirp.workers.dev](https://savingduit.gozalir
   - `views.js` — Komponen tampilan UI (Dashboard, Transaksi, Rekap, dll).
   - `util.js` — Helper format mata uang rupiah, tanggal, dan kalkulasi.
   - `gdrive.js` — Driver sinkronisasi cadangan Google Drive.
-- `worker.js` — Cloudflare Worker API (`GET /api/sync`, `POST /api/sync`, `GET /api/health`).
-- `wrangler.toml` — Konfigurasi deployment Cloudflare Workers + D1 Database.
-- `manifest.json` & `sw.js` — Konfigurasi Progressive Web App (PWA).
-- `icon-192.png` & `icon-512.png` — Icon aplikasi resolusi tinggi.
-- `server.js` & `buka.bat` — Server lokal alternatif jika ingin dijalankan offline di komputer.
+
+### ⚙️ `worker/` — Backend
+- `worker.js` — Cloudflare Worker API (`GET /api/sync`, `POST /api/sync`, `GET /api/health`) untuk produksi.
+- `server.js` — Server Node.js untuk pengujian lokal.
+
+### 📦 Berkas pendukung
+- `wrangler.toml` — Konfigurasi: `main = worker/worker.js`, `assets = public/`, dan binding D1.
+- `buka.bat` — Server lokal, klik dua kali untuk menjalankan.
+- `tests/` — Uji otomatis (logika, profil, DOM, dan browser sungguhan).
+- `.github/workflows/` — CI build otomatis Android APK.
 
 ---
 
-## 🚀 Perintah Deployment (Cloudflare)
-Untuk memperbarui kode ke Cloudflare:
+## 🚀 Perintah
 ```bash
-wrangler deploy
+npm start          # jalankan server lokal (http://localhost:8765)
+npm run dev        # uji backend dengan wrangler dev + D1 lokal
+npm test           # jalankan uji otomatis
+npm run deploy     # deploy frontend + backend ke Cloudflare
 ```

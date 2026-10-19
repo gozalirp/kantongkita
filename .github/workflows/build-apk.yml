@@ -29,18 +29,13 @@ jobs:
         run: |
           npm install --save @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Prepare Web Assets
-        run: |
-          mkdir -p www
-          cp -r index.html manifest.json sw.js css js icon-*.png www/
-
       - name: Create Capacitor Config
         run: |
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.savingduit.app",
             "appName": "SavingDuit",
-            "webDir": "www",
+            "webDir": "public",
             "server": {
               "androidScheme": "https"
             }

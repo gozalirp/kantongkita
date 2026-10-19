@@ -4,3 +4,20 @@ screen.png
 snap.ps1
 cloudflared.exe
 *.log
+
+# Data lokal server dev (worker/data/)
+worker/data/
+
+# Artefak build Android
+apk/
+*.apk
+*.zip
+gradle-error-extracted/
+
+# Berkas sementara dari tests/browser-test.js
+public/_probe.html
+
+# Berkas hasil generate Capacitor (build CI)
+android/
+www/
+capacitor.config.json

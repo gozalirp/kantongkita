@@ -1,10 +1,13 @@
 {
   "name": "savingduit",
   "version": "1.0.0",
-  "description": "SavingDuit - Aplikasi Keuangan Pribadi",
-  "main": "server.js",
+  "description": "SavingDuit - Aplikasi Keuangan Pribadi (frontend: public/, backend: worker/)",
+  "private": true,
   "scripts": {
-    "start": "node server.js",
-    "deploy": "wrangler pages deploy . --project-name=savingduit"
+    "start": "node worker/server.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node tests/smoke.js && node tests/profile-test.js && node tests/dom-test.js",
+    "test:browser": "node tests/browser-test.js"
   }
 }

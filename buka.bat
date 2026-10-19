@@ -24,7 +24,7 @@ echo   Tekan Ctrl+C atau tutup jendela ini untuk mematikan.
 echo.
 
 start "" cmd /c "timeout /t 2 >nul & start """" http://localhost:%PORT%"
-"%NODE%" server.js %PORT%
+"%NODE%" worker\server.js %PORT%
 goto END
 
 :NONODE
@@ -44,7 +44,7 @@ echo.
 echo   Cara 3:
 echo     Kalau Node.js ada tapi tidak terdeteksi,
 echo     jalankan lewat Command Prompt:
-echo         node "%~dp0server.js"
+echo         node "%~dp0worker\server.js"
 echo.
 pause
 

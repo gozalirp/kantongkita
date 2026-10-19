@@ -17,7 +17,7 @@ const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..', 'public');
 const PROBE = path.join(ROOT, '_probe.html');
 const PORT = 8877 + Math.floor(Math.random() * 200);
 
@@ -93,7 +93,7 @@ function hit(sel){
 function s1(){try{
   d=document.getElementById('f').contentDocument;w=document.getElementById('f').contentWindow;
   w.localStorage.clear();
-  say('T stylesheet|'+d.styleSheets.length);
+  say('T stylesheet|'+Array.prototype.filter.call(d.styleSheets,function(s){return s.href&&s.href.indexOf('css/style.css')>-1;}).length);
   say('T overlay-display|'+w.getComputedStyle(d.getElementById('modal-wrap')).display);
   say('T overlay-rect|'+Math.round(d.getElementById('modal-wrap').getBoundingClientRect().width));
   say('T modal-title-bawaan|'+JSON.stringify(d.getElementById('modal-title').textContent));

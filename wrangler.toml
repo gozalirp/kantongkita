@@ -1,10 +1,14 @@
 name = "savingduit"
-main = "worker.js"
+main = "worker/worker.js"
 compatibility_date = "2024-01-01"
 
+# ==================== FRONTEND ====================
+# Hanya folder public/ yang di-upload sebagai asset statis.
 [assets]
-directory = "."
+directory = "public"
 
+# ==================== BACKEND ====================
+# Binding database D1 untuk API /api/sync
 [[d1_databases]]
 binding = "DB"
 database_name = "savingduit-db"

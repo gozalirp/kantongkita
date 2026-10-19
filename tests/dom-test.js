@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..', 'public');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
   .replace(/<script src="js\/[^"]+"><\/script>/g, '');
 

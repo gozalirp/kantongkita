@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path');
 const {JSDOM}=require('jsdom');
-const ROOT=__dirname+'/..';
+const ROOT=__dirname+'/../public';
 const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
 const css=fs.readFileSync(path.join(ROOT,'css/style.css'),'utf8');
 const dom=new JSDOM(html,{url:'http://localhost/',pretendToBeVisual:true});

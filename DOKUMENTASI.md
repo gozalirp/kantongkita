@@ -110,28 +110,51 @@ Untuk keamanan data berlapis, tersedia dua opsi cadangan manual:
 
 ## 📁 Struktur Proyek
 
+Proyek ini dipisah menjadi dua bagian yang jelas: **frontend** (tampilan, ada di `public/`) dan **backend** (API, ada di `worker/`). Keduanya tetap dalam satu proyek dan di-deploy bersamaan sebagai satu Worker.
+
 ```text
 savingduit/
-├── index.html          # Halaman antarmuka Single Page Application
-├── worker.js           # Cloudflare Worker API & handler REST D1
-├── wrangler.toml       # Konfigurasi binding database D1 & edge route
-├── manifest.json       # Metadata aplikasi mobile (PWA)
-├── sw.js               # Service Worker untuk offline support & caching
-├── icon-192.png        # Asset logo aplikasi 192x192
-├── icon-512.png        # Asset logo aplikasi 512x512
-├── DOKUMENTASI.md      # Panduan komprehensif ini
-├── README.md           # Ringkasan cepat proyek
-├── buka.bat            # Script pembuka server lokal (opsional)
-├── server.js           # Server Node.js untuk pengujian lokal
-├── css/
-│   └── style.css       # Seluruh stylesheet antarmuka responsif
-└── js/
-    ├── app.js          # Inisialisasi, routing, dan auto-sync Cloudflare
-    ├── store.js        # Logika database lokal, validasi, dan profil
-    ├── views.js        # Komponen template antarmuka
-    ├── util.js         # Utilitas pemformatan mata uang, tanggal, dan kalkulasi
-    └── gdrive.js       # Integrasi cadangan Google Drive API
+│
+├── public/                     # 🎨 FRONTEND — semua yang dilihat pengguna
+│   ├── index.html              # Halaman antarmuka Single Page Application
+│   ├── manifest.json           # Metadata aplikasi mobile (PWA)
+│   ├── sw.js                   # Service Worker untuk offline support & caching
+│   ├── icon-192.png            # Asset logo aplikasi 192x192
+│   ├── icon-512.png            # Asset logo aplikasi 512x512
+│   ├── css/
+│   │   └── style.css           # Seluruh stylesheet antarmuka responsif
+│   └── js/
+│       ├── app.js              # Inisialisasi, routing, dan auto-sync Cloudflare
+│       ├── store.js            # Logika database lokal, validasi, dan profil
+│       ├── views.js            # Komponen template antarmuka
+│       ├── util.js             # Utilitas pemformatan mata uang, tanggal, kalkulasi
+│       └── gdrive.js           # Integrasi cadangan Google Drive API
+│
+├── worker/                     # ⚙️ BACKEND — API & database
+│   ├── worker.js               # Cloudflare Worker API + REST D1 (PRODUKSI)
+│   └── server.js               # Server Node.js untuk pengujian lokal (DEV)
+│
+├── tests/                      # 🧪 Uji otomatis (smoke, profil, DOM, browser)
+├── .github/workflows/          # 🤖 CI: build otomatis Android APK
+│
+├── wrangler.toml               # Konfigurasi: main = worker/worker.js, assets = public/
+├── package.json                # Perintah npm (start, dev, deploy, test)
+├── buka.bat                    # Script pembuka server lokal (klik dua kali)
+├── DOKUMENTASI.md              # Panduan komprehensif ini
+└── README.md                   # Ringkasan cepat proyek
 ```
+
+### Batas Frontend ↔ Backend
+
+Hanya ada **satu** titik sambung antara keduanya, yaitu HTTP API:
+
+| Endpoint | Method | Fungsi |
+| --- | --- | --- |
+| `/api/health` | GET | Cek status server |
+| `/api/sync` | GET | Ambil data dari cloud |
+| `/api/sync` | POST | Simpan data ke cloud |
+
+Frontend memanggilnya lewat **path relatif** (`fetch('/api/sync')`), sehingga tidak perlu konfigurasi URL apa pun selama keduanya satu domain. `wrangler.toml` mengarahkan `/api/*` ke `worker/worker.js`, dan sisanya dilayani sebagai file statis dari `public/`.
 
 ---
 
@@ -140,20 +163,34 @@ savingduit/
 ### Menjalankan di Komputer Lokal
 Jika ingin menjalankan dan mengembangkan secara lokal:
 ```bash
-# Jalankan menggunakan server lokal bawaan
-node server.js
+npm start
 # atau klik dua kali berkas 'buka.bat'
 ```
-Aplikasi akan aktif di `http://localhost:8765`.
+Aplikasi akan aktif di `http://localhost:8765`. Perintah ini menjalankan `worker/server.js`, yang melayani API sekaligus file statis dari `public/`.
+
+### Mengubah Frontend
+Semua berkas tampilan ada di `public/`. Cukup edit, lalu muat ulang browser (Ctrl+F5). Tidak perlu langkah build, tidak perlu menyentuh backend.
+
+### Mengubah Backend
+Semua logika API ada di `worker/worker.js`. Untuk menguji perubahan secara lokal dengan lingkungan Cloudflare sungguhan (termasuk database D1):
+```bash
+npm run dev
+```
+
+### Menjalankan Uji Otomatis
+```bash
+npm test                 # uji logika & DOM (cepat)
+npm run test:browser     # uji di Chrome sungguhan (perlu Chrome terpasang)
+```
 
 ### Deployment ke Cloudflare Workers
 Pastikan tool Wrangler sudah login:
 ```bash
 wrangler whoami
 ```
-Untuk mengunggah versi terbaru ke internet:
+Untuk mengunggah versi terbaru ke internet (frontend + backend sekaligus):
 ```bash
-wrangler deploy
+npm run deploy
 ```
 
 ---

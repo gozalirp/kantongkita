@@ -1,14 +1,19 @@
-/* server.js — Full Web Server + Sync API untuk SavingDuit (Lokal & Cloud Run)
-   Port default 8765, atau baca dari process.env.PORT (standar Cloud Run).
-   Data tersimpan aman di folder data/savingduit-cloud.json
+/* worker/server.js — Backend untuk pemakaian LOKAL (dev offline)
+   - API  : GET/POST /api/sync, GET /api/health
+   - Statis: menyajikan file dari folder ../public (frontend)
+   - Port default 8765, atau baca dari process.env.PORT
+   - Data tersimpan di worker/data/savingduit-cloud.json
+
+   Catatan: untuk produksi, backend yang dipakai adalah worker.js (Cloudflare Workers + D1).
 */
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = __dirname;
+// Frontend (aset statis) ada di folder sejajar: ../public
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORT = parseInt(process.env.PORT, 10) || parseInt(process.argv[2], 10) || 8765;
-const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'savingduit-cloud.json');
 
 // Pastikan folder data tersedia
@@ -101,12 +106,12 @@ const server = http.createServer(function (req, res) {
     return;
   }
 
-  // ==================== STATIC FILE SERVING ====================
+  // ==================== STATIC FILE SERVING (dari ../public) ====================
   let rel = pathname;
   if (rel === '/' || rel === '') rel = '/index.html';
 
-  const file = path.join(ROOT, path.normalize(rel).replace(/^(\.\.[\/\\])+/, ''));
-  if (!file.startsWith(ROOT)) {
+  const file = path.join(PUBLIC_DIR, path.normalize(rel).replace(/^(\.\.[\/\\])+/, ''));
+  if (!file.startsWith(PUBLIC_DIR)) {
     res.writeHead(403);
     return res.end('403 Forbidden');
   }

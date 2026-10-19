@@ -4,9 +4,9 @@
 const path = require('path');
 const root = {};
 global.window = undefined;
-const U = require(path.join(__dirname, '..', 'js', 'util.js'));
-const S = require(path.join(__dirname, '..', 'js', 'store.js'));
-const U2 = require(path.join(__dirname, '..', 'js', 'util.js')) && null;
+const U = require(path.join(__dirname, '..', 'public', 'js', 'util.js'));
+const S = require(path.join(__dirname, '..', 'public', 'js', 'store.js'));
+const U2 = require(path.join(__dirname, '..', 'public', 'js', 'util.js')) && null;
 
 let pass = 0, fail = 0;
 const fails = [];
