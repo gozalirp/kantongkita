@@ -189,7 +189,7 @@ function periksa(ctx, dev, tampilan) {
   g.tinggiBilah = Math.round(navR.height);
   g.areaKetukBilah = Math.round(navR.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
   g.targetKetuk = {};
-  ['dashboard', 'transaksi', 'rekap', 'pengaturan'].forEach(function (v) {
+  ['dashboard', 'transaksi', 'rekap', 'menu'].forEach(function (v) {
     var it = d.querySelector('.bnav-item[data-bview="' + v + '"]');
     if (it) g.targetKetuk[v] = Math.round(it.getBoundingClientRect().height);
   });

@@ -32,6 +32,7 @@
     d.className = 'toast ' + (kind || '');
     d.textContent = msg;
     box.appendChild(d);
+    U.polishIcons(box);
     setTimeout(function () {
       d.style.transition = 'opacity .25s, transform .25s';
       d.style.opacity = '0'; d.style.transform = 'translateX(20px)';
@@ -48,6 +49,7 @@
       el('modal-title').innerHTML = opt.title || '';
       el('modal-body').innerHTML = opt.body || '';
       el('modal-foot').innerHTML = opt.foot || '';
+      U.polishIcons(el('modal'));
       el('modal-wrap').hidden = false;
       el('modal-wrap').classList.add('show');
       el('modal-wrap').classList.toggle('locked', !!opt.lock);
@@ -68,7 +70,7 @@
     },
     locked: function () { return modalLocked; },
     body: function () { return el('modal-body'); },
-    setFoot: function (html) { el('modal-foot').innerHTML = html; }
+    setFoot: function (html) { el('modal-foot').innerHTML = html; U.polishIcons(el('modal-foot')); }
   };
 
   V.confirm = function (title, msg, okLabel, danger) {
@@ -487,44 +489,57 @@
     }
 
     const recent = S.filterTx(db, {}).slice(0, 10);
-    const netMonth = bulan.net;
 
-    return '' +
-    st4 +
-    '<div class="card mt"><div class="card-head"><h2>Tampilan Saldo Rekening / Tabungan</h2>' +
-      '<button class="btn sm" onclick="App.go(\'dompet\')">Kelola</button></div>' +
-      (walletCards ? '<div class="grid cols-3">' + walletCards + '</div>' : emptyBox('🏦', 'Belum ada dompet. Tambahkan dulu di menu Dompet & Bank.')) +
-    '</div>' +
+    const categories = S.byCategory(db, U.monthStart(U.today()), U.monthEnd(U.today()), 'out');
+    const colors = ['#5955EF', '#FBBF24', '#FB7185', '#60A5FA', '#34D399', '#A78BFA'];
+    // Semua kategori tetap masuk hitungan; warna berulang memiliki label tersendiri.
+    const categoryTotal = U.sum(categories, function (r) { return r.amount; });
+    let cursor = 0;
+    const stops = categories.map(function (r, i) {
+      const from = cursor;
+      cursor += U.pct(r.amount, categoryTotal);
+      return colors[i % colors.length] + ' ' + from + '% ' + cursor + '%';
+    });
+    const donut = '<div class="planner-donut" role="img" aria-label="' +
+      H('Total pengeluaran bulan ini ' + U.fmtRp(categoryTotal)) + '" style="--donut:conic-gradient(' +
+      (stops.length ? stops.join(',') : '#E9EDF5 0% 100%') + ')"><div><strong>' +
+      U.fmtRpShort(categoryTotal) + '</strong><span>Pengeluaran</span></div></div>';
 
-    '<div class="card mt"><div class="card-head">' +
-      '<h2>Grafik Pengeluaran vs Pemasukan</h2>' +
-      '<span class="muted" style="font-size:12px">' + chartCaption + '</span>' +
-      '<div class="seg" style="width:auto" id="dash-chart">' +
-        segBtn(st.chart, '6m', '6 Bulan') + segBtn(st.chart, '12m', '12 Bulan') + segBtn(st.chart, '30d', '30 Hari') +
-      '</div></div>' +
-      dualBars(chartData) +
-    '</div>' +
+    return '<div class="planner-dashboard">' +
+      '<header class="planner-welcome"><div><span class="planner-eyebrow">CATATAN KEUANGAN PRIBADI</span>' +
+        '<h2>Rencana uangmu, lebih terarah.</h2><p>Pantau saldo dan wujudkan targetmu, sedikit demi sedikit.</p></div>' +
+        '<button class="btn primary" onclick="V.txForm()">+ Catat transaksi</button></header>' +
+      st4 +
+      '<div class="planner-layout"><div class="planner-main">' +
+        '<section class="card planner-wallets"><div class="card-head"><h2>Dompet &amp; tabungan</h2>' +
+          '<button class="btn sm" onclick="App.go(\'dompet\')">Kelola</button></div>' +
+          (walletCards ? '<div class="grid cols-3">' + walletCards + '</div>' : emptyBox('🏦', 'Belum ada dompet. Tambahkan dulu di menu Dompet & Bank.')) +
+        '</section>' +
+        '<section class="card planner-chart"><div class="card-head"><h2>Statistik keuangan</h2>' +
+          '<div class="seg" id="dash-chart">' + segBtn(st.chart, '6m', '6 Bulan') +
+          segBtn(st.chart, '12m', '12 Bulan') + segBtn(st.chart, '30d', '30 Hari') + '</div></div>' +
+          '<p class="muted planner-caption">Pemasukan dan pengeluaran · ' + chartCaption + '</p>' + dualBars(chartData) +
+        '</section>' +
+        '<section class="card"><div class="card-head"><h2>Catatan Terakhir</h2>' +
+          '<button class="btn sm" onclick="App.go(\'transaksi\')">Lihat semua</button></div>' +
+          (recent.length ? '<div class="list">' + recent.map(function (t) { return V.txRow(db, t); }).join('') + '</div>' :
+            emptyBox('📝', 'Belum ada transaksi. Mulai catat pengeluaran pertamamu.')) + '</section>' +
+        '<section class="card"><div class="card-head"><h2>Ringkasan Cepat</h2></div><div class="grid cols-4">' +
+          [['Hari ini', S.summaryDays(db, 1).expense], ['7 hari', S.summaryDays(db, 7).expense],
+           ['Bulan ini', bulan.expense], ['Tahun ini', S.summaryYear(db).expense]].map(function (r) {
+            return '<div class="stat"><div class="lbl">' + r[0] + '</div><div class="val">' + U.fmtRpShort(r[1]) +
+              '</div><div class="sub">pengeluaran</div></div>';
+          }).join('') + '</div></section>' +
+      '</div><aside class="planner-aside" aria-label="Target dan komposisi pengeluaran">' +
+        '<section class="card planner-breakdown"><div class="card-head"><h2>Pengeluaran per Kategori</h2></div>' +
+          '<p class="muted planner-caption">' + U.fmtMonth(U.monthOf(U.today())) + '</p>' + donut +
+          (categories.length ? '<ul class="planner-legend">' + categories.map(function (r, i) {
+            return '<li><i aria-hidden="true" style="background:' + colors[i % colors.length] + '"></i><span>' + H(r.name) +
+              '</span><strong>' + U.fmtRpShort(r.amount) + '</strong></li>';
+          }).join('') + '</ul>' : '<p class="muted">Belum ada pengeluaran bulan ini.</p>') +
+        '</section>' + V.dashTahap2() +
+      '</aside></div></div>';
 
-    '<div class="grid cols-2 mt">' +
-      '<div class="card"><div class="card-head"><h2>Pengeluaran per Kategori</h2>' +
-        '<span class="muted" style="font-size:12px">' + U.fmtMonth(U.monthOf(U.today())) + '</span></div>' +
-        catBars(db, U.monthStart(U.today()), U.monthEnd(U.today())) + '</div>' +
-      '<div class="card"><div class="card-head"><h2>Catatan Terakhir</h2>' +
-        '<button class="btn sm primary" onclick="V.txForm()">+ Catat</button></div>' +
-        (recent.length ? '<div class="list">' + recent.map(function (t) { return V.txRow(db, t); }).join('') + '</div>'
-                       : emptyBox('📝', 'Belum ada transaksi. Mulai catat pengeluaran pertamamu.')) +
-      '</div>' +
-    '</div>' +
-
-    '<div class="card mt"><div class="card-head"><h2>Ringkasan Cepat</h2></div>' +
-      '<div class="grid cols-4">' +
-        '<div class="stat"><div class="lbl">Hari ini</div><div class="val" style="font-size:17px">' + U.fmtRpShort(S.summaryDays(db, 1).expense) + '</div><div class="sub">pengeluaran</div></div>' +
-        '<div class="stat"><div class="lbl">7 hari</div><div class="val" style="font-size:17px">' + U.fmtRpShort(S.summaryDays(db, 7).expense) + '</div><div class="sub">pengeluaran</div></div>' +
-        '<div class="stat"><div class="lbl">Bulan ini</div><div class="val" style="font-size:17px">' + U.fmtRpShort(bulan.expense) + '</div><div class="sub">pengeluaran</div></div>' +
-        '<div class="stat"><div class="lbl">Tahun ini</div><div class="val" style="font-size:17px">' + U.fmtRpShort(S.summaryYear(db).expense) + '</div><div class="sub">pengeluaran</div></div>' +
-      '</div>' +
-    '</div>' +
-    V.dashTahap2();
   };
 
   // ---- ringkasan Tahap 2: anggaran, target, langganan ----
@@ -853,6 +868,53 @@
   };
 
   /* ============================================================
+     VIEW: MENU — daftar semua fitur (dipakai navigasi bawah di HP)
+     ============================================================ */
+  const MENU_FITUR = [
+    ['dashboard', 'Beranda', 'Ringkasan saldo dan aktivitas terbaru.', 'home'],
+    ['transaksi', 'Catatan Transaksi', 'Semua pemasukan, pengeluaran, dan transfer.', 'receipt'],
+    ['rekap', 'Rekap Transaksi', 'Ringkasan harian sampai tahunan.', 'chart'],
+    ['anggaran', 'Anggaran per Kategori', 'Batas pengeluaran tiap kategori.', 'folder'],
+    ['target', 'Target Tabungan', 'Kumpulkan dana untuk tujuan tertentu.', 'target'],
+    ['langganan', 'Langganan Bulanan', 'Tagihan rutin yang harus dibayar.', 'refresh'],
+    ['dompet', 'Dompet & Bank', 'Saldo tunai, rekening, dan e-wallet.', 'wallet'],
+    ['kategori', 'Kategori', 'Kategori pemasukan dan pengeluaran.', 'tag']
+  ];
+  const MENU_LAIN = [
+    ['profil', 'Profil', 'Pisahkan catatan keuanganmu.', 'user'],
+    ['pengaturan', 'Pengaturan', 'Backup, sinkronisasi, dan preferensi.', 'settings']
+  ];
+
+  /* Halaman fitur terakhir yang dibuka — supaya Menu bisa menawarkannya lagi. */
+  function halamanTerakhir() {
+    try { return (root.App && root.App.terakhirBuka && root.App.terakhirBuka()) || ''; } catch (e) { return ''; }
+  }
+
+  V.menu = function () {
+    const kartu = function (row) {
+      return '<a class="menu-link" href="#/' + row[0] + '">' +
+        '<span class="menu-ic">' + U.icon(row[3] || 'tag') + '</span>' +
+        '<span class="menu-txt"><strong>' + row[1] + '</strong><span>' + row[2] + '</span></span>' +
+        '<span class="menu-go" aria-hidden="true">›</span>' +
+      '</a>';
+    };
+    const terakhir = halamanTerakhir();
+    const akhir = terakhir && terakhir !== 'menu'
+      ? MENU_FITUR.concat(MENU_LAIN).filter(function (r) { return r[0] === terakhir; })[0]
+      : null;
+
+    return (akhir ? '<div class="card menu-terakhir"><div class="card-head"><h2>Terakhir Dibuka</h2>' +
+        '<span class="tag">' + H(akhir[1]) + '</span></div>' +
+        '<nav class="menu-grid">' + kartu(akhir) + '</nav></div>' : '') +
+    '<div class="card' + (akhir ? ' mt' : '') + '"><div class="card-head"><h2>Semua Fitur</h2></div>' +
+      '<nav class="menu-grid" aria-label="Daftar fitur">' + MENU_FITUR.map(kartu).join('') + '</nav>' +
+    '</div>' +
+    '<div class="card mt"><div class="card-head"><h2>Lainnya</h2></div>' +
+      '<nav class="menu-grid" aria-label="Menu lainnya">' + MENU_LAIN.map(kartu).join('') + '<a class="menu-link" href="/keluarga.html"><span class="menu-ic">' + U.icon('user') + '</span><span class="menu-txt"><strong>Keluarga</strong><span>Login dan buku transaksi bersama (versi awal).</span></span></a></nav>' +
+    '</div>';
+  };
+
+  /* ============================================================
      VIEW: DOMPET & BANK
      ============================================================ */
   V.dompet = function () {
@@ -864,19 +926,15 @@
     const cards = list.map(function (w) {
       const b = bal[w.id] || 0;
       const n = S.txCountForWallet(db, w.id);
-      const bulanIn = S.summary(db, U.monthStart(U.today()), U.monthEnd(U.today())).list.filter(function (t) {
-        return t.type === 'in' && t.walletId === w.id;
-      });
-      return '<div class="card" style="border-left:4px solid ' + H(w.color || 'var(--line)') + '">' +
-        '<div class="card-head"><h2>' + H(w.icon + ' ' + w.name) + '</h2>' +
-          '<span class="tag">' + H(w.type) + '</span>' +
-          '<button class="btn icon sm ghost" onclick="V.walletForm(\'' + w.id + '\')">✏️</button>' +
-          '<button class="btn icon sm ghost" onclick="V.walletDelete(\'' + w.id + '\')">🗑️</button>' +
-        '</div>' +
-        '<div style="font-size:25px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.5px">' + U.fmtRp(b) + '</div>' +
-        '<div class="muted" style="font-size:12px;margin-top:8px">' + n + ' transaksi tercatat' +
-          (w.initial ? ' · saldo awal ' + U.fmtRp(w.initial) : '') + '</div>' +
-      '</div>';
+      const types = { cash: 'Uang tunai', bank: 'Rekening bank', ewallet: 'E-wallet', credit: 'Kartu kredit', investment: 'Investasi', other: 'Lainnya' };
+      return '<article class="card wallet-card" style="--wallet-color:' + H(w.color || '#5955EF') + '">' +
+        '<div class="wallet-heading"><span class="ico-badge">' + H(w.icon) + '</span>' +
+          '<div class="wallet-identity"><h3>' + H(w.name) + '</h3><span class="muted">' + H(types[w.type] || w.type) + '</span></div></div>' +
+        '<div class="wallet-balance"><span class="muted">Saldo saat ini</span><strong>' + U.fmtRp(b) + '</strong></div>' +
+        '<div class="wallet-meta">' + n + ' transaksi tercatat' +
+          (w.initial ? '<span>Saldo awal ' + U.fmtRp(w.initial) + '</span>' : '') + '</div>' +
+        '<footer class="wallet-actions"><button class="btn sm ghost" onclick="V.walletForm(\'' + w.id + '\')">✏️ Ubah</button>' +
+          '<button class="btn sm ghost danger" onclick="V.walletDelete(\'' + w.id + '\')">🗑️ Hapus</button></footer></article>';
     }).join('');
 
     // pindah dana cepat
@@ -885,7 +943,7 @@
     return '<div class="card"><div class="card-head"><h2>Pilihan Dompet / Bank</h2>' +
         '<span class="total-pill">Total: ' + U.fmtRp(total) + '</span>' +
         '<button class="btn primary" onclick="V.walletForm()">+ Tambah Dompet</button></div>' +
-      (cards ? '<div class="grid cols-3">' + cards + '</div>'
+      (cards ? '<div class="grid cols-3 wallet-grid">' + cards + '</div>'
              : emptyBox('🏦', 'Belum ada dompet. Tambahkan rekening, e-wallet, atau uang tunai.')) +
     '</div>' +
 
@@ -913,8 +971,8 @@
         '<div class="field"><label>Ikon (emoji)</label><input type="text" id="w-icon" value="' + H(f.icon) + '" maxlength="3"></div>' +
         '<div class="field"><label>Warna</label><div class="row" id="w-colors">' +
           COLORS.map(function (c) {
-            return '<button type="button" data-color="' + c + '" style="width:32px;height:32px;border-radius:9px;border:2px solid ' +
-              (f.color === c ? '#fff' : 'transparent') + ';background:' + c + ';cursor:pointer"></button>';
+            return '<button type="button" aria-label="Warna ' + c + '" data-color="' + c + '" style="width:44px;height:44px;border-radius:12px;border:2px solid ' +
+              (f.color === c ? '#0F172A' : 'transparent') + ';background:' + c + ';cursor:pointer"></button>';
           }).join('') +
         '</div></div>' +
         '<div class="field"><label>Saldo awal <span class="muted">(opsional)</span></label>' +
@@ -928,7 +986,7 @@
       const b = e.target.closest('[data-color]'); if (!b) return;
       color = b.dataset.color;
       Array.prototype.forEach.call(el('w-colors').children, function (c) { c.style.borderColor = 'transparent'; });
-      b.style.borderColor = '#fff';
+      b.style.borderColor = '#0F172A';
     });
     const initIn = el('w-initial');
     initIn.addEventListener('input', function () {
@@ -1836,12 +1894,12 @@
 
   function pilihanIkon(kini) {
     return '<div class="ikon-pilih" id="p-ikon">' + IKON_PROFIL.map(function (ic) {
-      return '<button type="button" class="ikon-btn' + (ic === kini ? ' on' : '') + '" data-ikon="' + ic + '">' + ic + '</button>';
+      return '<button type="button" title="Pilih ikon profil" class="ikon-btn' + (ic === kini ? ' on' : '') + '" data-ikon="' + ic + '">' + ic + '</button>';
     }).join('') + '</div>';
   }
   function pilihanWarna(kini) {
     return '<div class="warna-pilih" id="p-warna">' + WARNA_PROFIL.map(function (c) {
-      return '<button type="button" class="warna-btn' + (c === kini ? ' on' : '') + '" data-warna="' + c + '" style="background:' + c + '"></button>';
+      return '<button type="button" class="warna-btn' + (c === kini ? ' on' : '') + '" aria-label="Warna ' + c + '" data-warna="' + c + '" style="background:' + c + '"></button>';
     }).join('') + '</div>';
   }
 
@@ -2058,7 +2116,7 @@
   V.updateProfilBtn = function () {
     const p = S.Profiles.active();
     const ic = el('pb-ic'), nm = el('pb-nama');
-    if (ic) ic.textContent = p ? p.icon : '👤';
+    if (ic) { ic.textContent = p ? p.icon : '👤'; U.polishIcons(ic.parentElement); }
     if (nm) nm.textContent = p ? p.name : 'Profil';
     const k = el('btn-kunci');
     if (k) k.hidden = !(p && p.pinHash) || S.Profiles.isLocked(p.id);

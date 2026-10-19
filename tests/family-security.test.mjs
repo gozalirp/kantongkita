@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import { token, digest, username, validatePassword, hashPassword, verifyPassword, sameOrigin, sessionCookie } from '../worker/family-security.mjs';
+assert.equal(username('Suami_1'), 'suami_1');
+for (const value of ['', 'ab', '<script>', null, 'a'.repeat(33)]) assert.throws(() => username(value));
+assert.throws(() => validatePassword('pendek'));
+assert.throws(() => validatePassword('a'.repeat(129)));
+const password = 'contoh-password-panjang';
+const hash = await hashPassword(password);
+assert.equal(await verifyPassword(password, hash), true);
+assert.equal(await verifyPassword('password-yang-salah', hash), false);
+assert.equal(await verifyPassword(password, 'rusak'), false);
+// A stored hash with a weakened iteration count must not be accepted.
+assert.equal(await verifyPassword(password, hash.replace('$100000$', '$1000$')), false);
+assert.notEqual(hash, await hashPassword(password));
+const secret = token();
+assert.equal(secret.length, 64);
+assert.notEqual(secret, token());
+assert.notEqual(await digest(secret), secret);
+assert.equal(sameOrigin(new Request('https://example.test/api/login', { headers: { Origin: 'https://evil.test' } })), false);
+assert.equal(sameOrigin(new Request('https://example.test/api/login')), false);
+assert.equal(sameOrigin(new Request('https://example.test/api/login', { headers: { Origin: 'https://example.test' } })), true);
+assert.match(sessionCookie(secret), /HttpOnly; Secure; SameSite=Strict/);
+assert.throws(() => sessionCookie('bad; injected=true'));
+console.log('PASS family security primitives (not an end-to-end authentication test)');

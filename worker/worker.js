@@ -1,7 +1,20 @@
+import { family } from './family.mjs';
 // worker.js — Cloudflare Worker API + Asset Fetcher
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/family/')) {
+      if (env.FAMILY_ENABLED !== 'true') return Response.json({ ok: false, error: 'Akun keluarga sementara belum aktif: runtime login sedang diperbaiki.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+      return family(request, env);
+    }
+
+    // Legacy single-row sync is public and cannot isolate family members.
+    // Preserve its stored data, but block access until authenticated family sync replaces it.
+    if (url.pathname === '/api/sync') {
+      return Response.json({ ok: false, code: 'FAMILY_SETUP_REQUIRED',
+        error: 'Sinkronisasi keluarga belum diaktifkan. Data lokal tetap tersedia.' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    }
 
     // Header CORS standar
     const corsHeaders = {

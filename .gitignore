@@ -26,3 +26,4 @@ capacitor.config.json
 docs-build/*.png
 # Berkas sementara uji tata letak HP (tests/hp-layout.js)
 tests/hp-hasil.txt
+.dev.vars

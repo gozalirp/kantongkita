@@ -5,26 +5,26 @@
   'use strict';
   const U = root.U, S = root.S, V = root.V;
 
-  const VIEWS = ['dashboard', 'transaksi', 'rekap', 'anggaran', 'target', 'langganan', 'dompet', 'kategori', 'pengaturan', 'profil'];
+  const VIEWS = ['menu', 'dashboard', 'transaksi', 'rekap', 'anggaran', 'target', 'langganan', 'dompet', 'kategori', 'pengaturan', 'profil'];
   const TITLES = {
-    dashboard: 'Dashboard', transaksi: 'Catatan Transaksi', rekap: 'Rekap Transaksi',
+    menu: 'Menu', dashboard: 'Dashboard', transaksi: 'Catatan Transaksi', rekap: 'Rekap Transaksi',
     anggaran: 'Anggaran per Kategori', target: 'Target Tabungan', langganan: 'Langganan Bulanan',
     dompet: 'Dompet & Bank', kategori: 'Kategori', pengaturan: 'Pengaturan', profil: 'Profil'
   };
   const PREFIX = {
-    dashboard: 'V.dashboard()', transaksi: 'V.transaksi()', rekap: 'V.rekap()',
+    menu: 'V.menu()', dashboard: 'V.dashboard()', transaksi: 'V.transaksi()', rekap: 'V.rekap()',
     anggaran: 'V.anggaran()', target: 'V.target()', langganan: 'V.langganan()',
     dompet: 'V.dompet()', kategori: 'V.kategori()', pengaturan: 'V.pengaturan()', profil: 'V.profil()'
   };
   const BIND = {
-    dashboard: 'V.dashboardBind()', transaksi: 'V.transaksiBind()', rekap: 'V.rekapBind()',
+    menu: null, dashboard: 'V.dashboardBind()', transaksi: 'V.transaksiBind()', rekap: 'V.rekapBind()',
     anggaran: null, target: null, langganan: null,
     dompet: null, kategori: 'V.kategoriBind()', pengaturan: 'V.pengaturanBind()', profil: null
   };
 
   /* Kunci sepenuhnya halaman yang tidak butuh data keuangan — tetap bisa dibuka
      walau profil sedang terkunci (supaya orang bisa pindah profil). */
-  const VIEW_BEBAS = ['profil', 'pengaturan'];
+  const VIEW_BEBAS = ['menu', 'profil', 'pengaturan'];
   /* Halaman yang tidak masuk daftar ini disembunyikan saat profil terkunci. */
   const VIEW_DATA = ['dashboard', 'transaksi', 'rekap', 'anggaran', 'target', 'langganan', 'dompet', 'kategori'];
 
@@ -238,8 +238,38 @@
       location.hash = '#/' + view;
     },
 
+    /* ---------- halaman terakhir (dipakai Menu → "Terakhir Dibuka") ---------- */
+    terakhirBuka: function () {
+      try { return localStorage.getItem('savingduit.ui.terakhir') || ''; } catch (e) { return ''; }
+    },
+
+    /* jejak halaman dalam sesi ini — dipakai tab Menu sebagai tombol kembali */
+    jejak: [],
+    catatJejak: function (name) {
+      if (this.jejak[this.jejak.length - 1] === name) return;
+      this.jejak.push(name);
+      if (this.jejak.length > 30) this.jejak.shift();
+    },
+    sebelumMenu: function () {
+      const bersih = this.jejak.filter(function (v) { return v !== 'menu'; });
+      return bersih[bersih.length - 1] || '';
+    },
+    catatTerakhir: function (name) {
+      if (!name || name === 'menu') return;
+      try { localStorage.setItem('savingduit.ui.terakhir', name); } catch (e) { /* mode privat */ }
+    },
+
     render: function () {
       const name = this.view;
+      this.catatTerakhir(name);
+      this.catatJejak(name);
+      const tabMenu = document.querySelector('.bnav-item[data-bview="menu"]');
+      if (tabMenu) {
+        const bisaBalik = name === 'menu' && !!this.sebelumMenu();
+        const lbl = tabMenu.querySelector('.bnav-lbl');
+        if (lbl) lbl.textContent = bisaBalik ? 'Kembali' : 'Menu';
+        tabMenu.setAttribute('aria-label', bisaBalik ? 'Kembali ke halaman sebelumnya' : 'Menu daftar fitur');
+      }
       document.getElementById('page-title').textContent = TITLES[name];
       document.getElementById('total-pill').textContent = this.terkunci ? '🔒' : U.fmtRp(S.totalBalance(this.db));
       document.getElementById('content').innerHTML = this.terkunci && VIEW_DATA.indexOf(name) > -1
@@ -247,12 +277,39 @@
           '<p>Profil ini terkunci.</p><p class="muted" style="margin-top:8px">Masukkan sandi untuk membuka catatan.</p>' +
           '<button class="btn primary" style="margin-top:14px" onclick="V.profilGate()">Buka dengan Sandi</button></div></div>'
         : eval(PREFIX[name]);
+      U.polishIcons(document);
+      const content = document.getElementById('content');
+      content.dataset.page = name;
+      const descriptions = {
+        menu: 'Semua fitur SavingDuit dalam satu tempat.',
+        transaksi: 'Semua pemasukan, pengeluaran, dan transfer dalam satu tempat.',
+        rekap: 'Pahami kebiasaan keuanganmu lewat ringkasan dan statistik.',
+        anggaran: 'Atur batas pengeluaran agar rencana tetap di jalurnya.',
+        target: 'Sisihkan sedikit demi sedikit untuk hal yang berarti.',
+        langganan: 'Pantau tagihan rutin agar tidak ada yang terlewat.',
+        dompet: 'Kelola saldo tunai, rekening, dan uang digitalmu.',
+        kategori: 'Rapikan catatan dengan kategori yang sesuai kebutuhanmu.',
+        pengaturan: 'Kelola backup, sinkronisasi, dan preferensi aplikasi.',
+        profil: 'Pisahkan catatan keuangan pribadi dan kebutuhan lainnya.'
+      };
+      if (descriptions[name] && !this.terkunci) {
+        const heading = document.createElement('header');
+        heading.className = 'page-intro';
+        const title = document.createElement('h2');
+        title.textContent = TITLES[name];
+        const description = document.createElement('p');
+        description.textContent = descriptions[name];
+        heading.append(title, description);
+        content.prepend(heading);
+      }
       if (!this.terkunci && BIND[name]) eval(BIND[name]);
       Array.prototype.forEach.call(document.querySelectorAll('#nav a'), function (a) {
         a.classList.toggle('active', a.dataset.view === name);
+        if (a.dataset.view === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
       Array.prototype.forEach.call(document.querySelectorAll('#bottom-nav .bnav-item'), function (a) {
         a.classList.toggle('active', a.dataset.bview === name);
+        if (a.dataset.bview === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
       document.getElementById('content').scrollTop = 0;
     },
@@ -279,6 +336,19 @@
       this.applyLockUI();
 
       window.addEventListener('hashchange', this.navigate.bind(this));
+
+      /* Tab Menu di navigasi bawah: tekan sekali membuka daftar fitur,
+         tekan lagi = kembali ke halaman sebelumnya (pengganti gestur kembali). */
+      const tabMenu = document.querySelector('.bnav-item[data-bview="menu"]');
+      if (tabMenu) {
+        tabMenu.addEventListener('click', function (e) {
+          if (App.view !== 'menu') return;            // sedang di halaman lain -> buka daftar
+          const sebelum = App.sebelumMenu();
+          if (!sebelum) return;                        // tidak ada tujuan -> tetap di daftar
+          e.preventDefault();
+          App.go(sebelum);
+        });
+      }
 
       // sidebar mobile
       const sb = document.querySelector('.sidebar'), sc = document.querySelector('.scrim');

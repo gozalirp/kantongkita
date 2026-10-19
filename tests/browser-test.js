@@ -109,8 +109,20 @@ function s1(){try{
   say('T menu-profil|'+hit('[data-view="profil"]'));
   say('T tombol-profil-sidebar|'+hit('#btn-profil'));
   say('T topbar-total|'+hit('#total-pill'));
-  var b=d.querySelector('#content button');
-  say('T tombol-konten|'+(b?b.textContent.trim()+'|'+hit('#content button'):'TIDAK ADA'));
+  var manageSelector='#content .planner-wallets button';
+  var b=d.querySelector(manageSelector);
+  say('T tombol-konten|'+(b?b.textContent.trim()+'|'+hit(manageSelector):'TIDAK ADA'));
+  say('T planner-donut|'+!!d.querySelector('.planner-donut[role="img"][aria-label]'));
+  say('T planner-chart|'+!!d.querySelector('#dash-chart'));
+  say('T content-svg|'+(d.querySelectorAll('#content .ui-icon').length > 0));
+  var probe=d.createElement('div');
+  probe.innerHTML='<button class="btn" title="Modifier">✏️</button><input value="🏠"><span class="ico">🏦</span>';
+  d.body.appendChild(probe);
+  w.U.polishIcons(probe);
+  say('T icon-conversion|'+(probe.querySelectorAll('svg').length===2 && probe.querySelector('input').value==='🏠' && !!probe.querySelector('button').getAttribute('aria-label')));
+  w.U.polishIcons(probe);
+  say('T icon-idempotent|'+(probe.querySelectorAll('svg').length===2));
+  probe.remove();
   d.querySelector('[data-view="transaksi"]').click();
   setTimeout(s2,400);
 }catch(e){err(e);}}
@@ -156,11 +168,7 @@ function s5(){try{
 function s6(){try{
   say('T modal-tertutup-2|'+d.getElementById('modal-wrap').hidden);
   // ---- uji halaman Tahap 2 ----
-  w.App.db.budgets=[];
-  w.App.db.goals=[];
-  w.App.db.subscriptions=[];
-  d.querySelector('[data-view="anggaran"]').click();
-  setTimeout(s7,400);
+  sMenu();
 }catch(e){err(e);}}
 function s7(){try{
   say('T anggaran-judul|'+d.getElementById('page-title').textContent);
@@ -180,6 +188,40 @@ function s8(){try{
   say('T bform-nominal-terformat|'+lim.value);
   say('T bform-simpan-bisa-diklik|'+hit('#b-save'));
   d.getElementById('b-save').click(); setTimeout(s9,400);
+}catch(e){err(e);}}
+function sMenu(){try{
+  d.querySelector('.bnav-item[data-bview="menu"]').click();
+  setTimeout(function(){try{
+    say('T menu-judul|'+d.getElementById('page-title').textContent);
+    var link=d.querySelectorAll('#content .menu-link');
+    say('T menu-jumlah|'+link.length);
+    var tujuan=Array.prototype.map.call(link,function(a){return (a.getAttribute('href')||'').replace('#/','');});
+    say('T menu-semua-fitur|'+['dashboard','transaksi','rekap','anggaran','target','langganan','dompet','kategori','profil','pengaturan'].every(function(v){return tujuan.indexOf(v)>-1;}));
+    var beranda=Array.prototype.filter.call(link,function(a){return a.getAttribute('href')==='#/dashboard';})[0];
+    (beranda||link[0]).click();
+    setTimeout(function(){try{
+      say('T menu-tautan-jalan|'+d.getElementById('page-title').textContent);
+      d.querySelector('.bnav-item[data-bview="menu"]').click();
+      setTimeout(function(){try{
+        var kotak=d.querySelector('#content .menu-terakhir');
+        say('T menu-terakhir-ada|'+(kotak?'ADA':'TIDAK ADA'));
+        var tautan=kotak&&kotak.querySelector('.menu-link');
+        say('T menu-terakhir-tujuan|'+(tautan?(tautan.getAttribute('href')||'').replace('#/',''):'-'));
+        var semua=d.querySelectorAll('#content .menu-link');
+        say('T menu-daftar-tetap-lengkap|'+semua.length);
+        var lbl=d.querySelector('.bnav-item[data-bview="menu"] .bnav-lbl');
+        say('T menu-label-balik|'+(lbl?lbl.textContent:'-'));
+        d.querySelector('.bnav-item[data-bview="menu"]').click();
+        setTimeout(function(){try{
+          say('T menu-tap-lagi|'+d.getElementById('page-title').textContent);
+          say('T menu-label-pulih|'+d.querySelector('.bnav-item[data-bview="menu"] .bnav-lbl').textContent);
+          w.App.db.budgets=[]; w.App.db.goals=[]; w.App.db.subscriptions=[];
+          d.querySelector('[data-view="anggaran"]').click();
+          setTimeout(s7,400);
+        }catch(e){err(e);}},400);
+      }catch(e){err(e);}},400);
+    }catch(e){err(e);}},400);
+  }catch(e){err(e);}},400);
 }catch(e){err(e);}}
 function s9(){try{
   say('T anggaran-tersimpan|'+w.App.db.budgets.length);
@@ -511,6 +553,20 @@ function runHeadless(chrome, url) {
   ok('tombol "Kelola" di konten bisa diklik',
      /Kelola/.test(vAll('tombol-konten')[0] || '') && (vAll('tombol-konten')[1] === 'BISA_DIKLIK'),
      'hasil = ' + vAll('tombol-konten').join(' | '));
+
+  ok('diagram donat dashboard memiliki label aksesibel', v('planner-donut') === 'true');
+  ok('pemilih periode statistik tetap tersedia', v('planner-chart') === 'true');
+  ok('ikon SVG tersedia dalam konten dashboard', v('content-svg') === 'true');
+  ok('menu menampilkan daftar fitur', Number(v('menu-jumlah')) >= 10);
+  ok('menu memuat seluruh fitur, bukan langsung Pengaturan', v('menu-semua-fitur') === 'true');
+  ok('tautan menu membuka halaman yang dituju', /Catatan Transaksi|Dashboard/.test(v('menu-tautan-jalan')));
+  ok('menu menawarkan halaman terakhir dibuka di paling atas', v('menu-terakhir-ada') === 'ADA' && v('menu-terakhir-tujuan') === 'dashboard', 'ada=' + v('menu-terakhir-ada') + ' tujuan=' + v('menu-terakhir-tujuan'));
+  ok('daftar fitur tetap lengkap walau ada bagian Terakhir Dibuka', Number(v('menu-daftar-tetap-lengkap')) >= 11);
+  ok('tab Menu berubah jadi tombol kembali saat daftar terbuka', v('menu-label-balik') === 'Kembali');
+  ok('tekan tab Menu sekali lagi kembali ke halaman sebelumnya', v('menu-tap-lagi') === 'Dashboard');
+  ok('label tab Menu pulih setelah keluar dari daftar', v('menu-label-pulih') === 'Menu');
+  ok('ikon diganti tanpa mengubah input dan memiliki label', v('icon-conversion') === 'true');
+  ok('penggantian ikon aman dipanggil berulang', v('icon-idempotent') === 'true');
 
   section('3. Navigasi nyata lewat klik di browser');
   ok('judul halaman berubah jadi "Catatan Transaksi"',
