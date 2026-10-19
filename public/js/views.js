@@ -140,7 +140,7 @@
     return '<div class="item" data-tx="' + H(t.id) + '">' +
       '<div class="ico ' + cls + '">' + (rcp ? '🧾' : ico) + '</div>' +
       '<div class="body">' +
-        '<div class="t1">' + H(title) + '</div>' +
+        '<div class="t1">' + H(title) + oleh(t) + '</div>' +
         '<div class="t2">' + H(sub) + '</div>' +
       '</div>' +
       '<div class="right">' +
@@ -152,6 +152,14 @@
       '</div>' +
     '</div>';
   };
+
+  /* Siapa yang mencatat — hanya ditampilkan di buku bersama, karena di
+     catatan pribadi semua baris pasti milik sendiri (tidak ada gunanya). */
+  function oleh(t) {
+    if (!root.K || !K.aktif() || !t.by) return '';
+    const saya = K.nama && t.by === K.nama;
+    return '<span class="tx-by">' + (saya ? 'kamu' : H(t.by)) + '</span>';
+  }
 
   function emptyBox(icon, text) {
     return '<div class="empty"><span class="e-ic">' + icon + '</span><p>' + text + '</p></div>';

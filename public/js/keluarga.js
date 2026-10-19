@@ -84,6 +84,11 @@ async function load() {
   el('family').hidden = false;
   el('recovery-box').hidden = true;
   el('identity').textContent = 'Halo, ' + me.user.username;
+  /* Supaya dari halaman akun bisa langsung masuk ke buku bersama. */
+  const bukaApp = el('buka-app');
+  if (bukaApp) bukaApp.addEventListener('click', function () {
+    try { localStorage.setItem('savingduit.mode', 'keluarga'); } catch (e) {}
+  });
   el('invite').hidden = me.user.role !== 'owner' || me.members.length === 2;
   el('transactions').replaceChildren();
   if (!result.data.transactions.length) {

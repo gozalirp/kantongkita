@@ -303,6 +303,14 @@ function s19(){try{
   var fam=d.querySelector('#content .fam-masuk a');
   var famAll=d.querySelectorAll('#content .fam-masuk a');
   say('T dashboard-keluarga-dua-tombol|'+(famAll.length===2&&/aksi=aktivasi/.test(famAll[0].getAttribute('href'))&&/aksi=masuk/.test(famAll[1].getAttribute('href'))?'YA':'TIDAK'));
+  // Tombol pindah mode harus ada di kepala aplikasi dan bisa dipakai.
+  var mp=d.getElementById('mode-pill');
+  say('T mode-pill-ada|'+(mp&&mp.getBoundingClientRect().height>=28?'YA':'TIDAK'));
+  say('T mode-awal-pribadi|'+(mp&&/Pribadi/.test(mp.textContent)?'YA':'TIDAK'));
+  var K=w.K;
+  say('T modul-keluarga-ada|'+(K&&typeof K.aktif==='function'?'YA':'TIDAK'));
+  say('T mode-teks-pribadi|'+(K&&!K.aktif()?'YA':'TIDAK'));
+  try{w.localStorage.setItem('savingduit.mode','pribadi');}catch(e){}
   say('T dashboard-keluarga|'+(fam&&/keluarga\.html/.test(fam.getAttribute('href'))&&fam.getBoundingClientRect().height>10?'ADA':'TIDAK'));
   var bad=L.filter(function(x){return String(x).indexOf('TERTUTUP')>-1||String(x).indexOf('ERR')>-1||String(x).indexOf('ukuran-0')>-1;});
   say('T ringkas|'+(bad.length?bad.length+' MASALAH':'BERSIH'));
@@ -667,6 +675,12 @@ function runHeadless(chrome, url) {
      'dapat ' + v('dashboard-keluarga'));
   ok('dua tombol jelas: Buat akun & Masuk', v('dashboard-keluarga-dua-tombol') === 'YA',
      'dapat ' + v('dashboard-keluarga-dua-tombol'));
+  ok('tombol pindah mode tampil di kepala aplikasi', v('mode-pill-ada') === 'YA',
+     'dapat ' + v('mode-pill-ada'));
+  ok('mode awal adalah catatan pribadi', v('mode-awal-pribadi') === 'YA' && v('mode-teks-pribadi') === 'YA',
+     'label ' + v('mode-awal-pribadi') + ', modul ' + v('mode-teks-pribadi'));
+  ok('modul buku bersama termuat', v('modul-keluarga-ada') === 'YA',
+     'dapat ' + v('modul-keluarga-ada'));
 
   section('11. Ringkasan: tidak ada elemen tertutup / ukuran nol');
   ok('tidak ada elemen yang tertutup atau berukuran nol', v('ringkas') === 'BERSIH',

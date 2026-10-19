@@ -1,5 +1,5 @@
 /* Service Worker untuk PWA SavingDuit (Offline-first & Installable) */
-const CACHE_NAME = 'savingduit-v17-sembunyi-login';
+const CACHE_NAME = 'savingduit-v18-buku-keluarga';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './js/util.js',
   './js/store.js',
   './js/gdrive.js',
+  './js/keluarga-mode.js',
   './js/views.js',
   './js/app.js',
   './icon-192.png',

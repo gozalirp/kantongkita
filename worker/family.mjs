@@ -1,5 +1,41 @@
 import { token, digest, username, hashPassword, verifyPassword, sameOrigin, sessionCookie } from './family-security.mjs';
 const json = (value, status = 200, headers = {}) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
+
+/* Pemeriksaan isi buku bersama. Mengembalikan true kalau sah, atau pesan galat.
+   Tujuannya menolak data rusak/asing, bukan memaksa bentuk yang kaku. */
+const KODE_RE = /^[A-Za-z0-9_-]{1,40}$/;
+const TGL_RE = /^\d{4}-\d{2}-\d{2}$/;
+function daftar(value, maks) {
+  if (!Array.isArray(value)) return false;
+  if (value.length > maks) return false;
+  return value.every(function (x) { return x && typeof x === 'object' && !Array.isArray(x) && KODE_RE.test(String(x.id || '')); });
+}
+/* D1 membatasi satu pernyataan SQL (dan satu nilai teks) di kisaran 100 KB.
+   Satu buku keluarga bisa jauh lebih besar dari itu, jadi isinya dipecah menjadi
+   beberapa potongan dan digabung lagi saat dibaca. 90.000 karakter aman. */
+const POTONG = 90000;
+function pecah(teks) {
+  const out = [];
+  for (let i = 0; i < teks.length; i += POTONG) out.push(teks.slice(i, i + POTONG));
+  return out.length ? out : [''];
+}
+
+function validBook(book) {
+  if (!book || typeof book !== 'object' || Array.isArray(book)) return 'Data buku tidak valid';
+  if (!daftar(book.wallets, 100)) return 'Daftar dompet tidak valid';
+  if (!daftar(book.categories, 300)) return 'Daftar kategori tidak valid';
+  if (!daftar(book.budgets, 300)) return 'Daftar anggaran tidak valid';
+  if (!daftar(book.goals, 100)) return 'Daftar target tidak valid';
+  if (!daftar(book.subscriptions, 200)) return 'Daftar langganan tidak valid';
+  if (!daftar(book.transactions, 20000)) return 'Daftar transaksi tidak valid';
+  for (const t of book.transactions) {
+    if (!['in', 'out', 'move'].includes(t.type)) return 'Jenis transaksi tidak valid';
+    if (!Number.isSafeInteger(t.amount) || t.amount <= 0) return 'Nominal transaksi tidak valid';
+    if (!TGL_RE.test(String(t.date || ''))) return 'Tanggal transaksi tidak valid';
+    if (typeof t.note === 'string' && t.note.length > 500) return 'Catatan transaksi terlalu panjang';
+  }
+  return true;
+}
 export async function family(request, env) {
   const path = new URL(request.url).pathname.replace('/api/family/', '');
   const now = Math.floor(Date.now() / 1000);
@@ -10,7 +46,7 @@ export async function family(request, env) {
   let body = {};
   if (request.method === 'POST') {
     const text = await request.text();
-    if (text.length > 100000) return fail('Permintaan terlalu besar', 413);
+    if (text.length > 500000) return fail('Permintaan terlalu besar', 413);
     try { body = JSON.parse(text); } catch { return fail('JSON tidak valid'); }
     if (!body || typeof body !== 'object' || Array.isArray(body)) return fail('Objek diperlukan');
     const key = await digest(`${request.headers.get('CF-Connecting-IP') || 'local'}:${path}`);
@@ -80,9 +116,61 @@ export async function family(request, env) {
       await q('INSERT INTO family_invites VALUES(?,?,?,NULL) ON CONFLICT(family_id) DO UPDATE SET token_hash=excluded.token_hash,expires_at=excluded.expires_at,used_at=NULL', await digest(code), user.family_id, now+86400).run();
       return json({ ok: true, code });
     }
+    /* Isi buku bersama: seluruh koleksi, bukan hanya transaksi.
+       SEMUA perubahan masuk lewat 'save' dengan revision, sehingga dua orang
+       yang menyimpan bersamaan tidak saling menimpa (yang kalah dapat 409). */
     if (path === 'data' && request.method === 'GET') {
       const row = await q('SELECT revision,data FROM family_data WHERE family_id=?', user.family_id).first();
-      return json({ ok: true, revision: row?.revision || 0, data: row ? JSON.parse(row.data) : { transactions: [] } });
+      const parts = await q('SELECT chunk FROM family_data_parts WHERE family_id=? ORDER BY idx', user.family_id).all();
+      let isi = null;
+      if (parts.results && parts.results.length) {
+        try { isi = JSON.parse(parts.results.map(function (p) { return p.chunk; }).join('')); } catch (e) { isi = null; }
+      } else if (row) {
+        // buku dari versi lama (satu baris)
+        try { isi = JSON.parse(row.data); } catch (e) { isi = null; }
+      }
+      return json({ ok: true, revision: row?.revision || 0, data: isi || { transactions: [] } });
+    }
+    if (path === 'save' && request.method === 'POST') {
+      const book = body.book;
+      const valid = validBook(book);
+      if (valid !== true) return fail(typeof valid === 'string' ? valid : 'Data buku tidak valid');
+      const row = await q('SELECT revision,data FROM family_data WHERE family_id=?', user.family_id).first();
+      if ((row?.revision || 0) !== body.revision) return fail('Data berubah. Muat ulang lalu periksa sebelum menyimpan lagi.', 409);
+      // Stempel pencatat dipertahankan dari data lama; entri baru diberi user ini.
+      const lama = new Map();
+      if (row) {
+        const parts = await q('SELECT chunk FROM family_data_parts WHERE family_id=? ORDER BY idx', user.family_id).all();
+        let teksLama = null;
+        if (parts.results && parts.results.length) teksLama = parts.results.map(function (p) { return p.chunk; }).join('');
+        else teksLama = row.data;
+        try {
+          (JSON.parse(teksLama).transactions || []).forEach(function (t) { if (t && t.id) lama.set(t.id, t.by); });
+        } catch (e) {}
+      }
+      book.transactions.forEach(function (t) {
+        if (!t.by) t.by = lama.get(t.id) || user.username;
+      });
+      const teks = JSON.stringify(book);
+      const potong = pecah(teks);
+      const tulis = [q('DELETE FROM family_data_parts WHERE family_id=?', user.family_id)];
+      potong.forEach(function (c, i) {
+        tulis.push(q('INSERT INTO family_data_parts VALUES(?,?,?)', user.family_id, i, c));
+      });
+      if (row) {
+        tulis.push(q('UPDATE family_data SET revision=revision+1,updated_by=?,updated_at=? WHERE family_id=? AND revision=?', user.id, now, user.family_id, body.revision));
+      } else {
+        tulis.push(q('INSERT OR IGNORE INTO family_data VALUES(?,0,?,?,?)', user.family_id, '{}', user.id, now));
+        tulis.push(q('UPDATE family_data SET revision=1,updated_by=?,updated_at=? WHERE family_id=?', user.id, now, user.family_id));
+      }
+      const hasil = await env.DB.batch(tulis);
+      const akhir = hasil[hasil.length - 1];
+      if (!akhir.meta.changes) {
+        // kalah cepat dengan anggota lain: jangan tinggalkan potongan setengah jadi
+        await q('DELETE FROM family_data_parts WHERE family_id=?', user.family_id).run();
+        return fail('Data berubah. Muat ulang sebelum mencoba lagi.', 409);
+      }
+      return json({ ok: true });
     }
     if (path === 'transaction' && request.method === 'POST') {
       const t = body.transaction;

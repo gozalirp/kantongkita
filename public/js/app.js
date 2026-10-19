@@ -44,8 +44,37 @@
       return this.db;
     },
 
+    /* Muat data sesuai mode aktif. Mode pribadi tetap sinkron seperti dulu;
+       mode keluarga menunggu server. */
+    muat: async function () {
+      if (!root.K || !K.aktif()) { K && K.init(); return this.load(); }
+      try {
+        const buku = await K.muat();
+        this.db = S.normalize(buku);
+        this.dbBaru = true;
+        return this.db;
+      } catch (e) {
+        /* Tidak bisa memuat buku bersama: jangan tampilkan data pribadi
+           seolah-olah itu buku keluarga. */
+        this.db = S.seedDB();
+        this.dbBaru = true;
+        V.toast(e.message === 'LOGIN'
+          ? 'Sesi keluarga berakhir. Masuk lagi untuk melihat buku bersama.'
+          : 'Tidak bisa memuat buku keluarga. Periksa koneksi.', 'err');
+        return this.db;
+      }
+    },
+
     save: function () {
       this.db.meta.updated = new Date().toISOString();
+
+      /* Mode keluarga: data tidak ditulis ke localStorage supaya catatan
+         pribadi tidak tertimpa buku bersama. */
+      if (root.K && K.aktif()) {
+        this.simpanKeluarga();
+        return 'keluarga';
+      }
+
       const r = S.Persist.save(this.db);
       if (r === 'slim') V.toast('Penyimpanan penuh — struk dihapus otomatis, transaksi tetap aman', 'err');
       
@@ -66,7 +95,66 @@
       return r;
     },
 
-    /* Auto-Sync Cloudflare Push (Background) */
+    /* Kirim buku bersama ke server. Hasilnya diberitahukan hanya bila
+       penting, supaya tidak berisik setiap kali menyimpan. */
+    simpanKeluarga: function () {
+      const self = this;
+      const dikirim = this.db;
+      fetch('/api/family/save', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ revision: K.revisi, book: K.rakit(dikirim) })
+      }).then(function (r) {
+        if (r.status === 200) {
+          K.revisi += 1;
+          /* Server mengisi 'by'. Samakan di data lokal supaya penanda pencatat
+             langsung benar tanpa perlu muat ulang. */
+          (dikirim.transactions || []).forEach(function (t) {
+            if (!t.by && K.nama) t.by = K.nama;
+          });
+          self.updateNetDot(true, 'Keluarga tersimpan');
+          return;
+        }
+        if (r.status === 401) { K.keluar(); V.toast('Sesi keluarga berakhir. Kembali ke catatan pribadi.', 'err'); self.gantiMode(); return; }
+        if (r.status === 409) { V.toast('Data diubah anggota lain. Menampilkan versi terbaru…', 'err'); self.sinkronKeluarga(); return; }
+        V.toast('Gagal menyimpan ke buku keluarga.', 'err');
+      }).catch(function () {
+        V.toast('Offline — perubahan belum terkirim ke buku keluarga.', 'err');
+      });
+    },
+
+    /* Ambil ulang buku bersama dari server tanpa memuat ulang halaman. */
+    sinkronKeluarga: async function () {
+      await this.muat();
+      this.render();
+    },
+
+    /* Pindah antara catatan pribadi dan buku keluarga. */
+    gantiMode: async function (tujuan) {
+      const dari = root.K ? K.mode : 'pribadi';
+      const ke = tujuan || (dari === 'keluarga' ? 'pribadi' : 'keluarga');
+      if (root.K) {
+        const hasil = await K.pindah(ke);
+        if (!hasil.ok) { V.toast(hasil.pesan, 'err'); return; }
+      }
+      await this.muat();
+      this.terapkanModeUI();
+      V.toast(ke === 'keluarga' ? 'Buku keluarga aktif' : 'Catatan pribadi aktif', 'ok');
+      this.render();
+    },
+
+    /* Tanda mode di kepala aplikasi, dan tautan ke halaman akun. */
+    terapkanModeUI: function () {
+      const aktif = root.K && K.aktif();
+      const pill = document.getElementById('mode-pill');
+      if (pill) {
+        pill.textContent = aktif ? '👨‍👩‍👧 Keluarga' : '👤 Pribadi';
+        pill.classList.toggle('keluarga', aktif);
+        pill.title = aktif ? 'Buku bersama keluarga' : 'Catatan pribadi di perangkat ini';
+      }
+      document.body.classList.toggle('mode-keluarga', aktif);
+    },
     syncCloudPush: function () {
       clearTimeout(this._cloudPushT);
       const self = this;
@@ -352,7 +440,28 @@
 
       // pastikan daftar profil ada (sekaligus memindahkan data lama ke profil pertama)
       S.Profiles.list();
+      if (root.K) K.init();
+
+      /* Mode keluarga perlu menunggu server, jadi aplikasi dimulai setelah
+         data siap. Mode pribadi dibuka seketika seperti sebelumnya. */
+      if (root.K && K.aktif()) {
+        document.getElementById('content').innerHTML =
+          '<div class="card"><div class="empty"><span class="e-ic">👨‍👩‍👧</span>' +
+          '<p>Memuat buku keluarga…</p></div></div>';
+        const self = this;
+        this.muat().then(function () {
+          self.terapkanModeUI();
+          self.siapkan();
+        });
+        return;
+      }
       this.load();
+      this.terapkanModeUI();
+      this.siapkan();
+    },
+
+    /* Sisa persiapan setelah data tersedia (dipakai kedua mode). */
+    siapkan: function () {
       this.applyLockUI();
 
       window.addEventListener('hashchange', this.navigate.bind(this));
