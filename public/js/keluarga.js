@@ -41,6 +41,23 @@ function currentAction() {
   return picked ? picked.value : 'login';
 }
 
+/* Beranda bisa membuka halaman ini langsung pada keperluan tertentu:
+   ?aksi=aktivasi | masuk | undangan | pulih */
+const DARI_TAUTAN = { aktivasi: 'activate', masuk: 'login', undangan: 'join', pulih: 'recover' };
+
+function pilihAksi(name) {
+  const input = document.querySelector('input[name="action"][value="' + name + '"]');
+  if (!input) return;
+  input.checked = true;
+  syncActionUI();
+}
+
+function aksiDariTautan() {
+  const diminta = new URLSearchParams(location.search).get('aksi');
+  const name = DARI_TAUTAN[diminta];
+  if (name) pilihAksi(name);
+}
+
 function syncActionUI() {
   const action = currentAction();
   const conf = ACTION[action];
@@ -176,4 +193,5 @@ el('logout').addEventListener('click', () => busy(el('logout'), async () => {
 }));
 
 syncActionUI();
-load().catch(() => status('Masuk, atau aktivasi kalau ini keluarga baru.'));
+aksiDariTautan();
+load().catch(() => status('Masuk, atau buat akun kalau ini keluarga baru.'));

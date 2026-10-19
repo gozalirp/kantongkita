@@ -510,8 +510,10 @@
         '<h2>Rencana uangmu, lebih terarah.</h2><p>Pantau saldo dan wujudkan targetmu, sedikit demi sedikit.</p></div>' +
         '<button class="btn primary" onclick="V.txForm()">+ Catat transaksi</button></header>' +
       '<div class="card fam-masuk"><div class="fam-masuk-txt"><strong>Keuangan keluarga</strong>' +
-        '<span>Masuk dengan akun kalian untuk mencatat bersama pasangan.</span></div>' +
-        '<a class="btn sm primary" href="/keluarga.html">Login / Mulai</a></div>' +
+        '<span>Satu buku catatan untuk berdua. Buat akun kalau baru pertama kali.</span></div>' +
+        '<div class="fam-masuk-btn">' +
+          '<a class="btn primary" href="/keluarga.html?aksi=aktivasi">Buat akun</a>' +
+          '<a class="btn" href="/keluarga.html?aksi=masuk">Masuk</a></div></div>' +
       st4 +
       '<div class="planner-layout"><div class="planner-main">' +
         '<section class="card planner-wallets"><div class="card-head"><h2>Dompet &amp; tabungan</h2>' +

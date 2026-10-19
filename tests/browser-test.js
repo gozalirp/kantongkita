@@ -301,6 +301,8 @@ function s19(){try{
   say('T dashboard-ringkasan-tahap2|'+(d.querySelectorAll('#content .prog').length>0?'ADA':'TIDAK ADA'));
   say('T dashboard-anggaran-muncul|'+(/Anggaran Bulan Ini/.test(d.getElementById('content').innerHTML)?'YA':'TIDAK'));
   var fam=d.querySelector('#content .fam-masuk a');
+  var famAll=d.querySelectorAll('#content .fam-masuk a');
+  say('T dashboard-keluarga-dua-tombol|'+(famAll.length===2&&/aksi=aktivasi/.test(famAll[0].getAttribute('href'))&&/aksi=masuk/.test(famAll[1].getAttribute('href'))?'YA':'TIDAK'));
   say('T dashboard-keluarga|'+(fam&&/keluarga\.html/.test(fam.getAttribute('href'))&&fam.getBoundingClientRect().height>10?'ADA':'TIDAK'));
   var bad=L.filter(function(x){return String(x).indexOf('TERTUTUP')>-1||String(x).indexOf('ERR')>-1||String(x).indexOf('ukuran-0')>-1;});
   say('T ringkas|'+(bad.length?bad.length+' MASALAH':'BERSIH'));
@@ -663,6 +665,8 @@ function runHeadless(chrome, url) {
      'dapat ' + v('dashboard-anggaran-muncul'));
   ok('pintu masuk keuangan keluarga ada di dashboard', v('dashboard-keluarga') === 'ADA',
      'dapat ' + v('dashboard-keluarga'));
+  ok('dua tombol jelas: Buat akun & Masuk', v('dashboard-keluarga-dua-tombol') === 'YA',
+     'dapat ' + v('dashboard-keluarga-dua-tombol'));
 
   section('11. Ringkasan: tidak ada elemen tertutup / ukuran nol');
   ok('tidak ada elemen yang tertutup atau berukuran nol', v('ringkas') === 'BERSIH',
