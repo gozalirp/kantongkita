@@ -919,5 +919,26 @@ body.mode-keluarga .topbar h1::after{content:'· keluarga';font-size:12px;font-w
 .gerbang-kartu h2{font-size:19px;margin:10px 0 8px;color:var(--txt)}
 .gerbang-kartu .field{text-align:left;margin-bottom:12px}
 .gerbang-ikon{font-size:34px;line-height:1}
-body.wajib-masuk .nav{display:none}
+/* Selama gerbang tertutup, seluruh kerangka aplikasi disembunyikan:
+   tidak ada sidebar kiri, topbar, maupun navigasi bawah. Yang tampil
+   hanya layar masuk, di tengah layar. */
+body.wajib-masuk .sidebar,
+body.wajib-masuk .topbar,
+body.wajib-masuk .bottom-nav{display:none !important}
+body.wajib-masuk #app{display:block}
+body.wajib-masuk .main{display:block;height:100dvh;height:100dvh;overflow:auto}
+body.wajib-masuk .content{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100dvh;padding:calc(24px + var(--sat)) 18px calc(24px + var(--sab));
+  background:var(--bg);
+}
+body.wajib-masuk .gerbang-kartu{margin:0 auto;width:100%;max-width:400px}
 @media (max-width:420px){.gerbang-kartu{margin:12px auto;padding:20px 16px}}
+/* Tanpa sidebar dan topbar, kartu masuk perlu identitas sendiri supaya
+   tetap terasa sebagai SavingDuit dan bukan halaman acak. */
+.gerbang-merek{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:13px;font-weight:750;letter-spacing:.2px;color:var(--accent-ink);
+  background:var(--accent-soft);border:1px solid #DCD9FC;border-radius:999px;
+  padding:5px 13px;margin-bottom:14px;
+}
