@@ -924,6 +924,12 @@ body.mode-keluarga .topbar h1::after{content:'· keluarga';font-size:12px;font-w
 .gerbang-tab{margin:16px 0 10px}
 .gerbang-tab button{min-height:44px;font-size:13px}
 .gerbang-tip{font-size:12px;line-height:1.55;margin:0 0 14px}
+/* Tautan kecil di bawah kartu. Tombol bergaya tautan dipakai kalau aksinya
+   hanya berpindah tab (tanpa memuat halaman baru). */
+.gerbang-bantu{margin:12px 0 0}
+.tautan{background:none;border:0;padding:6px 2px;font:inherit;font-size:12.5px;
+  color:var(--accent-ink);cursor:pointer;text-decoration:underline;
+  text-underline-offset:2px;min-height:44px}
 .gerbang-kartu .field:last-of-type{margin-bottom:8px}
 /* Kode pemulihan: satu-satunya salinan yang dilihat user, jadi dibuat mudah
    dibaca dan disalin (monospace, boleh dibungkus, latar berbeda). */

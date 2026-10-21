@@ -81,8 +81,11 @@
             (daftar ? 'Buat akun' : 'Masuk') + '</button>' +
         '</form>' +
         '<p class="muted" id="g-pesan" style="margin-top:12px">' + U.esc(lama) + '</p>' +
-        '<p class="muted" style="margin-top:10px"><a href="/keluarga?aksi=' +
-          (daftar ? 'pulih' : 'lupa') + '">' + (daftar ? 'Sudah punya akun?' : 'Lupa password?') + '</a></p>' +
+        '<p class="muted gerbang-bantu" style="margin-top:10px">' +
+          (daftar
+            ? '<button type="button" class="tautan" id="g-ke-masuk">Sudah punya akun? Masuk</button>'
+            : '<a href="/keluarga?aksi=lupa">Lupa password?</a>') +
+        '</p>' +
       '</div>';
   };
 
@@ -143,6 +146,8 @@
     const tabDaftar = document.getElementById('g-tab-daftar');
     if (tabMasuk) tabMasuk.addEventListener('click', function () { if (App._gerbangDaftar) pindah(false); });
     if (tabDaftar) tabDaftar.addEventListener('click', function () { if (!App._gerbangDaftar) pindah(true); });
+    const keMasuk = document.getElementById('g-ke-masuk');
+    if (keMasuk) keMasuk.addEventListener('click', function () { pindah(false); });
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
