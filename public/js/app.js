@@ -257,7 +257,7 @@
       const aktif = root.K && K.aktif();
       const pill = document.getElementById('mode-pill');
       if (pill) {
-        pill.textContent = aktif ? 'Keluarga' : 'Pribadi';
+        pill.textContent = root.Buku ? 'Semua catatan' : (aktif ? 'Keluarga' : 'Pribadi');
         pill.classList.toggle('keluarga', aktif);
         pill.title = aktif ? 'Buku bersama keluarga' : 'Catatan pribadi di perangkat ini';
       }
@@ -473,7 +473,7 @@
       /* Saat gerbang tertutup, saldo di kepala pun tidak boleh tampil. */
       const gerbang = root.K && K.uiGerbang && !K.bolehBuka() && name === 'masuk';
       const pill = document.getElementById('total-pill');
-      pill.textContent = (this.terkunci || gerbang) ? '' : U.fmtRp(S.totalBalance(this.db));
+      pill.textContent = (this.terkunci || gerbang) ? '' : U.fmtRp(S.totalBalance(root.Buku && ['dashboard', 'transaksi', 'rekap', 'anggaran', 'target', 'langganan'].includes(name) ? Buku.data() : this.db));
       if (this.terkunci || gerbang) pill.innerHTML = U.icon('lock');
       pill.hidden = !!gerbang;   // saat gerbang: gembok saja, tanpa angka
       pill.setAttribute('aria-label', gerbang ? 'Terkunci sampai masuk' : 'Total saldo');
@@ -487,10 +487,14 @@
       U.pasangIkonStatis(document);
       U.ikatLabel(document);
       if (this._net) this.updateNetDot(this._net.on, this._net.label);
-      if (name === 'dashboard') this.cekJKeluarga();
+
       if (name === 'masuk') V.gerbangBind();
       const content = document.getElementById('content');
       content.dataset.page = name;
+      if (root.Buku && !this.terkunci && ['rekap', 'anggaran', 'target', 'langganan'].includes(name)) content.insertAdjacentHTML('afterbegin', Buku.kontrol());
+      if (root.Buku && ['dompet', 'kategori'].includes(name)) {
+        const notice = document.createElement('p'); notice.className = 'hint'; notice.textContent = 'Pengelolaan catatan pribadi. Catatan keluarga tersedia di Dashboard dan Transaksi.'; content.prepend(notice);
+      }
       const descriptions = {
         menu: 'Semua fitur Money Planner dalam satu tempat.',
         transaksi: 'Semua pemasukan, pengeluaran, dan transfer dalam satu tempat.',
@@ -563,7 +567,7 @@
       // pastikan daftar profil ada (sekaligus memindahkan data lama ke profil pertama)
       S.Profiles.list();
       U.pasangIkonStatis(document);
-      if (root.K) K.init();
+      if (root.K) { K.init(); if (root.Buku) { K.mode = 'pribadi'; localStorage.setItem('savingduit.mode', 'pribadi'); } }
 
       /* Wajib masuk sebelum dashboard. Tanpa jalan pintas: data keuangan tidak
          ditampilkan dan tidak dimuat sebelum sesi terbukti. */
@@ -597,6 +601,7 @@
         document.body.classList.remove('wajib-masuk');
         this._gerbangTertutup = false;
         this.navigate();
+        if (root.Buku) Buku.muat();
         return;
       }
       this._mulaiAktif = true;
@@ -623,6 +628,7 @@
       /* Bila sudah login, ambil salinan pribadi dari server. Hanya diisi bila
          perangkat ini belum punya catatan, supaya data lokal tidak tertimpa. */
       if (root.K) this.tarikPribadi();
+      if (root.Buku) Buku.muat();
 
       /* Kirim sisa perubahan saat halaman ditinggalkan. */
       window.addEventListener('pagehide', function () { App.simpanPribadiSekarang(); });

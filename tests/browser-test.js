@@ -137,7 +137,7 @@ function s2(){try{
   say('T baris-transaksi|'+d.querySelectorAll('#content .tx-row,#content tbody tr').length);
   var tin=d.querySelector('#content .btn, #content button');
   say('T tombol-di-transaksi|'+(tin?tin.textContent.trim():'TIDAK ADA'));
-  w.V.txForm(); setTimeout(s3,350);
+  w.V.txForm(); d.getElementById('buku-lanjut').click(); setTimeout(s3,350);
 }catch(e){err(e);}}
 function s3(){try{
   say('T form-terbuka|'+(!d.getElementById('modal-wrap').hidden));
@@ -181,7 +181,7 @@ function s7(){try{
   say('T anggaran-kosong|'+(d.querySelector('#content .empty')?'YA':'TIDAK'));
   var tambah=Array.prototype.filter.call(d.querySelectorAll('#content button'),function(b){return /Tambah Anggaran/.test(b.textContent);})[0];
   say('T anggaran-tombol|'+(tambah?'ADA':'TIDAK ADA'));
-  w.V.budgetForm(); setTimeout(s8,350);
+  w.V.budgetForm(); d.getElementById('buku-pilih').click(); setTimeout(s8,350);
 }catch(e){err(e);}}
 function s8(){try{
   say('T bform-terbuka|'+(!d.getElementById('modal-wrap').hidden));
@@ -238,7 +238,7 @@ function s9(){try{
 }catch(e){err(e);}}
 function s10(){try{
   say('T target-judul|'+d.getElementById('page-title').textContent);
-  w.V.goalForm(); setTimeout(s11,350);
+  w.V.goalForm(); d.getElementById('buku-pilih').click(); setTimeout(s11,350);
 }catch(e){err(e);}}
 function s11(){try{
   d.getElementById('g-name').value='Dana darurat';
@@ -268,7 +268,7 @@ function s14(){try{
 }catch(e){err(e);}}
 function s15(){try{
   say('T langganan-judul|'+d.getElementById('page-title').textContent);
-  w.V.subForm(); setTimeout(s16,350);
+  w.V.subForm(); d.getElementById('buku-pilih').click(); setTimeout(s16,350);
 }catch(e){err(e);}}
 function s16(){try{
   d.getElementById('s-name').value='Netflix';
@@ -306,18 +306,17 @@ function s18(){try{
 function s19(){try{
   say('T dashboard-ringkasan-tahap2|'+(d.querySelectorAll('#content .prog').length>0?'ADA':'TIDAK ADA'));
   say('T dashboard-anggaran-muncul|'+(/Anggaran Bulan Ini/.test(d.getElementById('content').innerHTML)?'YA':'TIDAK'));
-  var fam=d.querySelector('#content .fam-masuk a');
-  var famAll=d.querySelectorAll('#content .fam-masuk a');
-  say('T dashboard-keluarga-dua-tombol|'+(famAll.length===2&&/aksi=aktivasi/.test(famAll[0].getAttribute('href'))&&/aksi=masuk/.test(famAll[1].getAttribute('href'))?'YA':'TIDAK'));
+  var fam=d.querySelector('#undang-pasangan');
+  say('T dashboard-keluarga-dua-tombol|'+(fam && d.querySelectorAll('.buku-kontrol .seg button').length===3?'YA':'TIDAK'));
   // Tombol pindah mode harus ada di kepala aplikasi dan bisa dipakai.
   var mp=d.getElementById('mode-pill');
   say('T mode-pill-ada|'+(mp&&mp.getBoundingClientRect().height>=28?'YA':'TIDAK'));
-  say('T mode-awal-pribadi|'+(mp&&/Pribadi/.test(mp.textContent)?'YA':'TIDAK'));
+  say('T mode-awal-pribadi|'+(mp&&/Semua catatan/.test(mp.textContent)?'YA':'TIDAK'));
   var K=w.K;
   say('T modul-keluarga-ada|'+(K&&typeof K.aktif==='function'?'YA':'TIDAK'));
   say('T mode-teks-pribadi|'+(K&&!K.aktif()?'YA':'TIDAK'));
   try{w.localStorage.setItem('savingduit.mode','pribadi');}catch(e){}
-  say('T dashboard-keluarga|'+(fam&&/keluarga\.html/.test(fam.getAttribute('href'))&&fam.getBoundingClientRect().height>10?'ADA':'TIDAK'));
+  say('T dashboard-keluarga|'+(fam&&fam.textContent.includes('Undang pasangan')&&fam.getBoundingClientRect().height>10?'ADA':'TIDAK'));
   var bad=L.filter(function(x){return String(x).indexOf('TERTUTUP')>-1||String(x).indexOf('ERR')>-1||String(x).indexOf('ukuran-0')>-1;});
   say('T ringkas|'+(bad.length?bad.length+' MASALAH':'BERSIH'));
   // lanjut uji profil

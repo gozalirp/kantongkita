@@ -340,7 +340,7 @@
      sebagai aria-label, karena ikon saja tidak terbaca pembaca layar. */
   function iconBtn(label, shape, onclick) {
     return '<button class="btn icon sm ghost" title="' + H(label) + '" aria-label="' + H(label) + '"' +
-      ' onclick="' + onclick + '">' + U.icon(shape) + '</button>';
+      ' onclick="' + H(onclick) + '">' + U.icon(shape) + '</button>';
   }
 
   // baris transaksi
@@ -374,6 +374,10 @@
     const badge = rcp ? U.icon('receipt')
       : c ? emo(c.icon)
       : U.icon(t.type === 'in' ? 'download' : t.type === 'out' ? 'upload' : 'refresh');
+    const original = t._id || t.id;
+    const appel = t._sumber === 'keluarga' ? ',null,\'keluarga\'' : '';
+    const editAction = 'V.txForm(' + JSON.stringify(original) + appel + ')';
+    const deleteAction = (t._sumber === 'keluarga' ? 'Buku.hapus(' : 'V.txDelete(') + JSON.stringify(original) + ')';
     return '<div class="item" data-tx="' + H(t.id) + '">' +
       '<div class="ico ' + cls + '">' + badge + '</div>' +
       '<div class="body">' +
@@ -383,8 +387,8 @@
       '<div class="right">' +
         '<div class="amt ' + cls + '">' + amt + '</div>' +
         '<div class="row-act">' +
-          iconBtn('Ubah', 'edit', 'V.txForm(\'' + t.id + '\')') +
-          iconBtn('Hapus', 'trash', 'V.txDelete(\'' + t.id + '\')') +
+          iconBtn('Ubah', 'edit', editAction) +
+          iconBtn('Hapus', 'trash', deleteAction) +
         '</div>' +
       '</div>' +
     '</div>';
@@ -393,7 +397,7 @@
   /* Siapa yang mencatat — hanya ditampilkan di buku bersama, karena di
      catatan pribadi semua baris pasti milik sendiri (tidak ada gunanya). */
   function oleh(t) {
-    if (!root.K || !K.aktif() || !t.by) return '';
+    if (!root.K || (!K.aktif() && t._sumber !== 'keluarga') || !t.by) return '';
     const saya = K.nama && t.by === K.nama;
     return '<span class="tx-by">' + (saya ? 'kamu' : H(t.by)) + '</span>';
   }
@@ -492,12 +496,16 @@
   /* ============================================================
      FORM TRANSAKSI (tambah / ubah)
      ============================================================ */
-  V.txForm = function (id, presetType) {
-    const db = root.App.db;
+  V.txForm = function (id, presetType, sumber, walletId) {
+    if (root.Buku && !id && !sumber && !presetType && ['dashboard', 'transaksi'].includes(root.App.view)) { Buku.catat(); return; }
+    const bersama = sumber === 'keluarga';
+    if (bersama && (!root.Buku || !Buku.keluarga)) { V.toast('Muat catatan keluarga terlebih dahulu.', 'err'); return; }
+    const revisi = bersama ? Buku.revisi : null;
+    const db = bersama ? JSON.parse(JSON.stringify(Buku.keluarga)) : root.App.db;
     const editing = id ? (db.transactions || []).filter(function (t) { return t.id === id; })[0] : null;
     let form = editing ? Object.assign({}, editing, { amount: editing.amount }) : {
       id: '', date: U.today(), type: presetType || 'out', amount: '',
-      walletId: (db.wallets[0] || {}).id || '', walletTo: '', categoryId: '',
+      walletId: walletId || (db.wallets[0] || {}).id || '', walletTo: '', categoryId: '',
       note: '', receiptId: ''
     };
 
@@ -518,6 +526,7 @@
       const rcp = form.receiptId && db.receipts[form.receiptId];
 
       const body =
+        (root.Buku ? '<p class="hint">' + (bersama ? 'Terlihat oleh keluarga' : 'Hanya kamu') + '</p>' : '') +
         '<div class="seg" id="f-type" role="group" aria-label="Jenis transaksi" style="margin-bottom:16px">' +
           segBtn(form.type, 'in', ARAH.in + 'Pemasukan', 'in') +
           segBtn(form.type, 'out', ARAH.out + 'Pengeluaran', 'out') +
@@ -542,7 +551,7 @@
         '<div class="field"><label>Catatan <span class="muted">(opsional)</span></label>' +
           '<input type="text" id="f-note" value="' + H(form.note) + '" placeholder="contoh: makan siang tim"></div>' +
 
-        '<div class="field"><label>Struk / bukti bayar <span class="muted">(opsional)</span></label>' +
+        (bersama ? '' : '<div class="field"><label>Struk / bukti bayar <span class="muted">(opsional)</span></label>' +
           (rcp
             ? '<div class="row"><img src="' + rcp.data + '" alt="struk" style="width:64px;height:64px;object-fit:cover;border-radius:9px;border:1px solid var(--line)">' +
               '<div style="flex:1;min-width:0"><div style="font-size:12.5px" class="t1">' + H(rcp.name) + '</div>' +
@@ -550,7 +559,7 @@
               '<button type="button" class="btn sm" id="f-rcp-view">Lihat</button>' +
               '<button type="button" class="btn sm danger" id="f-rcp-del">Hapus</button></div>'
             : '<input type="file" id="f-rcp" accept="image/*,application/pdf" style="font-size:12.5px">') +
-          '<span class="hint">Gambar disimpan di perangkat ini. Disarankan &lt; 1,5 MB.</span></div>';
+          '<span class="hint">Gambar disimpan di perangkat ini. Disarankan &lt; 1,5 MB.</span></div>');
 
       V.modal.open({
         title: editing ? 'Ubah Transaksi' : 'Catat Transaksi',
@@ -607,7 +616,7 @@
       const rcpView = el('f-rcp-view');
       if (rcpView) rcpView.addEventListener('click', function () { if (form.receiptId) V.receiptView(form.receiptId); });
 
-      el('f-save').onclick = function () {
+      el('f-save').onclick = async function () {
         form.date = el('f-date').value;
         form.amount = U.parseAmount(el('f-amount').value);
         form.walletId = el('f-wallet').value;
@@ -619,6 +628,17 @@
         const keys = Object.keys(errs);
         if (keys.length) { V.toast(errs[keys[0]], 'err'); return; }
 
+        if (bersama) {
+          const bouton = el('f-save'); bouton.disabled = true;
+          if (!form.id) form.id = id || U.uid('tx');
+          const tx = S.mkTx(Object.assign({}, editing || {}, form, { id: form.id }));
+          tx.by = editing && editing.by || root.K.nama;
+          const i = db.transactions.findIndex(t => t.id === tx.id);
+          if (i < 0) db.transactions.push(tx); else db.transactions[i] = tx;
+          try { await Buku.simpan(db, revisi); V.modal.close(); root.App.render(); V.toast('Transaksi keluarga tersimpan', 'ok'); }
+          catch (e) { V.toast(e.message, 'err'); bouton.disabled = false; }
+          return;
+        }
         if (editing) {
           const idx = db.transactions.findIndex(function (t) { return t.id === id; });
           db.transactions[idx] = S.mkTx(Object.assign({}, editing, form, { id: id }));
@@ -678,7 +698,7 @@
      VIEW: DASHBOARD
      ============================================================ */
   V.dashboard = function () {
-    const db = root.App.db;
+    const db = root.Buku ? Buku.data() : root.App.db;
     const st = V.state.dashboard;
     const bal = S.walletBalances(db);
     const total = S.totalBalance(db);
@@ -753,11 +773,7 @@
       '<header class="planner-welcome"><div>' +
         '<h2>Rencana uangmu, lebih terarah.</h2><p>Pantau saldo dan wujudkan targetmu, sedikit demi sedikit.</p></div>' +
         '<button class="btn primary" onclick="V.txForm()">' + wrapIco('plus') + 'Catat transaksi</button></header>' +
-      '<div class="card fam-masuk"><div class="fam-masuk-txt"><strong>Keuangan keluarga</strong>' +
-        '<span>Satu buku catatan untuk berdua. Buat akun kalau baru pertama kali.</span></div>' +
-        '<div class="fam-masuk-btn">' +
-          '<a class="btn primary" href="/keluarga.html?aksi=aktivasi">Buat akun</a>' +
-          '<a class="btn" href="/keluarga.html?aksi=masuk">Masuk</a></div></div>' +
+      (root.Buku ? Buku.kontrol() : '') +
       st4 +
       '<div class="planner-layout"><div class="planner-main">' +
         '<section class="card planner-wallets"><div class="card-head"><h2>Dompet &amp; tabungan</h2>' +
@@ -786,14 +802,14 @@
             return '<li><i aria-hidden="true" style="background:' + colors[i % colors.length] + '"></i><span>' + H(r.name) +
               '</span><strong>' + U.fmtRpShort(r.amount) + '</strong></li>';
           }).join('') + '</ul>' : '<p class="muted">Belum ada pengeluaran bulan ini.</p>') +
-        '</section>' + V.dashTahap2() +
+        '</section>' + V.dashTahap2(db) +
       '</aside></div></div>';
 
   };
 
   // ---- ringkasan Tahap 2: anggaran, target, langganan ----
-  V.dashTahap2 = function () {
-    const db = root.App.db;
+  V.dashTahap2 = function (data) {
+    const db = data || root.App.db;
     const today = U.today();
     const bTot = S.budgetTotal(db, today);
     const bStatus = S.budgetStatus(db, today);
@@ -870,7 +886,7 @@
      VIEW: TRANSAKSI
      ============================================================ */
   V.transaksi = function () {
-    const db = root.App.db;
+    const db = root.Buku ? Buku.data() : root.App.db;
     const st = V.state.transaksi;
     const r = S.rangeFor(st.preset, U.today());
     st.from = r.from; st.to = r.to;
@@ -949,7 +965,7 @@
       groups = '<div class="card mt">' + emptyBox('search', 'Tidak ada transaksi pada filter ini.') + '</div>';
     }
 
-    return toolbar + strip + groups;
+    return (root.Buku ? Buku.kontrol() : '') + toolbar + strip + groups;
   };
 
   V.transaksiBind = function () {
@@ -979,7 +995,7 @@
      VIEW: REKAP
      ============================================================ */
   V.rekap = function () {
-    const db = root.App.db;
+    const db = root.Buku ? Buku.data() : root.App.db;
     const st = V.state.rekap;
     if (!st.ym) st.ym = U.monthOf(U.today());
     if (!st.year) st.year = U.yearOf(U.today());
@@ -1615,7 +1631,7 @@
      VIEW: ANGGARAN (batas pengeluaran per kategori)
      ============================================================ */
   V.anggaran = function () {
-    const db = root.App.db;
+    const db = root.Buku ? Buku.data() : root.App.db;
     const today = U.today();
     const rows = S.budgetStatus(db, today);
     const tot = S.budgetTotal(db, today);
@@ -1685,8 +1701,12 @@
       }).join('') + '</tbody></table></div></div>' : '');
   };
 
-  V.budgetForm = function (id, presetCat) {
-    const db = root.App.db;
+  V.budgetForm = function (id, presetCat, sumber) {
+    if (root.Buku && !id && !presetCat && !sumber) { Buku.pilihSumber(pilihan => V.budgetForm(null, null, pilihan)); return; }
+    const ctx = root.Buku ? Buku.konteks(id || presetCat, sumber) : null;
+    if (root.Buku && !ctx) return;
+    if (ctx) { if (id) id = ctx.id; else if (presetCat) presetCat = ctx.id; }
+    const db = ctx ? ctx.db : root.App.db;
     const b = id ? (db.budgets || []).filter(function (x) { return x.id === id; })[0] : null;
     const catOut = (db.categories || []).filter(function (c) { return !c.archived && c.type === 'out'; });
     if (!catOut.length) { V.toast('Belum ada kategori pengeluaran, tambahkan dulu di menu Kategori', 'err'); return; }
@@ -1695,6 +1715,7 @@
     V.modal.open({
       title: b ? 'Ubah Anggaran' : 'Tambah Anggaran',
       body:
+        (ctx ? '<p class="hint">' + (ctx.sumber === 'keluarga' ? 'Terlihat oleh keluarga' : 'Hanya kamu') + '</p>' : '') +
         '<div class="field"><label>Kategori pengeluaran</label>' +
           '<select id="b-cat">' + pilihanKategori(db, f.categoryId, 'out') + '</select></div>' +
         '<div class="field"><label>Batas anggaran</label>' +
@@ -1713,7 +1734,7 @@
       const v = U.parseAmount(limIn.value); limIn.value = v ? U.fmtNum(v) : '';
     });
 
-    el('b-save').onclick = function () {
+    el('b-save').onclick = async function () {
       const catId = el('b-cat').value;
       const limit = U.parseAmount(limIn.value);
       if (!catId) { V.toast('Pilih kategori dulu', 'err'); return; }
@@ -1725,16 +1746,21 @@
         categoryId: catId, limit: limit,
         period: el('b-period').value, note: el('b-note').value.trim()
       };
+      if (el('b-save').disabled) return;
+      el('b-save').disabled = true;
       if (b) { const i = db.budgets.findIndex(function (x) { return x.id === b.id; }); db.budgets[i] = obj; }
       else db.budgets.push(obj);
-      root.App.saveAndRender();
+      if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
       V.toast(b ? 'Anggaran diperbarui' : 'Anggaran ditambahkan', 'ok');
       V.modal.close();
     };
   };
 
-  V.budgetDelete = async function (id) {
-    const db = root.App.db;
+  V.budgetDelete = async function (id, sumber) {
+    const ctx = root.Buku ? Buku.konteks(id, sumber) : null;
+    if (root.Buku && !ctx) return;
+    if (ctx) id = ctx.id;
+    const db = ctx ? ctx.db : root.App.db;
     const b = (db.budgets || []).filter(function (x) { return x.id === id; })[0];
     if (!b) return;
     const c = db.categories.filter(function (x) { return x.id === b.categoryId; })[0];
@@ -1742,7 +1768,7 @@
       'Transaksi yang sudah dicatat <b>tidak terhapus</b>, hanya batas anggarannya yang dihilangkan.', 'Hapus', true);
     if (!ok) return;
     db.budgets = db.budgets.filter(function (x) { return x.id !== id; });
-    root.App.saveAndRender();
+    if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
     V.toast('Anggaran dihapus', 'ok');
   };
 
@@ -1750,7 +1776,7 @@
      VIEW: TARGET TABUNGAN
      ============================================================ */
   V.target = function () {
-    const db = root.App.db;
+    const db = root.Buku ? Buku.data() : root.App.db;
     const today = U.today();
     const list = S.goalStatus(db, today);
     const tot = S.goalTotal(db);
@@ -1804,14 +1830,19 @@
     '</div>';
   };
 
-  V.goalForm = function (id) {
-    const db = root.App.db;
+  V.goalForm = function (id, sumber) {
+    if (root.Buku && !id && !sumber) { Buku.pilihSumber(pilihan => V.goalForm(null, pilihan)); return; }
+    const ctx = root.Buku ? Buku.konteks(id, sumber) : null;
+    if (root.Buku && !ctx) return;
+    if (ctx) id = ctx.id;
+    const db = ctx ? ctx.db : root.App.db;
     const g = id ? (db.goals || []).filter(function (x) { return x.id === id; })[0] : null;
     const f = g || { id: '', name: '', icon: '🎯', target: '', saved: '', walletId: '', due: '', note: '' };
 
     V.modal.open({
       title: g ? 'Ubah Target' : 'Tambah Target Tabungan',
       body:
+        (ctx ? '<p class="hint">' + (ctx.sumber === 'keluarga' ? 'Terlihat oleh keluarga' : 'Hanya kamu') + '</p>' : '') +
         '<div class="field"><label>Nama target</label>' +
           '<input type="text" id="g-name" autocomplete="off" value="' + H(f.name) + '" placeholder="contoh: Dana darurat"></div>' +
         '<div class="field"><label>Ikon</label>' + pilihanEmoji('g-icons', IKON_TARGET, f.icon) +
@@ -1846,7 +1877,7 @@
       });
     });
 
-    el('g-save').onclick = function () {
+    el('g-save').onclick = async function () {
       const name = el('g-name').value.trim();
       const target = U.parseAmount(el('g-target').value);
       if (!name) { V.toast('Nama target wajib diisi', 'err'); return; }
@@ -1858,23 +1889,29 @@
         walletId: el('g-wallet').value, due: el('g-due').value,
         note: el('g-note').value.trim()
       };
+      if (el('g-save').disabled) return;
+      el('g-save').disabled = true;
       if (g) { const i = db.goals.findIndex(function (x) { return x.id === g.id; }); db.goals[i] = obj; }
       else db.goals.push(obj);
-      root.App.saveAndRender();
+      if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
       V.toast(g ? 'Target diperbarui' : 'Target ditambahkan', 'ok');
       V.modal.close();
     };
   };
 
   // + Nabung / − Tarik dari sebuah target
-  V.goalAdd = function (id, minus) {
-    const db = root.App.db;
+  V.goalAdd = function (id, minus, sumber) {
+    const ctx = root.Buku ? Buku.konteks(id, sumber) : null;
+    if (root.Buku && !ctx) return;
+    if (ctx) id = ctx.id;
+    const db = ctx ? ctx.db : root.App.db;
     const g = (db.goals || []).filter(function (x) { return x.id === id; })[0];
     if (!g) return;
     const p = S.goalProgress(g);
     V.modal.open({
       title: (minus ? 'Tarik dari ' : 'Nabung ke ') + H(g.name),
       body:
+        (ctx ? '<p class="hint">' + (ctx.sumber === 'keluarga' ? 'Terlihat oleh keluarga' : 'Hanya kamu') + '</p>' : '') +
         '<div class="field"><label>Nominal</label>' +
           '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="ga-amt" value="" placeholder="0"></div>' +
           '<span class="hint">Terkumpul sekarang ' + U.fmtRp(p.saved) + ' dari ' + U.fmtRp(p.target) +
@@ -1897,33 +1934,38 @@
       inp.value = U.fmtNum(v);
     });
 
-    el('ga-save').onclick = function () {
+    el('ga-save').onclick = async function () {
       const amt = U.parseAmount(inp.value);
       if (!(amt > 0)) { V.toast('Nominal harus lebih dari 0', 'err'); return; }
+      if (el('ga-save').disabled) return;
+      el('ga-save').disabled = true;
       if (minus) {
         const baru = Math.max(0, Number(g.saved || 0) - amt);
         const nyata = Number(g.saved || 0) - baru;
         g.saved = baru;
-        V.toast('Ditarik ' + U.fmtRp(nyata) + ' dari ' + g.name, 'ok');
+
       } else {
         g.saved = Number(g.saved || 0) + amt;
-        V.toast('Ditabung ' + U.fmtRp(amt) + ' ke ' + g.name, 'ok');
+
       }
-      root.App.saveAndRender();
+      if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
       V.modal.close();
     };
     setTimeout(function () { try { inp.focus(); } catch (e) {} }, 60);
   };
 
-  V.goalDelete = async function (id) {
-    const db = root.App.db;
+  V.goalDelete = async function (id, sumber) {
+    const ctx = root.Buku ? Buku.konteks(id, sumber) : null;
+    if (root.Buku && !ctx) return;
+    if (ctx) id = ctx.id;
+    const db = ctx ? ctx.db : root.App.db;
     const g = (db.goals || []).filter(function (x) { return x.id === id; })[0];
     if (!g) return;
     const ok = await V.confirm('Hapus target "' + H(g.name) + '"?',
       'Catatan target ini akan dihapus. <b>Saldo dompet dan transaksi tidak berubah.</b>', 'Hapus', true);
     if (!ok) return;
     db.goals = db.goals.filter(function (x) { return x.id !== id; });
-    root.App.saveAndRender();
+    if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
     V.toast('Target dihapus', 'ok');
   };
 
@@ -1931,7 +1973,7 @@
      VIEW: LANGGANAN BULANAN
      ============================================================ */
   V.langganan = function () {
-    const db = root.App.db;
+    const db = root.Buku ? Buku.data() : root.App.db;
     const today = U.today();
     const list = S.subStatus(db, today);
     const totalBulan = S.subMonthlyTotal(db);
@@ -2008,8 +2050,12 @@
       '<div class="list">' + kartuMati + '</div></div>' : '');
   };
 
-  V.subForm = function (id) {
-    const db = root.App.db;
+  V.subForm = function (id, sumber) {
+    if (root.Buku && !id && !sumber) { Buku.pilihSumber(pilihan => V.subForm(null, pilihan)); return; }
+    const ctx = root.Buku ? Buku.konteks(id, sumber) : null;
+    if (root.Buku && !ctx) return;
+    if (ctx) id = ctx.id;
+    const db = ctx ? ctx.db : root.App.db;
     const s = id ? (db.subscriptions || []).filter(function (x) { return x.id === id; })[0] : null;
     const f = s || { id: '', name: '', icon: '🔁', amount: '', cycle: 'month', day: U.strToDate(U.today()).getDate(),
                     walletId: '', categoryId: '', note: '', active: true };
@@ -2017,6 +2063,7 @@
     V.modal.open({
       title: s ? 'Ubah Langganan' : 'Tambah Langganan',
       body:
+        (ctx ? '<p class="hint">' + (ctx.sumber === 'keluarga' ? 'Terlihat oleh keluarga' : 'Hanya kamu') + '</p>' : '') +
         '<div class="field"><label>Nama langganan</label>' +
           '<input type="text" id="s-name" autocomplete="off" value="' + H(f.name) + '" placeholder="contoh: Netflix"></div>' +
         '<div class="field"><label>Ikon</label>' + pilihanEmoji('s-icons', IKON_LANGGANAN, f.icon) +
@@ -2062,7 +2109,7 @@
     el('s-cycle').addEventListener('change', hint);
     hint();
 
-    el('s-save').onclick = function () {
+    el('s-save').onclick = async function () {
       const name = el('s-name').value.trim();
       const amount = U.parseAmount(amtIn.value);
       if (!name) { V.toast('Nama langganan wajib diisi', 'err'); return; }
@@ -2079,17 +2126,22 @@
         note: el('s-note').value.trim(),
         active: s ? s.active !== false : true
       };
+      if (el('s-save').disabled) return;
+      el('s-save').disabled = true;
       if (s) { const i = db.subscriptions.findIndex(function (x) { return x.id === s.id; }); db.subscriptions[i] = obj; }
       else db.subscriptions.push(obj);
-      root.App.saveAndRender();
+      if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
       V.toast(s ? 'Langganan diperbarui' : 'Langganan ditambahkan', 'ok');
       V.modal.close();
     };
   };
 
   // Tandai sebuah langganan lunas bulan ini = catat transaksi + penanda di catatan
-  V.subPay = function (id) {
-    const db = root.App.db;
+  V.subPay = async function (id, sumber) {
+    const ctx = root.Buku ? Buku.konteks(id, sumber) : null;
+    if (root.Buku && !ctx) return;
+    if (ctx) id = ctx.id;
+    const db = ctx ? ctx.db : root.App.db;
     const s = (db.subscriptions || []).filter(function (x) { return x.id === id; })[0];
     if (!s) return;
     const today = U.today();
@@ -2103,13 +2155,16 @@
     });
     db.transactions.push(tx);
     s.lastPaid = today;
-    root.App.saveAndRender();
+    if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
     V.toast('Dibayar: ' + s.name + ' ' + U.fmtRp(s.amount), 'ok');
   };
 
   // Batalkan tanda lunas: buang transaksi penandanya
-  V.subUnpay = async function (id, ym) {
-    const db = root.App.db;
+  V.subUnpay = async function (id, ym, sumber) {
+    const ctx = root.Buku ? Buku.konteks(id, sumber) : null;
+    if (root.Buku && !ctx) return;
+    if (ctx) id = ctx.id;
+    const db = ctx ? ctx.db : root.App.db;
     const s = (db.subscriptions || []).filter(function (x) { return x.id === id; })[0];
     if (!s) return;
     const key = '/sub:' + s.id + '/ ' + ym;
@@ -2121,28 +2176,34 @@
     if (!ok) return;
     db.transactions = db.transactions.filter(function (t) { return t.id !== tx.id; });
     s.lastPaid = '';
-    root.App.saveAndRender();
+    if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
     V.toast('Tanda lunas dibatalkan', 'ok');
   };
 
-  V.subToggle = function (id) {
-    const db = root.App.db;
+  V.subToggle = async function (id, sumber) {
+    const ctx = root.Buku ? Buku.konteks(id, sumber) : null;
+    if (root.Buku && !ctx) return;
+    if (ctx) id = ctx.id;
+    const db = ctx ? ctx.db : root.App.db;
     const s = (db.subscriptions || []).filter(function (x) { return x.id === id; })[0];
     if (!s) return;
     s.active = s.active === false;
-    root.App.saveAndRender();
+    if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
     V.toast(s.active ? s.name + ' diaktifkan lagi' : s.name + ' dimatikan (tidak dihitung)', 'ok');
   };
 
-  V.subDelete = async function (id) {
-    const db = root.App.db;
+  V.subDelete = async function (id, sumber) {
+    const ctx = root.Buku ? Buku.konteks(id, sumber) : null;
+    if (root.Buku && !ctx) return;
+    if (ctx) id = ctx.id;
+    const db = ctx ? ctx.db : root.App.db;
     const s = (db.subscriptions || []).filter(function (x) { return x.id === id; })[0];
     if (!s) return;
     const ok = await V.confirm('Hapus langganan "' + H(s.name) + '"?',
       'Catatan langganannya dihapus. <b>Transaksi pembayaran yang sudah tercatat tetap ada.</b>', 'Hapus', true);
     if (!ok) return;
     db.subscriptions = db.subscriptions.filter(function (x) { return x.id !== id; });
-    root.App.saveAndRender();
+    if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
     V.toast('Langganan dihapus', 'ok');
   };
 
@@ -2180,10 +2241,9 @@
       '<div class="card-head"><h2 id="profil-keluarga-title">Keluarga</h2></div>' +
       '<p class="muted">Satu buku bersama, dua akun masing-masing. Bukan satu password untuk berdua.</p>' +
       (akun
-        ? '<p>Buka buku keluarga untuk mencatat bersama. Untuk mengundang pasangan, buka Kelola keluarga lalu pilih <b>Buat undangan pasangan</b> jika tersedia.</p>' +
-          '<div class="row"><button class="btn primary" onclick="App.gantiMode(\'keluarga\')"' + (keluargaAktif ? ' disabled' : '') + '>' +
-            (keluargaAktif ? 'Buku keluarga sedang aktif' : 'Buka buku keluarga') + '</button>' +
-            '<a class="btn" href="/keluarga">Kelola keluarga &amp; undangan</a></div>'
+        ? '<p>Gunakan tombol undangan untuk mengajak pasangan memakai catatan bersama. Hanya pemilik keluarga yang dapat mengundang, selama anggota belum berjumlah dua.</p>' +
+          '<div class="row">' + (root.Buku ? '<button class="btn primary" id="profil-tambah-keluarga" onclick="Buku.undang(this)">' + wrapIco('plus') + 'Undang pasangan</button>' : '<a class="btn primary" id="profil-tambah-keluarga" href="/keluarga#invite">' + wrapIco('plus') + 'Tambah anggota keluarga</a>') +
+            (root.Buku ? '<button class="btn" onclick="App.go(\'dashboard\')">Lihat dashboard bersama</button></div>' : '<button class="btn" onclick="App.gantiMode(\'keluarga\')"' + (keluargaAktif ? ' disabled' : '') + '>' + (keluargaAktif ? 'Buku keluarga sedang aktif' : 'Buka buku keluarga') + '</button></div>')
         : '<p>Mulai dari salah satu langkah berikut:</p>' +
           '<div class="row"><a class="btn primary" href="/keluarga?aksi=aktivasi">Buat akun pertama</a>' +
             '<a class="btn" href="/keluarga?aksi=undangan">Gabung dengan kode undangan</a></div>') +

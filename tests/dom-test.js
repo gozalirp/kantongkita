@@ -787,7 +787,7 @@ section('9. Konfirmasi hapus: batal lalu setuju');
       ok('profil belum login menawarkan akun pertama', tampilan.includes('/keluarga?aksi=aktivasi'));
       window.K = { terbuka: true, nama: 'Anggota', aktif: () => false };
       tampilan = V.profil();
-      ok('profil login menawarkan kelola keluarga', tampilan.includes('Kelola keluarga &amp; undangan'));
+      ok('profil login menawarkan tambah keluarga', tampilan.includes('Tambah anggota keluarga</a>') && tampilan.includes('href="/keluarga#invite"'));
       ok('profil login menawarkan buku bersama', tampilan.includes('Buka buku keluarga'));
       ok('profil login tidak menawarkan akun baru', !tampilan.includes('/keluarga?aksi=aktivasi'));
       window.K.aktif = () => true;
