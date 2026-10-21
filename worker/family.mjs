@@ -174,6 +174,37 @@ export async function family(request, env) {
       }
       return json({ ok: true });
     }
+    /* Buku PRIBADI per akun. Kuncinya user.id, bukan family_id: pasangan dalam
+       satu keluarga tidak bisa membaca atau menulis isi ini. Pola potong dan
+       revisi sama dengan buku bersama supaya perilaku konflik seragam. */
+    if (path === 'personal/data' && request.method === 'GET') {
+      const row = await q('SELECT revision FROM personal_data WHERE user_id=?', user.id).first();
+      const parts = await q('SELECT chunk FROM personal_data_parts WHERE user_id=? ORDER BY idx', user.id).all();
+      let isi = null;
+      if (parts.results && parts.results.length) {
+        try { isi = JSON.parse(parts.results.map(function (p) { return p.chunk; }).join('')); } catch (e) { isi = null; }
+      }
+      return json({ ok: true, revision: row?.revision || 0, data: isi });
+    }
+    if (path === 'personal/save' && request.method === 'POST') {
+      const book = body.book;
+      const valid = validBook(book);
+      if (valid !== true) return fail(typeof valid === 'string' ? valid : 'Data buku tidak valid');
+      if (!Number.isSafeInteger(body.revision) || body.revision < 0) return fail('Revisi tidak valid');
+      const row = await q('SELECT revision FROM personal_data WHERE user_id=?', user.id).first();
+      if ((row?.revision || 0) !== body.revision) return fail('Data berubah. Muat ulang sebelum menyimpan lagi.', 409);
+      const potong = pecah(JSON.stringify(book));
+      const tulis = [q('DELETE FROM personal_data_parts WHERE user_id=?', user.id)];
+      potong.forEach(function (c, i) { tulis.push(q('INSERT INTO personal_data_parts VALUES(?,?,?)', user.id, i, c)); });
+      tulis.push(q('INSERT OR IGNORE INTO personal_data VALUES(?,0,?)', user.id, now));
+      tulis.push(q('UPDATE personal_data SET revision=revision+1,updated_at=? WHERE user_id=? AND revision=?', now, user.id, body.revision));
+      const hasil = await env.DB.batch(tulis);
+      if (!hasil[hasil.length - 1].meta.changes) {
+        await q('DELETE FROM personal_data_parts WHERE user_id=?', user.id).run();
+        return fail('Data berubah. Muat ulang sebelum mencoba lagi.', 409);
+      }
+      return json({ ok: true, revision: body.revision + 1 });
+    }
     if (path === 'transaction' && request.method === 'POST') {
       const t = body.transaction;
       if (!Number.isSafeInteger(body.revision) || !t || !['in','out'].includes(t.type) || !Number.isSafeInteger(t.amount) || t.amount<=0 || typeof t.note !== 'string' || t.note.length>500 || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) return fail('Transaksi tidak valid');

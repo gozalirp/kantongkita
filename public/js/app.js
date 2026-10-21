@@ -77,8 +77,12 @@
 
       const r = S.Persist.save(this.db);
       if (r === 'slim') V.toast('Penyimpanan penuh — struk dihapus otomatis, transaksi tetap aman', 'err');
-      
-      // Auto-Sync ke Cloudflare D1 di background (Hybrid Offline-First)
+
+      /* Salinan pribadi ke server, hanya bila sudah login. Lokal tetap sumber
+         utama; server dipakai untuk membuka catatan di perangkat lain. */
+      this.simpnPribadiTertunda();
+
+      /* Auto-Sync ke Cloudflare D1 di background (Hybrid Offline-First) */
       this.syncCloudPush();
 
       if (root.GDrive && this.db.settings.driveEnabled && this.db.settings.driveFileId) {
@@ -97,6 +101,31 @@
 
     /* Kirim buku bersama ke server. Hasilnya diberitahukan hanya bila
        penting, supaya tidak berisik setiap kali menyimpan. */
+    /* Kirim salinan pribadi dengan jeda supaya tidak menembak server pada
+       setiap ketikan. Ketikan beruntun hanya mengirim keadaan terakhir. */
+    simpnPribadiTertunda: function () {
+      if (!root.K || !K.punyaCloud) return;
+      const self = this;
+      clearTimeout(this._pribadiT);
+      this._pribadiT = setTimeout(function () { self.simpanPribadiSekarang(); }, 1200);
+    },
+
+    /* Kirim salinan pribadi sekarang juga. Dipakai juga saat halaman ditutup. */
+    simpanPribadiSekarang: function () {
+      if (!root.K || !K.punyaCloud) return Promise.resolve('pribadi');
+      return K.simpanPribadi(this.db).then(function (hasil) {
+        if (hasil === 'ok') App.updateNetDot(true, 'Catatan pribadi tersimpan di cloud');
+        else if (hasil === 'bentrok') {
+          V.toast('Catatan pribadi ini berbeda dari salinan cloud. Salinan cloud tidak ditimpa.', 'err');
+          K.muatPribadi().then(function (jauh) {
+            if (jauh && jauh.transactions) V.toast('Versi cloud punya ' + jauh.transactions.length + ' transaksi. Backup lokal dulu sebelum memilih.', 'err');
+          });
+        } else if (hasil === 'keluar') V.toast('Sesi berakhir. Catatan baru tetap tersimpan di perangkat ini.', 'err');
+        else if (hasil === 'luring') App.updateNetDot(false, 'Offline — salinan cloud tertunda');
+        return hasil;
+      });
+    },
+
     simpanKeluarga: function () {
       const self = this;
       const dikirim = this.db;
@@ -458,6 +487,33 @@
       this.load();
       this.terapkanModeUI();
       this.siapkan();
+
+      /* Bila sudah login, ambil salinan pribadi dari server. Hanya diisi bila
+         perangkat ini belum punya catatan, supaya data lokal tidak tertimpa. */
+      if (root.K) this.tarikPribadi();
+
+      /* Kirim sisa perubahan saat halaman ditinggalkan. */
+      window.addEventListener('pagehide', function () { App.simpanPribadiSekarang(); });
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') App.simpanPribadiSekarang();
+      });
+    },
+
+    /* Ambil salinan pribadi dari server. Kosong secara default: perangkat baru
+       boleh mengisinya, perangkat yang sudah berisi tidak ditimpa. */
+    tarikPribadi: async function () {
+      if (!root.K) return null;
+      const login = await K.periksaPribadi();
+      if (!login) return null;
+      const jauh = await K.muatPribadi();
+      if (!jauh || !jauh.transactions) return null;
+      const lokal = this.db;
+      if (lokal.transactions && lokal.transactions.length) return null;   // jangan timpa
+      this.db = S.normalize(jauh);
+      S.Persist.save(this.db);
+      this.render();
+      V.toast('Catatan pribadi dimuat dari cloud.', 'ok');
+      return this.db;
     },
 
     /* Sisa persiapan setelah data tersedia (dipakai kedua mode). */

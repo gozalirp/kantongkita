@@ -55,6 +55,45 @@
     return M.mode;
   };
 
+  /* ---------- Buku pribadi di server ----------
+     Berlaku hanya bila pengguna sudah login. Catatan tetap ada di localStorage
+     seperti biasa; server hanya salinannya, supaya bisa dibuka di perangkat lain.
+     Kuncinya akun, jadi anggota keluarga lain tidak bisa membaca isi ini. */
+  M.revisiPribadi = 0;
+  M.punyaCloud = false;
+
+  /* Dipanggil saat login/logout dan saat aplikasi dibuka. */
+  M.periksaPribadi = async function () {
+    const me = await api('me', { method: 'GET' }).catch(function () { return { status: 0 }; });
+    M.punyaCloud = me.status === 200;
+    M.nama = (me.status === 200 && me.body.user && me.body.user.username) || '';
+    return M.punyaCloud;
+  };
+
+  /* Baca salinan pribadi dari server. null kalau belum pernah tersimpan. */
+  M.muatPribadi = async function () {
+    if (!M.punyaCloud) return null;
+    const d = await api('personal/data', { method: 'GET' });
+    if (d.status !== 200) { if (d.status === 401) M.punyaCloud = false; return null; }
+    M.revisiPribadi = d.body.revision || 0;
+    return d.body.data || null;
+  };
+
+  /* Kirim salinan pribadi. Hasil: 'ok' | 'bentrok' | 'keluar' | 'gagal' | 'luring' | 'pribadi'. */
+  M.simpanPribadi = async function (db) {
+    if (!M.punyaCloud) return 'pribadi';
+    try {
+      const hasil = await api('personal/save', {
+        method: 'POST',
+        body: JSON.stringify({ revision: M.revisiPribadi, book: M.rakit(db) })
+      });
+      if (hasil.status === 200) { M.revisiPribadi = hasil.body.revision || M.revisiPribadi + 1; return 'ok'; }
+      if (hasil.status === 409) return 'bentrok';
+      if (hasil.status === 401) { M.punyaCloud = false; return 'keluar'; }
+      return 'gagal';
+    } catch (e) { return 'luring'; }
+  };
+
   /* Dipanggil saat App.muat(). Mengembalikan null kalau mode pribadi
      (biar App memakai localStorage seperti biasa). */
   M.muat = async function () {
