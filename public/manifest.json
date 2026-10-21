@@ -1,6 +1,6 @@
 {
-  "name": "SavingDuit - Catatan Keuangan",
-  "short_name": "SavingDuit",
+  "name": "Money Planner - Catatan Keuangan",
+  "short_name": "Money Planner",
   "description": "Aplikasi catatan keuangan pribadi & usaha offline",
   "start_url": "./index.html",
   "display": "standalone",

@@ -407,7 +407,7 @@
       const content = document.getElementById('content');
       content.dataset.page = name;
       const descriptions = {
-        menu: 'Semua fitur SavingDuit dalam satu tempat.',
+        menu: 'Semua fitur Money Planner dalam satu tempat.',
         transaksi: 'Semua pemasukan, pengeluaran, dan transfer dalam satu tempat.',
         rekap: 'Pahami kebiasaan keuanganmu lewat ringkasan dan statistik.',
         anggaran: 'Atur batas pengeluaran agar rencana tetap di jalurnya.',

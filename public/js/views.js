@@ -32,7 +32,7 @@
     const lama = App._gerbangPesan || '';
     return '' +
       '<div class="card gerbang-kartu">' +
-        '<div class="gerbang-merek"><span aria-hidden="true">💰</span> SavingDuit</div>' +
+        '<div class="gerbang-merek"><span aria-hidden="true">💰</span> Money Planner</div>' +
         '<div class="gerbang-ikon">🔒</div>' +
         '<h2>Masuk dulu untuk membuka catatan</h2>' +
         '<p class="muted">Catatan keuangan tersimpan di akun, bukan di perangkat ini. ' +
