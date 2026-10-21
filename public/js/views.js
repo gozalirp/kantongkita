@@ -1084,6 +1084,15 @@
     const akhir = terakhir && terakhir !== 'menu'
       ? MENU_FITUR.concat(MENU_LAIN).filter(function (r) { return r[0] === terakhir; })[0]
       : null;
+    /* Kartu akun hanya relevan kalau memang ada akun yang login. */
+    const akun = root.K && root.K.terbuka && root.K.nama ? root.K.nama : '';
+    const kartuAkun = akun
+      ? '<div class="card mt"><div class="card-head"><h2>Akun</h2><span class="spacer"></span>' +
+        '<span class="tag ok">masuk</span></div>' +
+        '<p class="muted">Masuk sebagai <b>' + H(akun) + '</b>. Keluar tidak menghapus catatan yang tersimpan di perangkat ini.</p>' +
+        '<div class="actions"><button class="btn" style="min-height:44px" onclick="App.emailAkun(this)">Status / verifikasi email</button>' +
+        '<button class="btn danger" style="min-height:44px" onclick="App.keluarAkun(this)">Keluar akun</button></div></div>'
+      : '';
 
     return (akhir ? '<div class="card menu-terakhir"><div class="card-head"><h2>Terakhir Dibuka</h2>' +
         '<span class="tag">' + H(akhir[1]) + '</span></div>' +
@@ -1093,8 +1102,7 @@
     '</div>' +
     '<div class="card mt"><div class="card-head"><h2>Lainnya</h2></div>' +
       '<nav class="menu-grid" aria-label="Menu lainnya">' + MENU_LAIN.map(kartu).join('') + '<a class="menu-link" href="/keluarga.html"><span class="menu-ic">' + U.icon('user') + '</span><span class="menu-txt"><strong>Keluarga</strong><span>Login dan buku transaksi bersama (versi awal).</span></span></a></nav>' +
-    '</div>' +
-    '<div class="card mt"><div class="card-head"><h2>Akun</h2></div><p class="muted">Keluar tidak menghapus catatan yang tersimpan di perangkat.</p><div class="actions"><button class="btn" style="min-height:44px" onclick="App.emailAkun(this)">Status / verifikasi email</button><button class="btn danger" style="min-height:44px" onclick="App.keluarAkun(this)">Keluar akun</button></div></div>';
+    '</div>' + kartuAkun;
   };
 
   /* ============================================================
@@ -2091,6 +2099,23 @@
     const list = P.list();
     const aktif = P.activeId();
     const berSandi = P.countPinned();
+    const akun = root.K && root.K.terbuka && root.K.nama ? root.K.nama : '';
+
+    /* Akun yang sedang login ditampilkan terpisah dari profil lokal, supaya
+       jelas mana yang tersimpan di server dan mana yang di perangkat ini. */
+    const kartuAkun = akun
+      ? '<div class="card"><div class="card-head"><h2>Akun</h2><span class="spacer"></span>' +
+          '<span class="tag ok">masuk</span></div>' +
+          '<div class="profil-list"><div class="profil-card on">' +
+            '<div class="pc-ic">👤</div>' +
+            '<div class="pc-main"><div class="pc-nama">' + H(akun) + '</div>' +
+              '<div class="pc-info muted">Akun yang sedang login. Catatan keuangan di bawah tetap tersimpan di perangkat ini.</div>' +
+            '</div>' +
+            '<div class="pc-act"><button class="btn sm" onclick="App.emailAkun(this)">Status email</button>' +
+              '<button class="btn sm ghost" onclick="App.keluarAkun(this)">Keluar</button></div>' +
+          '</div></div>' +
+        '</div>'
+      : '';
 
     const kartu = list.map(function (p) {
       const ini = p.id === aktif;
@@ -2125,8 +2150,8 @@
       '</div>';
     }).join('');
 
-    return '<div class="card"><div class="card-head">' +
-        '<h2>Profil</h2><span class="spacer"></span>' +
+    return kartuAkun + '<div class="card' + (kartuAkun ? ' mt' : '') + '"><div class="card-head">' +
+        '<h2>Profil di perangkat ini</h2><span class="spacer"></span>' +
         '<button class="btn primary" onclick="V.profilForm()">+ Profil Baru</button></div>' +
       '<p class="muted" style="margin:-4px 0 14px">Setiap profil punya catatan, dompet, anggaran, dan target sendiri. ' +
         'Data antar profil <b>terpisah total</b> — tidak bisa saling melihat.</p>' +
@@ -2295,14 +2320,26 @@
     el('pg-lain').onclick = function () { V.modal.close(); root.App.go('profil'); };
   };
 
-  /* Perbarui tombol profil di sidebar. */
+  /* Perbarui tombol profil di sidebar. Kalau sudah masuk, nama akun yang
+     tampil lebih dulu, dengan nama profil lokal sebagai keterangan. */
   V.updateProfilBtn = function () {
     const p = S.Profiles.active();
-    const ic = el('pb-ic'), nm = el('pb-nama');
-    if (ic) { ic.textContent = p ? p.icon : '👤'; U.polishIcons(ic.parentElement); }
-    if (nm) nm.textContent = p ? p.name : 'Profil';
+    const akun = root.K && root.K.terbuka && root.K.nama ? root.K.nama : '';
+    const ic = el('pb-ic'), nm = el('pb-nama'), ket = el('pb-ket');
+    if (ic) { ic.textContent = akun ? '👤' : (p ? p.icon : '👤'); U.polishIcons(ic.parentElement); }
+    if (nm) nm.textContent = akun || (p ? p.name : 'Profil');
+    if (ket) ket.textContent = akun
+      ? (p ? p.name + ' · lokal' : 'catatan lokal')
+      : 'profil lokal';
+    const btn = el('btn-profil');
+    if (btn) btn.title = akun
+      ? 'Masuk sebagai ' + akun + '. Catatan disimpan di perangkat ini.'
+      : 'Profil lokal di perangkat ini';
     const k = el('btn-kunci');
     if (k) k.hidden = !(p && p.pinHash) || S.Profiles.isLocked(p.id);
+    /* Tombol keluar hanya berguna kalau memang ada akun yang login. */
+    const keluar = el('btn-keluar');
+    if (keluar) keluar.hidden = !akun;
   };
 
   V.profilKunci = function () {

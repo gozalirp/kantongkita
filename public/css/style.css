@@ -367,7 +367,9 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   color:inherit;cursor:pointer;font:inherit;text-align:left}
 .profil-btn:hover{border-color:var(--brand,#5b8def);background:rgba(15,23,42,.06)}
 .pb-ic{font-size:17px;line-height:1;flex:0 0 auto}
-.pb-nama{flex:1;min-width:0;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pb-teks{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-align:left}
+.pb-nama{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pb-ket{font-size:11px;color:var(--txt-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pb-chev{opacity:.45;font-size:16px}
 
 /* saat profil terkunci: total saldo di topbar disembunyikan */
@@ -382,6 +384,9 @@ body.terkunci .nav a[data-view="kategori"]{display:none}
 body.terkunci #btn-add-tx{display:none}
 
 .btn.full{width:100%;justify-content:center}
+/* `display:inline-flex` di atas mengalahkan `hidden` bawaan browser, jadi
+   tombol yang seharusnya disembunyikan tetap tampil. Ditegaskan di sini. */
+.btn[hidden]{display:none}
 
 .profil-list{display:grid;gap:10px}
 .profil-card{display:flex;align-items:center;gap:13px;padding:13px 15px;border:1px solid var(--line);
@@ -559,6 +564,8 @@ body.terkunci #btn-add-tx{display:none}
 @media(min-width:861px){
   .sidebar{background:#5955EF;color:#FFF;border:0}
   .sidebar .nav a,.brand small,.net-dot{color:#FFF}
+  .sidebar .pb-ket{color:rgba(255,255,255,.9)}
+  .sidebar .pb-chev{opacity:.7}
   .sidebar .nav a.active{background:#FFFFFF22;box-shadow:inset 3px 0 #FFF}
   .sidebar .nav a:hover{background:#FFFFFF18;color:#FFF}
 }

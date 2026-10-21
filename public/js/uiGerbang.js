@@ -41,7 +41,11 @@
       })
       .then(function () { return K.periksaPribadi(balapan); })
       .catch(function () { return 'ragu'; })
-      .then(function (hasil) { bersiap = null; return putuskan(hasil); });
+      .then(function (hasil) {
+        bersiap = null;
+        if (hasil === true && root.App) root.App.segarkanAkun();
+        return putuskan(hasil);
+      });
     return bersiap;
   };
 

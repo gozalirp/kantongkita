@@ -83,6 +83,7 @@
     /* Muat data sesuai mode aktif. Mode pribadi tetap sinkron seperti dulu;
        mode keluarga menunggu server. */
     muat: async function () {
+      this.lupakanAkun();
       if (!root.K || !K.aktif()) { K && K.init(); return this.load(); }
       try {
         const buku = await K.muat();
@@ -92,6 +93,7 @@
       } catch (e) {
         /* Tidak bisa memuat buku bersama: jangan tampilkan data pribadi
            seolah-olah itu buku keluarga. */
+        this.lupakanAkun();
         this.db = S.seedDB();
         this.dbBaru = true;
         V.toast(e.message === 'LOGIN'
@@ -579,6 +581,13 @@
       });
     },
 
+    /* Nama akun yang login ditampilkan di sidebar. Dipanggil ulang setelah
+       pemeriksaan sesi selesai, karena saat render pertama bisa belum ada. */
+    segarkanAkun: function () {
+      V.updateProfilBtn && V.updateProfilBtn();
+      if (this.view === 'profil') this.render();
+    },
+
     /* Ambil salinan pribadi dari server. Kosong secara default: perangkat baru
        boleh mengisinya, perangkat yang sudah berisi tidak ditimpa. */
     tarikPribadi: async function () {
@@ -595,6 +604,13 @@
       this.render();
       V.toast('Catatan pribadi dimuat dari cloud.', 'ok');
       return this.db;
+    },
+
+    /* Buang nama akun saat sesi berakhir supaya sidebar tidak menampilkan
+       akun yang sudah keluar. */
+    lupakanAkun: function () {
+      if (root.K) root.K.nama = '';
+      this.segarkanAkun();
     },
 
     /* Sisa persiapan setelah data tersedia (dipakai kedua mode). */
