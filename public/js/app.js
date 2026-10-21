@@ -41,6 +41,34 @@
     _gerbangDaftar: false,
     _gerbangKode: '',
     _gerbangAkun: null,
+    _emailAktif: false,
+
+    keluarAkun: async function (button) {
+      if (!confirm('Keluar dari akun? Catatan di perangkat ini tidak akan dihapus.')) return;
+      if (button) button.disabled = true;
+      try {
+        const response = await fetch('/api/family/logout', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        if (!response.ok && response.status !== 401) throw Error('Gagal keluar. Coba lagi.');
+        location.reload();
+      } catch (error) { V.toast(error.message || 'Periksa koneksi internet.', 'err'); }
+      finally { if (button) button.disabled = false; }
+    },
+
+    emailAkun: async function (button) {
+      button.disabled = true;
+      try {
+        const response = await fetch('/api/family/email/status', { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok) throw Error(data.error);
+        if (!data.email) { V.toast('Akun ini belum memiliki email. Kode pemulihan tetap bisa digunakan.'); return; }
+        if (data.verified) { V.toast('Email ' + data.email + ' sudah terverifikasi.'); return; }
+        const sent = await fetch('/api/family/email/resend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const result = await sent.json();
+        if (!sent.ok) throw Error(result.error);
+        V.toast('Email verifikasi dikirim ke ' + data.email + '.');
+      } catch (error) { V.toast(error.message || 'Periksa koneksi internet.', 'err'); }
+      finally { button.disabled = false; }
+    },
 
     /* ---------- penyimpanan ---------- */
     storageKey: function () { return S.Persist.key(); },

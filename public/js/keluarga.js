@@ -1,6 +1,7 @@
 'use strict';
 let revision = 0;
 let aksi = 'login';
+let emailEnabled = false;
 const el = id => document.getElementById(id);
 
 const ACTION = {
@@ -60,6 +61,9 @@ function aksiDariTautan() {
 function syncActionUI() {
   const conf = ACTION[aksi];
   el('auth-title').textContent = conf.title;
+  const needsEmail = emailEnabled && ['activate','join'].includes(aksi);
+  el('email-field').hidden = !needsEmail;
+  el('f-email').required = needsEmail;
   el('code-field').hidden = !conf.code;
   el('f-code').required = conf.code;
   el('code-label').textContent = conf.codeLabel || 'Kode';
@@ -147,6 +151,7 @@ el('account').addEventListener('submit', e => {
   const values = Object.fromEntries(new FormData(form));
   values.action = aksi;
   if (!ACTION[values.action].code) delete values.code;
+  if (!emailEnabled || !['activate','join'].includes(aksi)) delete values.email;
   busy(el('submit'), async () => {
     status('Memproses…');
     const result = await api(values.action, values);
@@ -209,6 +214,7 @@ el('logout').addEventListener('click', () => busy(el('logout'), async () => {
   status('Sudah logout.', 'ok');
 }));
 
+api('email/config').then(data => { emailEnabled = data.enabled === true; syncActionUI(); }).catch(() => {});
 syncActionUI();
 aksiDariTautan();
 load().catch(() => status('Masuk, atau buat akun kalau ini keluarga baru.'));

@@ -33,6 +33,7 @@
           <span class="hint" id="user-hint">3–32 karakter: huruf, angka, atau garis bawah.</span>
         </div>
 
+        <div class="k-field" id="email-field" hidden><label for="f-email">Email pemulihan</label><input id="f-email" name="email" type="email" autocomplete="email" maxlength="254"><span class="hint">Verifikasi melalui inbox untuk mengaktifkan reset password.</span></div>
         <div class="k-field">
           <label for="f-pass">Password</label>
           <input id="f-pass" name="password" type="password" required minlength="12" maxlength="128"
@@ -53,12 +54,12 @@
 
       <div class="k-recovery" id="recovery-box" hidden>
         <strong>Simpan kode pemulihan ini sekarang</strong>
-        <p>Hanya ditampilkan sekali dan tidak dikirim lewat email. Tanpa kode ini, akun tidak bisa dipulihkan.</p>
+        <p>Hanya ditampilkan sekali dan tidak dikirim lewat email. Simpan sebagai cadangan jika email tidak bisa diakses.</p>
         <div class="k-code"><code id="recovery"></code><button class="btn sm" type="button" id="copy">Salin</button></div>
       </div>
 
       <p class="k-switch" id="switch">Belum punya akun? <a href="#" data-action="activate">Buat akun</a></p>
-      <p class="k-mini"><a href="#" data-action="join">Punya kode undangan?</a><span aria-hidden="true">·</span><a href="#" data-action="recover">Lupa password?</a></p>    </section>
+      <p class="k-mini"><a href="#" data-action="join">Punya kode undangan?</a><span aria-hidden="true">·</span><a href="/akun-email">Lupa password lewat email?</a><span aria-hidden="true">·</span><a href="#" data-action="recover">Gunakan kode pemulihan</a></p>    </section>
 
     <section id="family" hidden>
       <div class="k-card">

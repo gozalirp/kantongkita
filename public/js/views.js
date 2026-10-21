@@ -44,7 +44,7 @@
           '<div class="gerbang-ikon">✅</div>' +
           '<h2>Akun berhasil dibuat</h2>' +
           '<p class="muted gerbang-tip">Simpan kode di bawah. Kode ini hanya tampil sekali ' +
-            'dan satu-satunya cara memulihkan akun kalau password lupa.</p>' +
+            'untuk cadangan pemulihan kalau password lupa.</p>' +
           '<div class="gerbang-kode" id="g-kode">' + U.esc(kode) + '</div>' +
           '<button class="btn" id="g-salin" type="button" style="width:100%">Salin kode</button>' +
           '<button class="btn primary" id="g-lanjut" type="button" style="width:100%;margin-top:10px">' +
@@ -73,8 +73,9 @@
           '<div class="field"><label for="g-user">Username</label>' +
             '<input id="g-user" type="text" maxlength="32" autocomplete="username" required' +
             (daftar ? ' pattern="[A-Za-z0-9_]{3,32}" spellcheck="false" placeholder="3–32: huruf, angka, garis bawah"' : '') + '></div>' +
+          (daftar && App._emailAktif ? '<div class="field"><label for="g-email">Email pemulihan</label><input id="g-email" type="email" autocomplete="email" maxlength="254" required><small>Verifikasi email dari inbox agar bisa digunakan untuk reset password.</small></div>' : '') +
           '<div class="field"><label for="g-pass">Password</label>' +
-            '<input id="g-pass" type="password" maxlength="180" required' +
+            '<input id="g-pass" type="password" maxlength="128" required' +
             ' autocomplete="' + (daftar ? 'new-password' : 'current-password') + '"' +
             (daftar ? ' minlength="12" placeholder="minimal 12 karakter"' : '') + '></div>' +
           '<button class="btn primary" id="g-masuk" type="submit" style="width:100%;margin-top:6px">' +
@@ -84,7 +85,7 @@
         '<p class="muted gerbang-bantu" style="margin-top:10px">' +
           (daftar
             ? '<button type="button" class="tautan" id="g-ke-masuk">Sudah punya akun? Masuk</button>'
-            : '<a href="/keluarga?aksi=lupa">Lupa password?</a>') +
+            : '<a href="/akun-email">Lupa password?</a>') +
         '</p>' +
       '</div>';
   };
@@ -154,6 +155,8 @@
       const daftar = App._gerbangDaftar === true;
       const user = document.getElementById('g-user').value.trim();
       const pass = document.getElementById('g-pass').value;
+      const emailField = document.getElementById('g-email');
+      const email = emailField ? emailField.value.trim() : undefined;
       if (!user || !pass) { pesan.textContent = 'Username dan password wajib diisi.'; return; }
       if (daftar && user.length < 3) { pesan.textContent = 'Username minimal 3 karakter.'; return; }
       if (daftar && pass.length < 12) { pesan.textContent = 'Password minimal 12 karakter.'; return; }
@@ -162,7 +165,7 @@
       fetch('/api/family/' + (daftar ? 'activate' : 'login'), {
         method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: user, password: pass })
+        body: JSON.stringify({ username: user, password: pass, email: email })
       }).then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (b) { return { status: r.status, body: b }; });
       }).then(function (hasil) {
@@ -172,6 +175,7 @@
           /* Kode disimpan hanya di memori + sessionStorage (hilang saat tab
              ditutup), bukan localStorage: ini kunci pemulihan akun. */
           const kode = hasil.body.recovery || '';
+          App._gerbangPesan = email ? (hasil.body.emailSent ? 'Email verifikasi dikirim. Periksa inbox atau spam.' : 'Akun dibuat, tetapi email belum terkirim. Setelah masuk, kirim ulang melalui Menu.') : '';
           App._gerbangKode = kode;
           App._gerbangAkun = kode ? { user: user, pass: pass } : null;
           if (kode) { try { sessionStorage.setItem(KODE_SESI, kode); } catch (e2) {} }
@@ -1089,7 +1093,8 @@
     '</div>' +
     '<div class="card mt"><div class="card-head"><h2>Lainnya</h2></div>' +
       '<nav class="menu-grid" aria-label="Menu lainnya">' + MENU_LAIN.map(kartu).join('') + '<a class="menu-link" href="/keluarga.html"><span class="menu-ic">' + U.icon('user') + '</span><span class="menu-txt"><strong>Keluarga</strong><span>Login dan buku transaksi bersama (versi awal).</span></span></a></nav>' +
-    '</div>';
+    '</div>' +
+    '<div class="card mt"><div class="card-head"><h2>Akun</h2></div><p class="muted">Keluar tidak menghapus catatan yang tersimpan di perangkat.</p><div class="actions"><button class="btn" style="min-height:44px" onclick="App.emailAkun(this)">Status / verifikasi email</button><button class="btn danger" style="min-height:44px" onclick="App.keluarAkun(this)">Keluar akun</button></div></div>';
   };
 
   /* ============================================================

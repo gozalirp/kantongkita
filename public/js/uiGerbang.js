@@ -34,6 +34,11 @@
     if (bolehBuka()) return Promise.resolve(true);
     if (bersiap) return bersiap;
     bersiap = Promise.resolve()
+      .then(function () {
+        return fetch('/api/family/email/config', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (data) {
+          if (root.App) root.App._emailAktif = data.enabled === true;
+        }).catch(function () {});
+      })
       .then(function () { return K.periksaPribadi(balapan); })
       .catch(function () { return 'ragu'; })
       .then(function (hasil) { bersiap = null; return putuskan(hasil); });

@@ -1,4 +1,5 @@
 import { token, digest, username, hashPassword, verifyPassword, sameOrigin, sessionCookie } from './family-security.mjs';
+import { emailAddress, emailReady, sendAccountEmail, accountEmail } from './account-email.mjs';
 const json = (value, status = 200, headers = {}) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
 
 /* Pemeriksaan isi buku bersama. Mengembalikan true kalau sah, atau pesan galat.
@@ -53,9 +54,11 @@ export async function family(request, env) {
     const count = await q(`INSERT INTO family_rate_limits(key_hash,window_start,attempts) VALUES(?,?,1)
       ON CONFLICT(key_hash) DO UPDATE SET attempts=CASE WHEN window_start<? THEN 1 ELSE attempts+1 END,
       window_start=CASE WHEN window_start<? THEN excluded.window_start ELSE window_start END RETURNING attempts`, key, now, now-900, now-900).first();
-    if (count.attempts > (['login','activate','join','recover'].includes(path) ? 10 : 120)) return fail('Terlalu banyak percobaan. Tunggu 15 menit.', 429);
+    if (count.attempts > (['login','activate','join','recover','email/request-reset','email/verify','email/reset','email/resend'].includes(path) ? 10 : 120)) return fail('Terlalu banyak percobaan. Tunggu 15 menit.', 429);
   }
   try {
+    if (path === 'email/config' && request.method === 'GET') return json({ ok: true, enabled: emailReady(env) });
+    if (['email/request-reset','email/verify','email/reset'].includes(path) && request.method === 'POST') return await accountEmail(path, body, env, now);
     if (['activate','join','login','recover'].includes(path) && request.method === 'POST') {
       const name = username(body.username);
       if (path === 'login') {
@@ -74,11 +77,15 @@ export async function family(request, env) {
         const hash = await hashPassword(body.password);
         const result = await env.DB.batch([
           q('UPDATE family_users SET password_hash=?,recovery_hash=? WHERE id=? AND recovery_hash=?', hash, await digest(recovery), user.id, user.recovery_hash),
-          q('DELETE FROM family_sessions WHERE user_id=?', user.id)
+          q('DELETE FROM family_sessions WHERE user_id=?', user.id),
+          q('DELETE FROM account_email_tokens WHERE user_id=?', user.id)
         ]);
         if (!result[0].meta.changes) return fail('Kode sudah digunakan', 409);
         return json({ ok: true, recovery });
       }
+      const email = body.email ? emailAddress(body.email) : null;
+      if (emailReady(env) && !email) return fail('Email pemulihan wajib diisi.');
+      if (email && !emailReady(env)) return fail('Layanan email belum diaktifkan.', 503);
       let familyId, invitation;
       if (path === 'activate') {
         /* Pendaftaran TERBUKA: siapa pun yang memegang alamat aplikasi boleh
@@ -104,9 +111,12 @@ export async function family(request, env) {
         statements.push(q(`INSERT INTO family_users SELECT ?,family_id,?,?,?,'partner',? FROM family_invites WHERE token_hash=? AND used_at IS NULL AND expires_at>?`, id, name, hash, await digest(recovery), now, invitation.token_hash, now));
         statements.push(q('UPDATE family_invites SET used_at=? WHERE token_hash=? AND EXISTS(SELECT 1 FROM family_users WHERE id=?)', now, invitation.token_hash, id));
       } else statements.push(q("INSERT INTO family_users VALUES(?,?,?,?,?,'owner',?)", id, familyId, name, hash, await digest(recovery), now));
+      if (email) statements.push(q('INSERT INTO account_emails VALUES(?,?,NULL)', id, email));
       const result = await env.DB.batch(statements);
       if (path === 'join' && !result[0].meta.changes) return fail('Undangan sudah digunakan', 409);
-      return json({ ok: true, recovery });
+      let emailSent = false;
+      if (email) { try { await sendAccountEmail(env, id, email, 'verify', now); emailSent = true; } catch {} }
+      return json({ ok: true, recovery, emailSent });
     }
     const cookie = request.headers.get('Cookie')?.match(/(?:^|;\s*)__Host-sd_session=([a-f0-9]{64})(?:;|$)/)?.[1];
     const user = cookie && await q(`SELECT u.id,u.family_id,u.username,u.role FROM family_sessions s JOIN family_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?`, await digest(cookie), now).first();
@@ -115,6 +125,19 @@ export async function family(request, env) {
     if (path === 'logout' && request.method === 'POST') {
       await q('DELETE FROM family_sessions WHERE token_hash=?', await digest(cookie)).run();
       return json({ ok: true }, 200, { 'Set-Cookie': sessionCookie(cookie, 0) });
+    }
+    if (path === 'email/status' && request.method === 'GET') {
+      const email = await q('SELECT email,verified_at FROM account_emails WHERE user_id=?', user.id).first();
+      return json({ ok: true, email: email?.email || '', verified: !!email?.verified_at, enabled: emailReady(env) });
+    }
+    if (path === 'email/resend' && request.method === 'POST') {
+      if (!emailReady(env)) return fail('Layanan email belum diaktifkan.', 503);
+      const email = await q('SELECT email,verified_at FROM account_emails WHERE user_id=?', user.id).first();
+      if (!email || email.verified_at) return fail('Tidak ada email yang perlu diverifikasi.');
+      const recent = await q("SELECT token_hash FROM account_email_tokens WHERE user_id=? AND purpose='verify' AND expires_at>?", user.id, now+86340).first();
+      if (recent) return fail('Tunggu satu menit sebelum mengirim ulang.', 429);
+      await sendAccountEmail(env, user.id, email.email, 'verify', now);
+      return json({ ok: true });
     }
     if (path === 'invite' && request.method === 'POST') {
       if (user.role !== 'owner') return fail('Hanya pemilik keluarga', 403);
@@ -223,7 +246,7 @@ export async function family(request, env) {
     }
     return fail('Endpoint tidak ditemukan', 404);
   } catch (error) {
-    if (String(error.message).includes('Username harus') || String(error.message).includes('Password harus')) return fail(error.message);
+    if (String(error.message).includes('Username harus') || String(error.message).includes('Password harus') || String(error.message).includes('Email tidak valid')) return fail(error.message);
     return fail('Operasi gagal. Username mungkin sudah dipakai atau layanan belum siap.', 409);
   }
 }
