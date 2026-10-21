@@ -35,8 +35,6 @@
         '<div class="gerbang-merek"><span aria-hidden="true">💰</span> Money Planner</div>' +
         '<div class="gerbang-ikon">🔒</div>' +
         '<h2>Masuk dulu untuk membuka catatan</h2>' +
-        '<p class="muted">Catatan keuangan tersimpan di akun, bukan di perangkat ini. ' +
-          'Tanpa masuk, tidak ada data yang ditampilkan.</p>' +
         '<p class="muted">Belum punya akun? <a href="/keluarga?aksi=aktivasi">Buat akun</a> — ' +
           'hanya bisa sekali untuk aplikasi ini.</p>' +
         '<form id="g-form" autocomplete="on" style="margin-top:14px">' +
