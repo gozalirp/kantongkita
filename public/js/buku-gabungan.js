@@ -96,7 +96,7 @@
       [['semua', 'Semua'], ['pribadi', 'Pribadi'], ['keluarga', 'Keluarga']].map(function (p) {
         return '<button type="button" aria-pressed="' + (B.filter === p[0]) + '" class="' + (B.filter === p[0] ? 'on' : '') + '" onclick="Buku.pilih(\'' + p[0] + '\')">' + p[1] + '</button>';
       }).join('') + '</div><span class="spacer"></span>' +
-      '<button class="btn primary" id="undang-pasangan" onclick="Buku.undang(this)">' + root.U.icon('plus') + 'Undang pasangan</button>' +
+      (B.role === 'partner' ? '' : '<button class="btn primary" id="undang-pasangan" onclick="Buku.undang(this)">' + root.U.icon('plus') + 'Undang pasangan</button>') +
       '<button class="btn" onclick="Buku.muat()"' + (B.memuat || B.sibuk ? ' disabled' : '') + '>Muat ulang keluarga</button></div>' +
       '<div class="row"><button class="btn" onclick="Buku.dompet()"' + (!B.keluarga || B.sibuk || B.memuat ? ' disabled' : '') + '>Tambah dompet keluarga</button></div>' +
       '<p class="hint">Pribadi hanya untuk kamu. Keluarga terlihat oleh kedua anggota. Data lama tidak otomatis dibagikan.</p>' +
@@ -111,7 +111,29 @@
       const r = await fetch('/api/family/invite', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const data = await r.json();
       if (!r.ok) throw Error(data.error || 'Undangan belum bisa dibuat.');
-      root.V.modal.open({ title: 'Undang pasangan', body: '<p>Kirim kode ini ke pasangan. Berlaku 24 jam dan sekali pakai.</p><div class="field"><label for="undangan-kode">Kode undangan</label><input id="undangan-kode" readonly value="' + root.U.esc(data.code) + '"></div><p>Pasangan membuka halaman Keluarga, memilih Punya kode undangan?, lalu membuat username dan password sendiri.</p><a class="btn" href="/keluarga?aksi=undangan" target="_blank" rel="noopener">Halaman gabung pasangan</a>', foot: '<button class="btn" data-close>Tutup</button>' });
+      root.V.modal.open({
+        title: 'Undang pasangan',
+        body: '<p>Kirim kode ini ke pasangan. Berlaku 24 jam dan sekali pakai.</p>' +
+          '<div class="field"><label for="undangan-kode">Kode undangan</label><input id="undangan-kode" readonly value="' + root.U.esc(data.code) + '"></div>' +
+          '<div class="field"><label for="gabung-kode">Punya kode dari pasangan?</label>' +
+            '<input id="gabung-kode" type="text" autocomplete="off" placeholder="Tempel kode dari pasangan">' +
+            '<span class="hint">Masukkan kode yang kamu terima lalu klik Gabung: akun ini langsung ikut buku keluarga pasangan. Ditolak kalau akun ini sudah punya catatan bersama sendiri, supaya catatan tidak hilang.</span></div>',
+        foot: '<button class="btn" data-close>Tutup</button><button class="btn primary" id="gabung-pakai">Gabung</button>'
+      });
+      const tombol = document.getElementById('gabung-pakai');
+      tombol.onclick = async function () {
+        const kode = document.getElementById('gabung-kode').value.trim();
+        if (!kode) { root.V.toast('Tempel kode dari pasangan dulu.', 'err'); return; }
+        tombol.disabled = true;
+        try {
+          const res = await fetch('/api/family/link', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: kode }) });
+          const hasil = await res.json();
+          if (!res.ok) throw Error(hasil.error || 'Kode itu tidak bisa dipakai.');
+          root.V.modal.close();
+          await B.muat();
+          root.V.toast('Sudah tergabung. Buku keluarga pasangan langsung dimuat.', 'ok');
+        } catch (e) { root.V.toast(e.message, 'err'); tombol.disabled = false; }
+      };
     } catch (e) { root.V.toast(e.message, 'err'); }
     finally { button.disabled = false; }
   };

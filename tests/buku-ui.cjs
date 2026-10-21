@@ -86,6 +86,27 @@ w.fetch = async (url, options) => {
   await B.undang($('undang-pasangan'));
   assert.equal($('undangan-kode').value, 'test-invite');
   assert($('undangan-kode').readOnly);
+  // Kode dari pasangan: tidak ada lagi tautan keluar, dan tombolnya langsung memuat buku baru.
+  assert.equal(w.document.querySelectorAll('#modal-body a[href^="/keluarga"]').length, 0);
+  assert($('gabung-kode'));
+  const calls = [];
+  w.fetch = async (url, options) => {
+    calls.push(url);
+    if (url === '/api/family/link') {
+      assert.equal(JSON.parse(options.body).code, 'KODE-PASANGAN');
+      return { ok: true, json: async () => ({ ok: true }) };
+    }
+    if (url === '/api/family/me') return { ok: true, json: async () => ({ user: { username: 'owner', role: 'partner' }, members: [{ username: 'pasangan' }] }) };
+    if (url === '/api/family/data') return { ok: true, json: async () => ({ revision: 3, data: { wallets: [{ id: 'w_bersama', name: 'Dompet Pasangan' }], transactions: [] } }) };
+    throw Error('endpoint tak terduga: ' + url);
+  };
+  $('gabung-kode').value = 'KODE-PASANGAN';
+  await $('gabung-pakai').onclick();
+  assert.deepEqual(calls, ['/api/family/link', '/api/family/me', '/api/family/data']);
+  assert.equal(B.role, 'partner');
+  assert.equal(B.revisi, 3);
+  assert(B.data().wallets.some(x => x.name.indexOf('Dompet Pasangan') === 0));
+  assert.equal($('undang-pasangan'), null, 'anggota kedua tidak lagi ditawari undangan');
   console.log('PASS: combined dashboard, wallet routing, family create/edit isolation, invitation modal');
   dom.window.close(); process.exit(0);
 })().catch(e => { console.error(e); dom.window.close(); process.exit(1); });

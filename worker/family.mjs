@@ -54,7 +54,7 @@ export async function family(request, env) {
     const count = await q(`INSERT INTO family_rate_limits(key_hash,window_start,attempts) VALUES(?,?,1)
       ON CONFLICT(key_hash) DO UPDATE SET attempts=CASE WHEN window_start<? THEN 1 ELSE attempts+1 END,
       window_start=CASE WHEN window_start<? THEN excluded.window_start ELSE window_start END RETURNING attempts`, key, now, now-900, now-900).first();
-    if (count.attempts > (['login','activate','join','recover','email/request-reset','email/verify','email/reset','email/resend'].includes(path) ? 10 : 120)) return fail('Terlalu banyak percobaan. Tunggu 15 menit.', 429);
+    if (count.attempts > (['login','activate','join','link','recover','email/request-reset','email/verify','email/reset','email/resend'].includes(path) ? 10 : 120)) return fail('Terlalu banyak percobaan. Tunggu 15 menit.', 429);
   }
   try {
     if (path === 'email/config' && request.method === 'GET') return json({ ok: true, enabled: emailReady(env) });
@@ -145,6 +145,36 @@ export async function family(request, env) {
       const code = token();
       await q('INSERT INTO family_invites VALUES(?,?,?,NULL) ON CONFLICT(family_id) DO UPDATE SET token_hash=excluded.token_hash,expires_at=excluded.expires_at,used_at=NULL', await digest(code), user.family_id, now+86400).run();
       return json({ ok: true, code });
+    }
+    /* Memakai kode dari pasangan: akun INI pindah ke keluarga pengundang.
+       Tanpa akun baru — berbeda dari 'join' yang mendaftarkan akun kedua.
+       Ditolak kalau buku keluarga sendiri sudah berisi, karena buku itu jadi
+       tidak terjangkau setelah pindah. */
+    if (path === 'link' && request.method === 'POST') {
+      if (typeof body.code !== 'string' || !body.code.trim()) return fail('Kode undangan diperlukan');
+      if (user.role !== 'owner') return fail('Akun ini sudah tergabung sebagai anggota keluarga lain', 409);
+      const invitation = await q('SELECT * FROM family_invites WHERE token_hash=? AND used_at IS NULL AND expires_at>?', await digest(body.code.trim()), now).first();
+      if (!invitation) return fail('Kode undangan tidak valid atau kedaluwarsa', 403);
+      if (invitation.family_id === user.family_id) return fail('Itu kode dari keluarga kamu sendiri', 409);
+      const anggota = await q('SELECT COUNT(*) AS n FROM family_users WHERE family_id=?', invitation.family_id).first();
+      if ((anggota?.n || 0) >= 2) return fail('Keluarga tujuan sudah berisi dua anggota', 409);
+      const parts = await q('SELECT chunk FROM family_data_parts WHERE family_id=? ORDER BY idx', user.family_id).all();
+      const baris = await q('SELECT data FROM family_data WHERE family_id=?', user.family_id).first();
+      let buku = null;
+      try {
+        if (parts.results && parts.results.length) buku = JSON.parse(parts.results.map((p) => p.chunk).join(''));
+        else if (baris) buku = JSON.parse(baris.data);
+      } catch { buku = null; }
+      const isi = buku && ['wallets', 'categories', 'transactions', 'budgets', 'goals', 'subscriptions'].some((k) => (buku[k] || []).length);
+      if (isi) return fail('Akun ini sudah punya catatan bersama sendiri. Minta pasangan memakai kode dari akun ini supaya catatan tidak hilang.', 409);
+      const hasil = await env.DB.batch([
+        q("UPDATE family_users SET family_id=?, role='partner' WHERE id=? AND role='owner' AND family_id=?", invitation.family_id, user.id, user.family_id),
+        q('UPDATE family_invites SET used_at=? WHERE token_hash=? AND EXISTS(SELECT 1 FROM family_users WHERE id=? AND family_id=?)', now, invitation.token_hash, user.id, invitation.family_id),
+        // Kode lama milik keluarga yang ditinggalkan ikut dibuang supaya tidak bisa dipakai masuk ke keluarga kosong.
+        q('DELETE FROM family_invites WHERE family_id=?', user.family_id)
+      ]);
+      if (!hasil[0].meta.changes) return fail('Tidak bisa menggabungkan sekarang. Coba lagi.', 409);
+      return json({ ok: true });
     }
     /* Isi buku bersama: seluruh koleksi, bukan hanya transaksi.
        SEMUA perubahan masuk lewat 'save' dengan revision, sehingga dua orang
