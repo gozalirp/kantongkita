@@ -56,9 +56,11 @@
       B.akun = username;
       K.nama = username;
       B.role = identitas.user.role;
-      B.jumlah = identitas.members.length;
+      B.anggota = Array.isArray(identitas.members) ? identitas.members : [];
+      B.jumlah = B.anggota.length;
     } catch (e) {
       B.keluarga = null;
+      B.anggota = null;
       B.pesan = e.message || 'Buku keluarga belum bisa dimuat.';
     } finally {
       B.memuat = false;
@@ -89,6 +91,27 @@
     root.V.state.transaksi.walletId = ''; root.V.state.transaksi.catId = '';
     root.App.render();
   };
+  /* Siapa saja yang ada di keluarga ini — supaya pasangan langsung kelihatan,
+     bukan cuma angkanya. Nama dibatasi supaya chip tetap satu baris, jumlah
+     anggota diumumkan sebagai satu status utuh, bukan angka telanjang. */
+  B.anggotaKeluarga = function () {
+    const H = root.U.esc;
+    if (!B.anggota || !B.anggota.length) return '';
+    const chip = function (m) {
+      const nama = String(m.username || '');
+      const peran = (m.role === 'owner' ? 'Pemilik' : 'Anggota') + (nama === B.akun ? ' · kamu' : '');
+      return '<li class="keluarga-anggota"><span class="keluarga-ava" aria-hidden="true">' + H(nama.slice(0, 1).toUpperCase()) + '</span>' +
+        '<span class="keluarga-nama" title="' + H(nama) + '">' + H(nama) + '</span>' +
+        '<span class="keluarga-peran">' + peran + '</span></li>';
+    };
+    return '<div class="keluarga-baris">' +
+      '<span class="keluarga-judul">Keluarga</span>' +
+      '<ul class="keluarga-daftar" aria-label="Anggota keluarga">' + B.anggota.map(chip).join('') + '</ul>' +
+      '<span class="keluarga-jumlah" role="status" aria-atomic="true">' + B.anggota.length + ' anggota</span>' +
+      (B.anggota.length < 2 ? '<span class="keluarga-kosong">Anggota kedua belum ada — bagikan kode undangan di atas.</span>' : '') +
+      '<a class="btn sm" href="/keluarga">Halaman keluarga</a></div>';
+  };
+
   B.kontrol = function () {
     const H = root.U.esc;
     return '<section class="card buku-kontrol" aria-label="Catatan pribadi dan keluarga">' +
@@ -99,6 +122,7 @@
       (B.role === 'partner' ? '' : '<button class="btn primary" id="undang-pasangan" onclick="Buku.undang(this)">' + root.U.icon('plus') + 'Undang pasangan</button>') +
       '<button class="btn" onclick="Buku.muat()"' + (B.memuat || B.sibuk ? ' disabled' : '') + '>Muat ulang keluarga</button></div>' +
       '<div class="row"><button class="btn" onclick="Buku.dompet()"' + (!B.keluarga || B.sibuk || B.memuat ? ' disabled' : '') + '>Tambah dompet keluarga</button></div>' +
+      B.anggotaKeluarga() +
       '<p class="hint">Pribadi hanya untuk kamu. Keluarga terlihat oleh kedua anggota. Data lama tidak otomatis dibagikan.</p>' +
       (B.memuat ? '<p role="status">Memuat catatan keluarga…</p>' : '') +
       (B.pesan ? '<p role="alert">' + H(B.pesan) + '</p>' : '') +

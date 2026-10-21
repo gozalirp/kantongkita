@@ -161,9 +161,6 @@
          utama; server dipakai untuk membuka catatan di perangkat lain. */
       this.simpnPribadiTertunda();
 
-      /* Auto-Sync ke Cloudflare D1 di background (Hybrid Offline-First) */
-      this.syncCloudPush();
-
       if (root.GDrive && this.db.settings.driveEnabled && this.db.settings.driveFileId) {
         clearTimeout(this._pushT);
         const self = this;
@@ -263,98 +260,41 @@
       }
       document.body.classList.toggle('mode-keluarga', aktif);
     },
-    syncCloudPush: function () {
-      clearTimeout(this._cloudPushT);
-      const self = this;
-      this._cloudPushT = setTimeout(function () {
-        fetch('/api/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(self.db)
-        }).then(function (res) {
-          if (res.ok) {
-            App.updateNetDot(true, 'Cloudflare Aktif');
-          }
-        }).catch(function () {
-          App.updateNetDot(false, 'Offline (Lokal)');
-        });
-      }, 1500);
-    },
-
-    /* Auto-Sync Cloudflare Pull (Background saat buka aplikasi) */
-    syncCloudPull: function () {
-      const self = this;
-      fetch('/api/sync')
-        .then(function (res) { return res.json(); })
-        .then(function (res) {
-          if (res && res.ok && res.data) {
-            const cloudUpdated = res.data.meta && res.data.meta.updated;
-            const localUpdated = self.db && self.db.meta && self.db.meta.updated;
-            // Jika data di cloud lebih baru, perbarui data lokal
-            if (!localUpdated || (cloudUpdated && cloudUpdated > localUpdated)) {
-              self.db = S.normalize(res.data);
-              S.Persist.save(self.db);
-              self.render();
-              V.toast('Data disinkronkan otomatis dari Cloud');
-            }
-            App.updateNetDot(true, 'Cloudflare Aktif');
-          } else {
-            // Jika cloud kosong, kirim data lokal sekarang ke cloud
-            if (self.db) self.syncCloudPush();
-          }
-        })
-        .catch(function () {
-          App.updateNetDot(false, 'Offline (Lokal)');
-        });
-    },
-
-    /* Manual Trigger Sync Cloudflare dari Button Topbar / Pengaturan */
+    /* Manual Trigger Sync Cloudflare dari Button Topbar / Pengaturan:
+       simpan salinan pribadi ke akun cloud & muat ulang buku keluarga terbaru. */
     manualSyncCloud: function () {
       const btn = document.getElementById('btn-sync-cloud');
-      if (btn) {
-        btn.disabled = true;
-        btn.style.opacity = '0.6';
-      }
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
       V.toast('Menyinkronkan data dengan Cloud...');
       const self = this;
-      
-      // Ambil data terbaru di server dulu
-      fetch('/api/sync')
-        .then(function (res) { return res.json(); })
-        .then(function (res) {
-          if (res && res.ok && res.data) {
-            const cloudUpdated = res.data.meta && res.data.meta.updated;
-            const localUpdated = self.db && self.db.meta && self.db.meta.updated;
-            if (cloudUpdated && cloudUpdated > localUpdated) {
-              self.db = S.normalize(res.data);
-              S.Persist.save(self.db);
-              self.render();
-              V.toast('Berhasil mengambil data terbaru dari Cloud!', 'ok');
-              if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-              App.updateNetDot(true, 'Cloudflare Aktif');
-              return;
-            }
-          }
-          // Jika lokal lebih baru atau sama, dorong ke cloud
-          return fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(self.db)
-          }).then(function (postRes) {
-            if (postRes.ok) {
-              V.toast('Berhasil mengirim data lokal ke Cloud!', 'ok');
-              App.updateNetDot(true, 'Cloudflare Aktif');
-            } else {
-              V.toast('Gagal menyinkronkan data ke Cloud', 'err');
-            }
-            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-          });
-        })
-        .catch(function (err) {
-          V.toast('Koneksi gagal: pastikan ada internet', 'err');
-          if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-          App.updateNetDot(false, 'Offline (Lokal)');
-        });
+      const tugas = [];
+      if (root.K && K.punyaCloud) tugas.push(K.simpanPribadi(this.db));
+      if (root.Buku) tugas.push(Buku.muat());
+
+      if (!tugas.length) {
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        V.toast('Masuk dulu ke akun keluarga agar catatan tersinkron ke cloud.', 'err');
+        return;
+      }
+
+      Promise.all(tugas).then(function (hasil) {
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        const statusPribadi = hasil[0];
+        if (statusPribadi === 'ok') {
+          self.updateNetDot(true, 'Cloud Aktif');
+          V.toast('Berhasil menyinkronkan data ke Cloud!', 'ok');
+        } else if (statusPribadi === 'bentrok') {
+          V.toast('Ada versi lebih baru di cloud, salinan lokal tidak ditimpa.', 'err');
+        } else {
+          self.updateNetDot(true, 'Cloud Aktif');
+          V.toast('Data keluarga terbaru berhasil dimuat.', 'ok');
+        }
+        self.render();
+      }).catch(function () {
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        self.updateNetDot(false, 'Offline (Lokal)');
+        V.toast('Gagal menyinkronkan data ke Cloud', 'err');
+      });
     },
 
     saveAndRender: function () { this.save(); this.render(); },
@@ -630,10 +570,15 @@
       if (root.K) this.tarikPribadi();
       if (root.Buku) Buku.muat();
 
-      /* Kirim sisa perubahan saat halaman ditinggalkan. */
+      /* Kirim sisa perubahan saat halaman ditinggalkan, dan tarik pembaruan
+         saat kembali ke tab. */
       window.addEventListener('pagehide', function () { App.simpanPribadiSekarang(); });
       document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'hidden') App.simpanPribadiSekarang();
+        if (document.visibilityState === 'hidden') {
+          App.simpanPribadiSekarang();
+        } else if (document.visibilityState === 'visible' && root.Buku && Buku.akun && !Buku.sibuk) {
+          Buku.muat().then(function () { App.render(); }).catch(function () {});
+        }
       });
     },
 
@@ -714,9 +659,6 @@
 
       this.navigate();
       V.updateProfilBtn && V.updateProfilBtn();
-
-      // Coba sinkronisasi otomatis dari Cloudflare D1
-      this.syncCloudPull();
 
       // profil bersandi yang belum dibuka -> langsung minta sandi
       if (this.terkunci) setTimeout(function () { V.profilGate(); }, 200);

@@ -1213,10 +1213,18 @@
 
     // pindah dana cepat
     const moves = S.filterTx(db, {}).filter(function (t) { return t.type === 'move'; }).slice(0, 8);
+    const adaKeluarga = !!(root.Buku && root.Buku.akun);
+    const tombolKeluarga = adaKeluarga
+      ? '<button class="btn" onclick="Buku.dompet()">' + wrapIco('users') + 'Tambah Dompet Keluarga</button>'
+      : '';
 
     return '<div class="card"><div class="card-head"><h2>Pilihan Dompet / Bank</h2>' +
         '<span class="total-pill">Total: ' + U.fmtRp(total) + '</span>' +
-        '<button class="btn primary" onclick="V.walletForm()">' + wrapIco('plus') + 'Tambah Dompet</button></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+          tombolKeluarga +
+          '<button class="btn primary" onclick="V.walletForm()">' + wrapIco('plus') + 'Tambah Dompet Pribadi</button>' +
+        '</div></div>' +
+      (adaKeluarga ? '<p class="hint" style="margin:4px 0 12px;">Dompet di bawah ini hanya ada di akunmu. Pakai “Tambah Dompet Keluarga” agar terlihat juga oleh pasangan.</p>' : '') +
       (cards ? '<div class="grid cols-3 wallet-grid">' + cards + '</div>'
              : emptyBox('wallet', 'Belum ada dompet. Tambahkan rekening, e-wallet, atau uang tunai.')) +
     '</div>' +

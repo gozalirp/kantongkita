@@ -219,6 +219,20 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .seg button.on.out{background:var(--out-soft);color:var(--out)}
 .seg button.on.move{background:var(--move-soft);color:var(--move)}
 
+/* Baris keluarga di kartu ringkasan: anggota kelihatan langsung dari dashboard.
+   Nama dibatasi satu baris (chip tidak boleh pecah jadi dua), peran tidak
+   pernah terpotong, dan jumlah anggota diumumkan sebagai satu status utuh. */
+.keluarga-baris{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.keluarga-judul{font-size:12.5px;font-weight:650;color:var(--txt-dim)}
+.keluarga-daftar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;list-style:none;margin:0;padding:0;min-width:0}
+.keluarga-anggota{display:flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:3px 10px 3px 4px;min-width:0;max-width:100%}
+.keluarga-ava{width:24px;height:24px;flex:none;border-radius:50%;background:#EDEBFF;color:var(--accent-ink);display:grid;place-items:center;font-size:11.5px;font-weight:700}
+.keluarga-nama{font-size:12.5px;font-weight:600;min-width:0;max-width:16ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.keluarga-peran{font-size:11.5px;color:var(--txt-mute);white-space:nowrap;flex:none}
+.keluarga-jumlah{font-size:11.5px;color:var(--txt-mute);white-space:nowrap}
+.keluarga-kosong{font-size:11.5px;color:var(--txt-mute)}
+@media (max-width:560px){.keluarga-baris .btn{margin-left:auto}}
+
 /* stat cards aesthetic */
 .stat{
   background: linear-gradient(145deg, #FFFFFF, #F7FBFF);
@@ -618,6 +632,7 @@ input:not([type]),input[type=text],input[type=search],input[type=number],input[t
 .seg button.on.in{background:var(--in-soft);color:var(--in)}
 .seg button.on.out{background:var(--out-soft);color:var(--out)}
 .seg button.on.move{background:var(--move-soft);color:var(--move)}
+
 .stat{background:#EDEBFF;box-shadow:none;border-color:transparent}
 .stat::before{display:none}
 .stat:nth-child(4n+2){background:#E4F2FF}

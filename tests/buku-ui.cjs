@@ -96,7 +96,7 @@ w.fetch = async (url, options) => {
       assert.equal(JSON.parse(options.body).code, 'KODE-PASANGAN');
       return { ok: true, json: async () => ({ ok: true }) };
     }
-    if (url === '/api/family/me') return { ok: true, json: async () => ({ user: { username: 'owner', role: 'partner' }, members: [{ username: 'pasangan' }] }) };
+    if (url === '/api/family/me') return { ok: true, json: async () => ({ user: { username: 'owner', role: 'partner' }, members: [{ username: 'owner', role: 'owner' }, { username: 'pasangan', role: 'partner' }] }) };
     if (url === '/api/family/data') return { ok: true, json: async () => ({ revision: 3, data: { wallets: [{ id: 'w_bersama', name: 'Dompet Pasangan' }], transactions: [] } }) };
     throw Error('endpoint tak terduga: ' + url);
   };
@@ -107,6 +107,22 @@ w.fetch = async (url, options) => {
   assert.equal(B.revisi, 3);
   assert(B.data().wallets.some(x => x.name.indexOf('Dompet Pasangan') === 0));
   assert.equal($('undang-pasangan'), null, 'anggota kedua tidak lagi ditawari undangan');
-  console.log('PASS: combined dashboard, wallet routing, family create/edit isolation, invitation modal');
+  // Siapa saja di keluarga ini kelihatan tanpa buka halaman lain.
+  const kartuKeluarga = B.anggotaKeluarga();
+  assert.equal(B.anggota.length, 2);
+  assert(/keluarga-judul">Keluarga</.test(kartuKeluarga));
+  assert(/keluarga-ava" aria-hidden="true">O</.test(kartuKeluarga));
+  assert(/Pemilik · kamu/.test(kartuKeluarga));
+  assert(/keluarga-peran">Anggota</.test(kartuKeluarga));
+  assert(/role="status" aria-atomic="true">2 anggota</.test(kartuKeluarga));
+  assert(/aria-label="Anggota keluarga"/.test(kartuKeluarga));
+  assert(/href="\/keluarga"/.test(kartuKeluarga));
+  assert.equal(B.kontrol().includes('Halaman keluarga'), true);
+  const anggotaPenuh = B.anggota;
+  B.anggota = [anggotaPenuh[0]];
+  assert(/1 anggota/.test(B.anggotaKeluarga()));
+  assert(/Anggota kedua belum ada/.test(B.anggotaKeluarga()));
+  B.anggota = anggotaPenuh;
+  console.log('PASS: combined dashboard, wallet routing, family create/edit isolation, invitation modal, family members');
   dom.window.close(); process.exit(0);
 })().catch(e => { console.error(e); dom.window.close(); process.exit(1); });
