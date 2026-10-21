@@ -834,8 +834,9 @@ body.kb{overflow:auto;min-height:100dvh;padding:0}
 .k-hero{display:flex;flex-direction:column;gap:10px;padding-top:4px}
 .k-brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:15px;
   color:var(--txt);text-decoration:none;margin-bottom:6px}
-.k-logo{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:17px;
+.k-logo{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;
   background:var(--accent-gradient);box-shadow:0 6px 16px -6px rgba(81,71,217,.55)}
+.k-logo .ui-icon{width:19px;height:19px;color:#fff}
 .k-hero h1{font-size:clamp(24px,4.6vw,32px);line-height:1.15;letter-spacing:-.6px}
 .k-sub{color:var(--txt-dim);font-size:14.5px;max-width:34ch}
 .k-points b{color:var(--txt);font-weight:650}

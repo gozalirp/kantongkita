@@ -13,7 +13,9 @@ Menggunakan panduan design, design-system, dan ui-ux-pro-max. Pencarian design-s
 - Radius 12px kontrol, 18–20px kartu, 24px modal. Ritme jarak 8/12/16/24px.
 
 ## Komponen
-Navigasi menggunakan SVG lokal tanpa dependensi. Emoji untuk pilihan profil/kategori pengguna dipertahankan sebagai data. Halaman memiliki judul dan deskripsi singkat. Navigasi aktif memakai aria-current. Modal memiliki labelledby; toast berupa live region. Disabled, focus-visible dan reduced-motion wajib dipertahankan. Target sentuh HP 44px, input 16px untuk menghindari zoom otomatis iOS.
+Navigasi menggunakan SVG lokal tanpa dependensi. Emoji untuk pilihan profil/kategori pengguna dipertahankan sebagai data. Halaman memiliki judul dan deskripsi singkat.
+
+Setiap halaman HTML (`index.html`, `keluarga.html`, `akun-email.html`) wajib memuat tautan Google Fonts Plus Jakarta Sans sendiri. `style.css` hanya menyebut nama fontnya; tanpa tautan itu browser diam-diam jatuh ke sans-serif sistem dan halaman terlihat beda tanpa ada yang error. Navigasi aktif memakai aria-current. Modal memiliki labelledby; toast berupa live region. Disabled, focus-visible dan reduced-motion wajib dipertahankan. Target sentuh HP 44px, input 16px untuk menghindari zoom otomatis iOS.
 
 ## Bahasa ikon
 Satu peran, satu bahasa. **Ikon garis (SVG) hanya untuk kontrol**: tombol aksi, pintasan navigasi, kepala modal, keadaan kosong, dan notifikasi status. **Emoji hanya untuk data pilihan pengguna**: dompet, kategori, target tabungan, langganan, dan profil, dibungkus `<span class="ui-emoji">` supaya ukurannya setara ikon garis.
