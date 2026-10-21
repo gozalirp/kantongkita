@@ -1,6 +1,8 @@
 name = "savingduit"
 main = "worker/worker.js"
 compatibility_date = "2024-01-01"
+workers_dev = true
+routes = [{ pattern = "moneyplanner.darmintompel.my.id", custom_domain = true }]
 
 # ==================== FRONTEND ====================
 # Hanya folder public/ yang di-upload sebagai asset statis.
