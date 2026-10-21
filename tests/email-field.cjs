@@ -1,0 +1,11 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const css = fs.readFileSync('public/css/style.css', 'utf8');
+const views = fs.readFileSync('public/js/views.js', 'utf8');
+const inputRules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(([, selectors]) => selectors.includes('input[type=password]'));
+assert.equal(inputRules.length, 3, 'base, theme and mobile input rules');
+for (const [, selectors] of inputRules) assert.ok(selectors.includes('input[type=email]'), 'email must share password styling');
+assert.match(views, /id="g-email"[^>]*aria-describedby="g-email-hint"/);
+assert.match(views, /class="email-hint" id="g-email-hint"/);
+assert.match(css, /\.email-hint\{[^}]*font-size:12px/);
+console.log('PASS: email shares base/theme/mobile styling and has an accessible helper.');

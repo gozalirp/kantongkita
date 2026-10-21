@@ -73,7 +73,7 @@
           '<div class="field"><label for="g-user">Username</label>' +
             '<input id="g-user" type="text" maxlength="32" autocomplete="username" required' +
             (daftar ? ' pattern="[A-Za-z0-9_]{3,32}" spellcheck="false" placeholder="3–32: huruf, angka, garis bawah"' : '') + '></div>' +
-          (daftar && App._emailAktif ? '<div class="field"><label for="g-email">Email pemulihan</label><input id="g-email" type="email" autocomplete="email" maxlength="254" required><small>Verifikasi email dari inbox agar bisa digunakan untuk reset password.</small></div>' : '') +
+          (daftar && App._emailAktif ? '<div class="field"><label for="g-email">Email pemulihan</label><input id="g-email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="254" placeholder="nama@gmail.com" aria-describedby="g-email-hint" required><small class="email-hint" id="g-email-hint">Untuk reset password. Verifikasi lewat tautan di inbox.</small></div>' : '') +
           '<div class="field"><label for="g-pass">Password</label>' +
             '<input id="g-pass" type="password" maxlength="128" required' +
             ' autocomplete="' + (daftar ? 'new-password' : 'current-password') + '"' +

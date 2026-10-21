@@ -1,5 +1,5 @@
 /* Service Worker untuk PWA SavingDuit (Offline-first & Installable) */
-const CACHE_NAME = 'savingduit-v30-email-logout';
+const CACHE_NAME = 'savingduit-v31-email-field';
 const ASSETS = [
   './',
   './index.html',
