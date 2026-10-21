@@ -40,8 +40,8 @@
     if (kode) {
       return '' +
         '<div class="card gerbang-kartu">' +
-          '<div class="gerbang-merek"><span aria-hidden="true">💰</span> Money Planner</div>' +
-          '<div class="gerbang-ikon">✅</div>' +
+          '<div class="gerbang-merek"><span class="ui-icon-wrap" aria-hidden="true">' + U.icon('wallet') + '</span>Money Planner</div>' +
+          '<div class="gerbang-ikon">' + U.icon('check') + '</div>' +
           '<h2>Akun berhasil dibuat</h2>' +
           '<p class="muted gerbang-tip">Simpan kode di bawah. Kode ini hanya tampil sekali ' +
             'untuk cadangan pemulihan kalau password lupa.</p>' +
@@ -55,8 +55,8 @@
     const daftar = App._gerbangDaftar === true;
     return '' +
       '<div class="card gerbang-kartu">' +
-        '<div class="gerbang-merek"><span aria-hidden="true">💰</span> Money Planner</div>' +
-        '<div class="gerbang-ikon">' + (daftar ? '✨' : '🔒') + '</div>' +
+        '<div class="gerbang-merek"><span class="ui-icon-wrap" aria-hidden="true">' + U.icon('wallet') + '</span>Money Planner</div>' +
+        '<div class="gerbang-ikon">' + U.icon(daftar ? 'user' : 'lock') + '</div>' +
         '<h2>' + (daftar ? 'Buat akun baru' : 'Masuk dulu untuk membuka catatan') + '</h2>' +
         '<div class="seg gerbang-tab" role="tablist" aria-label="Pilih keperluan">' +
           '<button type="button" role="tab" id="g-tab-masuk" aria-selected="' + (daftar ? 'false' : 'true') + '"' +
@@ -201,7 +201,11 @@
     d.className = 'toast ' + (kind || '');
     d.textContent = msg;
     box.appendChild(d);
-    U.polishIcons(box);
+    /* Satu toast = satu ikon status di kiri; teksnya bersih dari emoji supaya
+       tidak ada dua bahasa ikon dalam satu kotak. */
+    const statusKind = kind === 'err' ? 'alert' : kind === 'ok' ? 'check' : 'info';
+    d.innerHTML = '<span class="ui-icon-wrap toast-ic">' + U.icon(statusKind) + '</span><span class="toast-txt"></span>';
+    d.querySelector('.toast-txt').textContent = msg;
     setTimeout(function () {
       d.style.transition = 'opacity .25s, transform .25s';
       d.style.opacity = '0'; d.style.transform = 'translateX(20px)';
@@ -279,44 +283,68 @@
   function segBtn(active, val, label, cls) {
     return '<button type="button" data-seg="' + H(val) + '" class="' + (active === val ? 'on ' + (cls || '') : '') + '">' + label + '</button>';
   }
+  /* Panah arah dana bukan emoji: dipakai sebagai penanda arah, bukan hiasan. */
+  const ARAH = { in: '↓ ', out: '↑ ', move: '⇄ ' };
+
+  /* Emoji data pengguna (kategori, dompet, target) tetap emoji; hanya diberi
+     pembungkus supaya ukurannya terkendali dan tidak ikut dikonversi. */
+  function emo(e) { return '<span class="ui-emoji" aria-hidden="true">' + H(e) + '</span>'; }
+
+  /* Ikon di dalam tombol berlabel: jarak ikon ke teks diatur oleh gap .btn,
+     jadi teksnya tidak perlu spasi pembuka lagi. */
+  function wrapIco(shape) {
+    return '<span class="ui-icon-wrap" aria-hidden="true">' + U.icon(shape) + '</span>';
+  }
+
+  /* Tombol aksi berikon: satu bentuk untuk semua baris. Label teks tetap ada
+     sebagai aria-label, karena ikon saja tidak terbaca pembaca layar. */
+  function iconBtn(label, shape, onclick) {
+    return '<button class="btn icon sm ghost" title="' + H(label) + '" aria-label="' + H(label) + '"' +
+      ' onclick="' + onclick + '">' + U.icon(shape) + '</button>';
+  }
 
   // baris transaksi
   V.txRow = function (db, t, opts) {
     opts = opts || {};
     const wm = walletMap(db), cm = catMap(db);
-    const w = wm[t.walletId] || { name: '?', icon: '❔' };
+    const w = wm[t.walletId] || { name: '?' };
     const c = cm[t.categoryId];
-    let ico, cls, amt, title, sub;
+    let cls, amt, title, sub;
 
     if (t.type === 'in') {
-      ico = c ? c.icon : '📥'; cls = 'in'; amt = '+' + U.fmtRp(t.amount);
+      cls = 'in'; amt = '+' + U.fmtRp(t.amount);
       title = c ? c.name : 'Pemasukan';
-      sub = w.icon + ' ' + w.name;
+      sub = w.name;
     } else if (t.type === 'out') {
-      ico = c ? c.icon : '📤'; cls = 'out'; amt = '−' + U.fmtRp(t.amount);
+      cls = 'out'; amt = '−' + U.fmtRp(t.amount);
       title = c ? c.name : 'Pengeluaran';
-      sub = w.icon + ' ' + w.name;
+      sub = w.name;
     } else {
-      const w2 = wm[t.walletTo] || { name: '?', icon: '❔' };
-      ico = '🔄'; cls = 'move'; amt = U.fmtRp(t.amount);
+      const w2 = wm[t.walletTo] || { name: '?' };
+      cls = 'move'; amt = U.fmtRp(t.amount);
       title = 'Pindah Dana';
-      sub = w.icon + ' ' + w.name + ' → ' + w2.icon + ' ' + w2.name;
+      sub = w.name + ' ke ' + w2.name;
     }
     if (t.note) sub += ' · ' + t.note;
     if (!opts.hideDate) sub = U.fmtDate(t.date) + ' · ' + sub;
 
     const rcp = t.receiptId && db.receipts && db.receipts[t.receiptId];
+    /* Badge kiri: emoji kategori pilihan pengguna; baris sistem (Pindah Dana,
+       tanpa kategori) memakai ikon garis supaya tidak muncul emoji acak. */
+    const badge = rcp ? U.icon('receipt')
+      : c ? emo(c.icon)
+      : U.icon(t.type === 'in' ? 'download' : t.type === 'out' ? 'upload' : 'refresh');
     return '<div class="item" data-tx="' + H(t.id) + '">' +
-      '<div class="ico ' + cls + '">' + (rcp ? '🧾' : ico) + '</div>' +
+      '<div class="ico ' + cls + '">' + badge + '</div>' +
       '<div class="body">' +
         '<div class="t1">' + H(title) + oleh(t) + '</div>' +
         '<div class="t2">' + H(sub) + '</div>' +
       '</div>' +
       '<div class="right">' +
         '<div class="amt ' + cls + '">' + amt + '</div>' +
-        '<div style="margin-top:5px">' +
-          '<button class="btn icon sm ghost" title="Ubah" onclick="V.txForm(\'' + t.id + '\')">✏️</button>' +
-          '<button class="btn icon sm ghost" title="Hapus" onclick="V.txDelete(\'' + t.id + '\')">🗑️</button>' +
+        '<div class="row-act">' +
+          iconBtn('Ubah', 'edit', 'V.txForm(\'' + t.id + '\')') +
+          iconBtn('Hapus', 'trash', 'V.txDelete(\'' + t.id + '\')') +
         '</div>' +
       '</div>' +
     '</div>';
@@ -331,13 +359,13 @@
   }
 
   function emptyBox(icon, text) {
-    return '<div class="empty"><span class="e-ic">' + icon + '</span><p>' + text + '</p></div>';
+    return '<div class="empty"><span class="e-ic">' + U.icon(icon) + '</span><p>' + text + '</p></div>';
   }
 
   // grafik batang CSS: data = [{label, in, out, net}]
   function dualBars(data, opts) {
     opts = opts || {};
-    if (!data.length) return emptyBox('📉', 'Belum ada data untuk digambar.');
+    if (!data.length) return emptyBox('chart', 'Belum ada data untuk digambar.');
     const max = Math.max.apply(null, data.map(function (d) { return Math.max(d.income || 0, d.expense || 0); }).concat([1]));
     const showVal = opts.showVal !== false;
     return '<div class="bars">' + data.map(function (d) {
@@ -362,12 +390,12 @@
 
   function catBars(db, from, to) {
     const rows = S.byCategory(db, from, to, 'out');
-    if (!rows.length) return emptyBox('🍃', 'Belum ada pengeluaran pada periode ini.');
+    if (!rows.length) return emptyBox('chart', 'Belum ada pengeluaran pada periode ini.');
     const total = U.sum(rows, function (r) { return r.amount; });
     const max = Math.max.apply(null, rows.map(function (r) { return r.amount; }).concat([1]));
     return '<div class="bars">' + rows.slice(0, 12).map(function (r) {
       return '<div class="bar-row">' +
-        '<div class="bar-cat" title="' + H(r.name) + '">' + H(r.icon + ' ' + r.name) + '</div>' +
+        '<div class="bar-cat" title="' + H(r.name) + '">' + emo(r.icon) + H(r.name) + '</div>' +
         '<div class="bar-track"><div class="bar-fill out" style="width:' + U.pct(r.amount, max) + '%"></div></div>' +
         '<div class="right num" style="font-size:12px">' + U.fmtRpShort(r.amount) +
           '<span class="muted" style="font-size:11px"> · ' + U.round1(U.pct(r.amount, total)) + '%</span></div>' +
@@ -451,9 +479,9 @@
 
       const body =
         '<div class="seg" id="f-type" style="margin-bottom:16px">' +
-          segBtn(form.type, 'in', '⬇️ Pemasukan', 'in') +
-          segBtn(form.type, 'out', '⬆️ Pengeluaran', 'out') +
-          segBtn(form.type, 'move', '🔄 Pindah Dana', 'move') +
+          segBtn(form.type, 'in', ARAH.in + 'Pemasukan', 'in') +
+          segBtn(form.type, 'out', ARAH.out + 'Pengeluaran', 'out') +
+          segBtn(form.type, 'move', ARAH.move + 'Pindah Dana', 'move') +
         '</div>' +
 
         '<div class="field"><label>Tanggal</label>' +
@@ -585,7 +613,7 @@
     if (!r) return;
     const isImg = /^image\//.test(r.mime);
     V.modal.open({
-      title: '🧾 ' + H(r.name),
+      title: H(r.name),
       body: isImg
         ? '<img src="' + r.data + '" alt="struk" style="width:100%;border-radius:10px;border:1px solid var(--line)">'
         : '<p class="dim">Berkas PDF tidak bisa dipratinjau di sini.</p>',
@@ -629,13 +657,12 @@
           '<div class="sub">' + r2026.countOut + ' transaksi</div></div>' +
         '<div class="stat' + (r2026.net >= 0 ? ' in' : ' out') + '"><div class="lbl">Selisih</div>' +
           '<div class="val">' + (r2026.net >= 0 ? '+' : '−') + U.fmtRpShort(Math.abs(r2026.net)) + '</div>' +
-          '<div class="sub">' + (r2026.net >= 0 ? 'surplus 💪' : 'defisit ⚠️') + '</div></div>' +
+          '<div class="sub">' + (r2026.net >= 0 ? 'surplus' : 'defisit') + '</div></div>' +
       '</div>';
 
     // dompet
     const walletCards = (db.wallets || []).filter(function (w) { return !w.archived; }).map(function (w) {
-      return '<div class="stat" style="border-left:3px solid ' + H(w.color || 'var(--line)') + '">' +
-        '<div class="lbl">' + H(w.icon + ' ' + w.name) + '</div>' +
+      return '<div class="stat"><div class="lbl">' + emo(w.icon) + H(w.name) + '</div>' +
         '<div class="val" style="font-size:18px">' + U.fmtRp(bal[w.id] || 0) + '</div></div>';
     }).join('');
 
@@ -685,7 +712,7 @@
     return '<div class="planner-dashboard">' +
       '<header class="planner-welcome"><div>' +
         '<h2>Rencana uangmu, lebih terarah.</h2><p>Pantau saldo dan wujudkan targetmu, sedikit demi sedikit.</p></div>' +
-        '<button class="btn primary" onclick="V.txForm()">+ Catat transaksi</button></header>' +
+        '<button class="btn primary" onclick="V.txForm()">' + wrapIco('plus') + 'Catat transaksi</button></header>' +
       '<div class="card fam-masuk"><div class="fam-masuk-txt"><strong>Keuangan keluarga</strong>' +
         '<span>Satu buku catatan untuk berdua. Buat akun kalau baru pertama kali.</span></div>' +
         '<div class="fam-masuk-btn">' +
@@ -695,7 +722,7 @@
       '<div class="planner-layout"><div class="planner-main">' +
         '<section class="card planner-wallets"><div class="card-head"><h2>Dompet &amp; tabungan</h2>' +
           '<button class="btn sm" onclick="App.go(\'dompet\')">Kelola</button></div>' +
-          (walletCards ? '<div class="grid cols-3">' + walletCards + '</div>' : emptyBox('🏦', 'Belum ada dompet. Tambahkan dulu di menu Dompet & Bank.')) +
+          (walletCards ? '<div class="grid cols-3">' + walletCards + '</div>' : emptyBox('wallet', 'Belum ada dompet. Tambahkan dulu di menu Dompet & Bank.')) +
         '</section>' +
         '<section class="card planner-chart"><div class="card-head"><h2>Statistik keuangan</h2>' +
           '<div class="seg" id="dash-chart">' + segBtn(st.chart, '6m', '6 Bulan') +
@@ -705,7 +732,7 @@
         '<section class="card"><div class="card-head"><h2>Catatan Terakhir</h2>' +
           '<button class="btn sm" onclick="App.go(\'transaksi\')">Lihat semua</button></div>' +
           (recent.length ? '<div class="list">' + recent.map(function (t) { return V.txRow(db, t); }).join('') + '</div>' :
-            emptyBox('📝', 'Belum ada transaksi. Mulai catat pengeluaran pertamamu.')) + '</section>' +
+            emptyBox('receipt', 'Belum ada transaksi. Mulai catat pengeluaran pertamamu.')) + '</section>' +
         '<section class="card"><div class="card-head"><h2>Ringkasan Cepat</h2></div><div class="grid cols-4">' +
           [['Hari ini', S.summaryDays(db, 1).expense], ['7 hari', S.summaryDays(db, 7).expense],
            ['Bulan ini', bulan.expense], ['Tahun ini', S.summaryYear(db).expense]].map(function (r) {
@@ -742,7 +769,7 @@
     if (bStatus.length) {
       const lewat = bStatus.filter(function (r) { return r.usage.over; });
       const dekat = bStatus.filter(function (r) { return !r.usage.over && r.usage.pct >= 80; });
-      kartu.push('<div class="card"><div class="card-head"><h2>🎯 Anggaran Bulan Ini</h2>' +
+      kartu.push('<div class="card"><div class="card-head"><h2>Anggaran Bulan Ini</h2>' +
         '<button class="btn sm" onclick="App.go(\'anggaran\')">Kelola</button></div>' +
         progBar(bTot.pct, bTot.left < 0 ? 'over' : (bTot.pct >= 80 ? 'warn' : '')) +
         '<div class="row" style="justify-content:space-between;margin-top:9px;font-size:13px">' +
@@ -759,7 +786,7 @@
     }
 
     if (sTotal > 0) {
-      kartu.push('<div class="card"><div class="card-head"><h2>🔁 Langganan</h2>' +
+      kartu.push('<div class="card"><div class="card-head"><h2>Langganan</h2>' +
         '<button class="btn sm" onclick="App.go(\'langganan\')">Kelola</button></div>' +
         '<div style="font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px">' + U.fmtRp(sTotal) +
           '<span class="muted" style="font-size:12px;font-weight:500"> /bulan</span></div>' +
@@ -772,7 +799,7 @@
 
     if (gStatus.length) {
       const top = gStatus.filter(function (r) { return !r.progress.done; }).slice(0, 3);
-      kartu.push('<div class="card"><div class="card-head"><h2>🏆 Target Tabungan</h2>' +
+      kartu.push('<div class="card"><div class="card-head"><h2>Target Tabungan</h2>' +
         '<button class="btn sm" onclick="App.go(\'target\')">Kelola</button></div>' +
         '<div style="font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px">' + U.fmtRpShort(gTot.saved) +
           '<span class="muted" style="font-size:12px;font-weight:500"> / ' + U.fmtRpShort(gTot.target) + '</span></div>' +
@@ -780,7 +807,7 @@
           gTot.done + ' dari ' + gTot.total + ' target tercapai</div>' +
         (top.length ? '<div style="margin-top:11px;display:flex;flex-direction:column;gap:9px">' + top.map(function (r) {
           return '<div><div class="row" style="justify-content:space-between;font-size:12px;margin-bottom:4px">' +
-            '<span>' + H(r.goal.icon + ' ' + r.goal.name) + '</span>' +
+            '<span>' + emo(r.goal.icon) + H(r.goal.name) + '</span>' +
             '<span class="num muted">' + U.round1(r.progress.pct) + '%</span></div>' +
             progBar(r.progress.pct, r.late ? 'over' : (r.progress.done ? 'in' : 'move')) + '</div>';
         }).join('') + '</div>' : '') +
@@ -830,8 +857,8 @@
             segBtn(st.preset, 'month', 'Bulan') + segBtn(st.preset, 'year', 'Tahun') +
             segBtn(st.preset, '7d', '7 Hari') + segBtn(st.preset, 'all', 'Semua') +
           '</div>' +
-          '<input type="text" id="tx-q" placeholder="🔍 Cari catatan / kategori…" value="' + H(st.q) + '" style="max-width:240px">' +
-          '<button class="btn primary" onclick="V.txForm()">+ Catat Transaksi</button>' +
+          '<input type="text" id="tx-q" placeholder="Cari catatan / kategori…" value="' + H(st.q) + '" style="max-width:240px">' +
+          '<button class="btn primary" onclick="V.txForm()">' + wrapIco('plus') + 'Catat Transaksi</button>' +
         '</div>' +
         '<div class="row mt" style="gap:12px">' +
           '<select id="tx-wallet" style="max-width:230px"><option value="">Semua dompet</option>' +
@@ -879,7 +906,7 @@
       });
       groups += '</div></div>';
     } else {
-      groups = '<div class="card mt">' + emptyBox('🔍', 'Tidak ada transaksi pada filter ini.') + '</div>';
+      groups = '<div class="card mt">' + emptyBox('search', 'Tidak ada transaksi pada filter ini.') + '</div>';
     }
 
     return toolbar + strip + groups;
@@ -929,7 +956,7 @@
       const from = st.ym + '-01', to = U.monthEnd(from);
       caption = U.fmtMonth(st.ym);
       const rows = S.byDay(db, from, to).sort(function (a, b) { return a.date < b.date ? 1 : -1; });
-      if (!rows.length) table = emptyBox('📅', 'Tidak ada transaksi pada bulan ini.');
+      if (!rows.length) table = emptyBox('calendar', 'Tidak ada transaksi pada bulan ini.');
       else {
         table = '<div class="tbl-wrap"><table><thead><tr><th>Tanggal</th><th>Hari</th><th class="n">Masuk</th><th class="n">Keluar</th><th class="n">Selisih</th><th class="n">Jml</th></tr></thead><tbody>' +
           rows.map(function (d) {
@@ -953,7 +980,7 @@
       const from = st.ym + '-01', to = U.monthEnd(from);
       caption = 'Minggu dalam ' + U.fmtMonth(st.ym);
       const rows = S.byWeek(db, from, to);
-      if (!rows.length) table = emptyBox('📅', 'Tidak ada transaksi pada bulan ini.');
+      if (!rows.length) table = emptyBox('calendar', 'Tidak ada transaksi pada bulan ini.');
       else {
         table = '<div class="tbl-wrap"><table><thead><tr><th>Periode Minggu</th><th class="n">Hari aktif</th><th class="n">Masuk</th><th class="n">Keluar</th><th class="n">Selisih</th><th class="n">Jml</th></tr></thead><tbody>' +
           rows.map(function (d) {
@@ -977,7 +1004,7 @@
           .map(function (y) { return '<option value="' + y + '"' + (y === st.year ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select>';
       caption = 'Tahun ' + st.year;
       const rows = S.byMonth(db, st.year + '-01', st.year + '-12');
-      if (!rows.length) table = emptyBox('📅', 'Tidak ada transaksi pada tahun ini.');
+      if (!rows.length) table = emptyBox('calendar', 'Tidak ada transaksi pada tahun ini.');
       else {
         table = '<div class="tbl-wrap"><table><thead><tr><th>Bulan</th><th class="n">Masuk</th><th class="n">Keluar</th><th class="n">Selisih</th><th class="n">Pindah dana</th><th class="n">Jml</th></tr></thead><tbody>' +
           rows.map(function (d) {
@@ -1000,7 +1027,7 @@
     if (st.tab === 'tahun') {
       caption = 'Semua tahun';
       const rows = S.byYear(db);
-      if (!rows.length) table = emptyBox('📅', 'Belum ada data tahunan.');
+      if (!rows.length) table = emptyBox('calendar', 'Belum ada data tahunan.');
       else {
         table = '<div class="tbl-wrap"><table><thead><tr><th>Tahun</th><th class="n">Masuk</th><th class="n">Keluar</th><th class="n">Selisih</th><th class="n">Pindah dana</th><th class="n">Jml</th></tr></thead><tbody>' +
           rows.map(function (d) {
@@ -1119,13 +1146,13 @@
       const n = S.txCountForWallet(db, w.id);
       const types = { cash: 'Uang tunai', bank: 'Rekening bank', ewallet: 'E-wallet', credit: 'Kartu kredit', investment: 'Investasi', other: 'Lainnya' };
       return '<article class="card wallet-card" style="--wallet-color:' + H(w.color || '#5955EF') + '">' +
-        '<div class="wallet-heading"><span class="ico-badge">' + H(w.icon) + '</span>' +
+        '<div class="wallet-heading"><span class="ico-badge">' + emo(w.icon) + '</span>' +
           '<div class="wallet-identity"><h3>' + H(w.name) + '</h3><span class="muted">' + H(types[w.type] || w.type) + '</span></div></div>' +
         '<div class="wallet-balance"><span class="muted">Saldo saat ini</span><strong>' + U.fmtRp(b) + '</strong></div>' +
         '<div class="wallet-meta">' + n + ' transaksi tercatat' +
           (w.initial ? '<span>Saldo awal ' + U.fmtRp(w.initial) + '</span>' : '') + '</div>' +
-        '<footer class="wallet-actions"><button class="btn sm ghost" onclick="V.walletForm(\'' + w.id + '\')">✏️ Ubah</button>' +
-          '<button class="btn sm ghost danger" onclick="V.walletDelete(\'' + w.id + '\')">🗑️ Hapus</button></footer></article>';
+        '<footer class="wallet-actions"><button class="btn sm ghost" onclick="V.walletForm(\'' + w.id + '\')">' + wrapIco('edit') + 'Ubah</button>' +
+          '<button class="btn sm ghost danger" onclick="V.walletDelete(\'' + w.id + '\')">' + wrapIco('trash') + 'Hapus</button></footer></article>';
     }).join('');
 
     // pindah dana cepat
@@ -1133,15 +1160,15 @@
 
     return '<div class="card"><div class="card-head"><h2>Pilihan Dompet / Bank</h2>' +
         '<span class="total-pill">Total: ' + U.fmtRp(total) + '</span>' +
-        '<button class="btn primary" onclick="V.walletForm()">+ Tambah Dompet</button></div>' +
+        '<button class="btn primary" onclick="V.walletForm()">' + wrapIco('plus') + 'Tambah Dompet</button></div>' +
       (cards ? '<div class="grid cols-3 wallet-grid">' + cards + '</div>'
-             : emptyBox('🏦', 'Belum ada dompet. Tambahkan rekening, e-wallet, atau uang tunai.')) +
+             : emptyBox('wallet', 'Belum ada dompet. Tambahkan rekening, e-wallet, atau uang tunai.')) +
     '</div>' +
 
     '<div class="card mt"><div class="card-head"><h2>Catatan Perpindahan Dana</h2>' +
-      '<button class="btn sm" onclick="V.txForm(null,\'move\')">+ Pindah Dana</button></div>' +
+      '<button class="btn sm" onclick="V.txForm(null,\'move\')">' + wrapIco('plus') + 'Pindah Dana</button></div>' +
       (moves.length ? '<div class="list">' + moves.map(function (t) { return V.txRow(db, t); }).join('') + '</div>'
-                    : emptyBox('🔄', 'Belum ada perpindahan dana antar dompet.')) +
+                    : emptyBox('refresh', 'Belum ada perpindahan dana antar dompet.')) +
     '</div>';
   };
 
@@ -1237,22 +1264,22 @@
       const n = S.txCountForCategory(db, c.id);
       const amt = used[c.id] || 0;
       return '<div class="item">' +
-        '<div class="ico ' + (c.type === 'in' ? 'in' : 'out') + '">' + H(c.icon) + '</div>' +
+        '<div class="ico ' + (c.type === 'in' ? 'in' : 'out') + '">' + emo(c.icon) + '</div>' +
         '<div class="body"><div class="t1">' + H(c.name) + '</div>' +
           '<div class="t2">' + n + ' transaksi · bulan ini ' + U.fmtRp(amt) + '</div></div>' +
-        '<div class="right"><button class="btn icon sm ghost" onclick="V.catForm(\'' + c.id + '\')">✏️</button>' +
-        '<button class="btn icon sm ghost" onclick="V.catDelete(\'' + c.id + '\')">🗑️</button></div>' +
+        '<div class="right">' + iconBtn('Ubah', 'edit', 'V.catForm(\'' + c.id + '\')') +
+          iconBtn('Hapus', 'trash', 'V.catDelete(\'' + c.id + '\')') + '</div>' +
       '</div>';
     }).join('');
 
     return '<div class="card"><div class="card-head">' +
         '<div class="seg" style="width:auto" id="ct-tab">' +
-          segBtn(st.tab, 'out', '⬆️ Pengeluaran', 'out') + segBtn(st.tab, 'in', '⬇️ Pemasukan', 'in') +
+          segBtn(st.tab, 'out', ARAH.out + 'Pengeluaran', 'out') + segBtn(st.tab, 'in', ARAH.in + 'Pemasukan', 'in') +
         '</div>' +
         '<span class="spacer"></span>' +
-        '<button class="btn primary" onclick="V.catForm(null,\'' + st.tab + '\')">+ Tambah Kategori</button></div>' +
+        '<button class="btn primary" onclick="V.catForm(null,\'' + st.tab + '\')">' + wrapIco('plus') + 'Tambah Kategori</button></div>' +
       (rows ? '<div class="list">' + rows + '</div>'
-            : emptyBox('🏷️', 'Belum ada kategori. Tambahkan dulu.')) +
+            : emptyBox('tag', 'Belum ada kategori. Tambahkan dulu.')) +
     '</div>' +
     '<div class="card mt"><div class="card-head"><h2>Pemakaian Kategori Bulan Ini</h2></div>' +
       catBars(db, from, to) + '</div>';
@@ -1277,7 +1304,7 @@
       body:
         '<div class="field"><label>Nama</label><input type="text" id="c-name" value="' + H(f.name) + '" placeholder="contoh: Kopi &amp; Jajan"></div>' +
         '<div class="field"><label>Jenis</label><div class="seg" id="c-type">' +
-          segBtn(f.type, 'out', '⬆️ Pengeluaran', 'out') + segBtn(f.type, 'in', '⬇️ Pemasukan', 'in') + '</div></div>' +
+          segBtn(f.type, 'out', ARAH.out + 'Pengeluaran', 'out') + segBtn(f.type, 'in', ARAH.in + 'Pemasukan', 'in') + '</div></div>' +
         '<div class="field"><label>Ikon</label>' +
           '<div class="row" id="c-icons" style="gap:6px">' +
             EMOJI.map(function (e) {
@@ -1349,7 +1376,7 @@
     const rcpBytes = U.sum(Object.keys(db.receipts || {}).map(function (k) { return (db.receipts[k].data || '').length; }));
 
     return '' +
-    '<div class="card"><div class="card-head"><h2>📦 Backup &amp; Pemulihan</h2></div>' +
+    '<div class="card"><div class="card-head"><h2>Backup &amp; Pemulihan</h2></div>' +
       '<p class="dim" style="font-size:13px;margin-bottom:14px">Data disimpan di perangkat ini (localStorage). ' +
       'Rutin unduh backup supaya aman kalau browser dibersihkan atau ganti perangkat.</p>' +
       '<div class="grid cols-4" style="margin-bottom:16px">' +
@@ -1360,27 +1387,27 @@
           '<div class="sub">' + rcpCount + ' struk · ' + (rcpBytes / 1024).toFixed(0) + ' KB</div></div>' +
       '</div>' +
       '<div class="row">' +
-        '<button class="btn primary" onclick="V.exportJSON()">⬇️ Unduh Backup (JSON)</button>' +
-        '<button class="btn" onclick="V.exportCSV()">⬇️ Ekspor CSV</button>' +
-        '<label class="btn" style="cursor:pointer">📂 Impor Backup<input type="file" id="st-import" accept=".json,application/json" hidden></label>' +
+        '<button class="btn primary" onclick="V.exportJSON()">' + wrapIco('download') + 'Unduh Backup (JSON)</button>' +
+        '<button class="btn" onclick="V.exportCSV()">' + wrapIco('download') + 'Ekspor CSV</button>' +
+        '<label class="btn" style="cursor:pointer">' + wrapIco('folder') + 'Impor Backup<input type="file" id="st-import" accept=".json,application/json" hidden></label>' +
         '<span class="spacer"></span>' +
-        '<button class="btn danger" onclick="V.resetAll()">⚠️ Reset Semua Data</button>' +
+        '<button class="btn danger" onclick="V.resetAll()">' + wrapIco('alert') + 'Reset Semua Data</button>' +
       '</div>' +
       '<div class="row mt" style="gap:10px"><label class="row" style="font-size:13px;gap:8px;cursor:pointer">' +
         '<input type="checkbox" id="st-pw-import" style="width:auto"> Impor menggantikan seluruh data (bukan menggabung)</label></div>' +
     '</div>' +
 
-    '<div class="card mt"><div class="card-head"><h2>⚡ Cloudflare D1 Cloud Sync (Otomatis)</h2>' +
+    '<div class="card mt"><div class="card-head"><h2>Cloudflare D1 Cloud Sync (Otomatis)</h2>' +
       '<span class="net-dot on"><span></span><em>Aktif Realtime</em></span></div>' +
       '<p class="dim" style="font-size:13px;margin-bottom:14px">' +
         'Data Anda otomatis tersinkronkan ke database serverless Cloudflare D1 di latar belakang setiap ada perubahan. ' +
         'Jika Anda ingin memaksa sinkronisasi sekarang secara manual, klik tombol di bawah.</p>' +
       '<div class="row">' +
-        '<button class="btn primary" onclick="App.manualSyncCloud()">🔄 Sinkronkan Sekarang (Cloudflare)</button>' +
+        '<button class="btn primary" onclick="App.manualSyncCloud()">' + wrapIco('refresh') + 'Sinkronkan Sekarang (Cloudflare)</button>' +
       '</div>' +
     '</div>' +
 
-    '<div class="card mt"><div class="card-head"><h2>☁️ Sinkronisasi Google Drive</h2>' +
+    '<div class="card mt"><div class="card-head"><h2>Sinkronisasi Google Drive</h2>' +
       '<span class="net-dot' + (st.driveEnabled && st.driveFileId ? ' on' : '') + '"><span></span><em>' +
         (st.driveEnabled && st.driveFileId ? (st.lastSync ? 'Terhubung · ' + H(U.fmtDate(String(st.lastSync).slice(0, 10))) : 'Terhubung') : 'Belum tersambung') + '</em></span></div>' +
       '<p class="dim" style="font-size:13px;margin-bottom:14px">' +
@@ -1391,15 +1418,15 @@
         '<span class="hint">Buat di console.cloud.google.com → APIs &amp; Services → Credentials → OAuth client ID → Web application. ' +
         'Tambahkan <code>' + H(location.origin || 'file://') + '</code> ke Authorized JavaScript origins, dan aktifkan <b>Google Drive API</b>.</span></div>' +
       '<div class="row">' +
-        '<button class="btn primary" id="st-drive-connect" ' + (st.driveClientId ? '' : 'disabled style="opacity:.5"') + '>🔗 Sambungkan Drive</button>' +
-        '<button class="btn" id="st-drive-push" ' + (st.driveFileId ? '' : 'disabled style="opacity:.5"') + '>⬆️ Kirim ke Drive</button>' +
-        '<button class="btn" id="st-drive-pull" ' + (st.driveFileId ? '' : 'disabled style="opacity:.5"') + '>⬇️ Ambil dari Drive</button>' +
+        '<button class="btn primary" id="st-drive-connect" ' + (st.driveClientId ? '' : 'disabled style="opacity:.5"') + '>' + wrapIco('cloud') + 'Sambungkan Drive</button>' +
+        '<button class="btn" id="st-drive-push" ' + (st.driveFileId ? '' : 'disabled style="opacity:.5"') + '>' + wrapIco('upload') + 'Kirim ke Drive</button>' +
+        '<button class="btn" id="st-drive-pull" ' + (st.driveFileId ? '' : 'disabled style="opacity:.5"') + '>' + wrapIco('download') + 'Ambil dari Drive</button>' +
         '<button class="btn danger" id="st-drive-off" ' + (st.driveFileId ? '' : 'disabled style="opacity:.5"') + '>Putuskan</button>' +
       '</div>' +
       (st.lastSync ? '<div class="muted mt" style="font-size:12px">Sinkron terakhir: ' + H(new Date(st.lastSync).toLocaleString('id-ID')) + '</div>' : '') +
     '</div>' +
 
-    '<div class="card mt"><div class="card-head"><h2>ℹ️ Tentang</h2></div>' +
+    '<div class="card mt"><div class="card-head"><h2>Tentang</h2></div>' +
       '<div class="tbl-wrap"><table><tbody>' +
         '<tr><td class="dim">Versi aplikasi</td><td>1.0.0 (Tahap 1)</td></tr>' +
         '<tr><td class="dim">Versi skema data</td><td>' + db.version + '</td></tr>' +
@@ -1516,7 +1543,7 @@
       return root.GDrive.ensureFile(root.App.db).then(function () {
         root.App.save();
         root.App.render();
-        V.toast('Google Drive siap digunakan ☁️', 'ok');
+        V.toast('Google Drive siap digunakan', 'ok');
       });
     }).catch(function (e) {
       V.toast('Gagal menyambung: ' + e.message, 'err');
@@ -1564,15 +1591,15 @@
       const habis = u.limit > 0 && u.left <= 0;
       return '<div class="card card-sm">' +
         '<div class="card-head">' +
-          '<div class="ico-badge ' + (u.over ? 'out' : 'in') + '">' + H(c.icon) + '</div>' +
+          '<div class="ico-badge ' + (u.over ? 'out' : 'in') + '">' + emo(c.icon) + '</div>' +
           '<div style="flex:1;min-width:0">' +
             '<div class="t1">' + H(c.name) + (r.valid ? '' : ' <span class="tag out">kategori hilang</span>') + '</div>' +
             '<div class="t2">' + (r.budget.period === 'year' ? 'per tahun' : 'per bulan') +
               (r.budget.note ? ' · ' + H(r.budget.note) : '') + '</div>' +
           '</div>' +
           pctTag(u.pct, u.over) +
-          '<button class="btn icon sm ghost" onclick="V.budgetForm(\'' + r.budget.id + '\')">✏️</button>' +
-          '<button class="btn icon sm ghost" onclick="V.budgetDelete(\'' + r.budget.id + '\')">🗑️</button>' +
+          iconBtn('Ubah', 'edit', 'V.budgetForm(\'' + r.budget.id + '\')') +
+          iconBtn('Hapus', 'trash', 'V.budgetDelete(\'' + r.budget.id + '\')') +
         '</div>' +
         progBar(u.pct, u.over ? 'over' : (u.pct >= 80 ? 'warn' : '')) +
         '<div class="row" style="justify-content:space-between;margin-top:9px;font-size:12.5px">' +
@@ -1590,10 +1617,10 @@
 
     return '<div class="card"><div class="card-head"><h2>Anggaran per Kategori</h2>' +
         '<span class="muted" style="font-size:12px">' + U.fmtMonth(U.monthOf(today)) + '</span>' +
-        '<button class="btn primary" onclick="V.budgetForm()">+ Tambah Anggaran</button></div>' +
+        '<button class="btn primary" onclick="V.budgetForm()">' + wrapIco('plus') + 'Tambah Anggaran</button></div>' +
       (rows.length
         ? '<div class="grid cols-3">' + kartu + '</div>'
-        : emptyBox('🎯', 'Belum ada anggaran. Pasang batas pengeluaran supaya lebih terkendali.')) +
+        : emptyBox('target', 'Belum ada anggaran. Pasang batas pengeluaran supaya lebih terkendali.')) +
       (rows.length ? '<div class="grid cols-4 mt">' +
         '<div class="stat"><div class="lbl">Total anggaran</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.limit) + '</div></div>' +
         '<div class="stat out"><div class="lbl">Terpakai</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.used) + '</div>' +
@@ -1608,14 +1635,14 @@
     (belum.length ? '<div class="card mt"><div class="card-head"><h2>Belum Dianggarkan</h2>' +
       '<span class="muted" style="font-size:12px">klik untuk memasang batas</span></div>' +
       '<div class="row" style="gap:8px">' + belum.map(function (c) {
-        return '<button class="btn sm" onclick="V.budgetForm(null,\'' + c.id + '\')">' + H(c.icon + ' ' + c.name) + '</button>';
+        return '<button class="btn sm" onclick="V.budgetForm(null,\'' + c.id + '\')">' + emo(c.icon) + H(c.name) + '</button>';
       }).join('') + '</div></div>' : '') +
 
     (rows.length ? '<div class="card mt"><div class="card-head"><h2>Pemakaian Anggaran Bulan Ini</h2></div>' +
       '<div class="tbl-wrap"><table><thead><tr><th>Kategori</th><th>Batas</th><th>Terpakai</th><th>Sisa</th><th style="width:150px">Progres</th></tr></thead><tbody>' +
       rows.map(function (r) {
         const u = r.usage;
-        return '<tr><td>' + H(r.category.icon + ' ' + r.category.name) + '</td>' +
+        return '<tr><td>' + emo(r.category.icon) + H(r.category.name) + '</td>' +
           '<td class="num">' + U.fmtRp(u.limit) + '</td>' +
           '<td class="num">' + U.fmtRp(u.used) + '</td>' +
           '<td class="num ' + (u.left < 0 ? 'val-out' : '') + '">' + U.fmtRp(u.left) + '</td>' +
@@ -1700,14 +1727,14 @@
                   : (r.daysLeft !== null && r.daysLeft <= 31 ? '<span class="tag warn">' + H(sisaHari(r.daysLeft)) + '</span>' : '');
       return '<div class="card card-sm">' +
         '<div class="card-head">' +
-          '<div class="ico-badge ' + (p.done ? 'in' : 'move') + '">' + H(g.icon || '🎯') + '</div>' +
+          '<div class="ico-badge ' + (p.done ? 'in' : 'move') + '">' + emo(g.icon || '🎯') + '</div>' +
           '<div style="flex:1;min-width:0">' +
             '<div class="t1">' + H(g.name) + ' ' + badge + '</div>' +
             '<div class="t2">' + (g.due ? 'tenggat ' + H(U.fmtDate(g.due)) + ' · ' + H(sisaHari(r.daysLeft)) : 'tanpa tenggat') +
-              (r.wallet ? ' · ' + H(r.wallet.icon + ' ' + r.wallet.name) : '') + '</div>' +
+              (r.wallet ? ' · ' + emo(r.wallet.icon) + H(r.wallet.name) : '') + '</div>' +
           '</div>' +
-          '<button class="btn icon sm ghost" onclick="V.goalForm(\'' + g.id + '\')">✏️</button>' +
-          '<button class="btn icon sm ghost" onclick="V.goalDelete(\'' + g.id + '\')">🗑️</button>' +
+          iconBtn('Ubah', 'edit', 'V.goalForm(\'' + g.id + '\')') +
+          iconBtn('Hapus', 'trash', 'V.goalDelete(\'' + g.id + '\')') +
         '</div>' +
         progBar(p.pct, p.done ? 'in' : (r.late ? 'over' : '')) +
         '<div class="row" style="justify-content:space-between;margin-top:9px;font-size:13px">' +
@@ -1715,10 +1742,10 @@
           '<span class="num muted">' + U.round1(p.rawPct) + '%</span>' +
         '</div>' +
         '<div class="row mt" style="gap:7px">' +
-          '<button class="btn sm primary" onclick="V.goalAdd(\'' + g.id + '\')">+ Nabung</button>' +
-          (p.saved > 0 ? '<button class="btn sm" onclick="V.goalAdd(\'' + g.id + '\',true)">− Tarik</button>' : '') +
+          '<button class="btn sm primary" onclick="V.goalAdd(\'' + g.id + '\')">' + wrapIco('plus') + 'Nabung</button>' +
+          (p.saved > 0 ? '<button class="btn sm" onclick="V.goalAdd(\'' + g.id + '\',true)">' + wrapIco('minus') + 'Tarik</button>' : '') +
           '<span class="spacer"></span>' +
-          (p.done ? '<span class="muted" style="font-size:12px">Selesai! 🎉</span>'
+          (p.done ? '<span class="muted" style="font-size:12px">Selesai</span>'
                   : '<span class="muted" style="font-size:12px">' + (r.monthlyNeed === null ? 'sisa ' + U.fmtRp(p.left)
                      : 'perlu ' + U.fmtRp(r.monthlyNeed) + '/bulan') + '</span>') +
         '</div>' +
@@ -1727,10 +1754,10 @@
     }).join('');
 
     return '<div class="card"><div class="card-head"><h2>Target Tabungan</h2>' +
-        '<button class="btn primary" onclick="V.goalForm()">+ Tambah Target</button></div>' +
+        '<button class="btn primary" onclick="V.goalForm()">' + wrapIco('plus') + 'Tambah Target</button></div>' +
       (list.length
         ? '<div class="grid cols-3">' + kartu + '</div>'
-        : emptyBox('🎯', 'Belum ada target tabungan. Misalnya: dana darurat, laptop baru, liburan.')) +
+        : emptyBox('target', 'Belum ada target tabungan. Misalnya: dana darurat, laptop baru, liburan.')) +
       (list.length ? '<div class="grid cols-4 mt">' +
         '<div class="stat"><div class="lbl">Total target</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.target) + '</div>' +
           '<div class="sub">' + tot.total + ' target</div></div>' +
@@ -1884,14 +1911,14 @@
         : '<span class="tag">' + H(sisaHari(r.daysLeft)) + '</span>';
       return '<div class="card card-sm' + (r.paidThisMonth ? ' dim-card' : '') + '">' +
         '<div class="card-head">' +
-          '<div class="ico-badge ' + (r.paidThisMonth ? 'in' : 'out') + '">' + H(s.icon || '🔁') + '</div>' +
+          '<div class="ico-badge ' + (r.paidThisMonth ? 'in' : 'out') + '">' + emo(s.icon || '🔁') + '</div>' +
           '<div style="flex:1;min-width:0">' +
             '<div class="t1">' + H(s.name) + ' ' + badge + '</div>' +
             '<div class="t2">Jatuh tempo ' + H(U.fmtDate(r.due)) +
-              (r.category ? ' · ' + H(r.category.icon + ' ' + r.category.name) : '') + '</div>' +
+              (r.category ? ' · ' + emo(r.category.icon) + H(r.category.name) : '') + '</div>' +
           '</div>' +
-          '<button class="btn icon sm ghost" onclick="V.subForm(\'' + s.id + '\')">✏️</button>' +
-          '<button class="btn icon sm ghost" onclick="V.subDelete(\'' + s.id + '\')">🗑️</button>' +
+          iconBtn('Ubah', 'edit', 'V.subForm(\'' + s.id + '\')') +
+          iconBtn('Hapus', 'trash', 'V.subDelete(\'' + s.id + '\')') +
         '</div>' +
         '<div style="font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px">' +
           U.fmtRp(s.amount) + '<span class="muted" style="font-size:12px;font-weight:500"> ' + siklus + '</span></div>' +
@@ -1901,7 +1928,7 @@
         '<div class="row mt" style="gap:7px">' +
           (r.paidThisMonth
             ? '<button class="btn sm" onclick="V.subUnpay(\'' + s.id + '\',\'' + U.monthOf(today) + '\')">Batalkan tanda lunas</button>'
-            : '<button class="btn sm primary" onclick="V.subPay(\'' + s.id + '\')">✓ Tandai dibayar</button>') +
+            : '<button class="btn sm primary" onclick="V.subPay(\'' + s.id + '\')">' + wrapIco('check') + 'Tandai dibayar</button>') +
           '<span class="spacer"></span>' +
           '<button class="btn sm ghost" onclick="V.subToggle(\'' + s.id + '\')">' + (s.active === false ? 'Aktifkan' : 'Matikan') + '</button>' +
         '</div>' +
@@ -1910,24 +1937,24 @@
 
     const kartuMati = semua.map(function (s) {
       return '<div class="item">' +
-        '<div class="ico out">' + H(s.icon || '🔁') + '</div>' +
+        '<div class="ico out">' + emo(s.icon || '🔁') + '</div>' +
         '<div class="body"><div class="t1">' + H(s.name) + '</div>' +
           '<div class="t2">' + U.fmtRp(s.amount) + ' · dimatikan, tidak dihitung</div></div>' +
         '<div class="right"><button class="btn sm ghost" onclick="V.subToggle(\'' + s.id + '\')">Aktifkan</button>' +
-        '<button class="btn icon sm ghost" onclick="V.subDelete(\'' + s.id + '\')">🗑️</button></div>' +
+        iconBtn('Hapus', 'trash', 'V.subDelete(\'' + s.id + '\')') + '</div>' +
       '</div>';
     }).join('');
 
-    return (dekat.length ? '<div class="card alert"><div class="card-head"><h2>⏰ Segera Jatuh Tempo</h2>' +
+    return (dekat.length ? '<div class="card alert"><div class="card-head"><h2>Segera Jatuh Tempo</h2>' +
         '<span class="tag warn">' + dekat.length + ' langganan</span></div>' +
       '<div class="muted" style="font-size:13px">Total ' + U.fmtRp(U.sum(dekat, function (r) { return Number(r.sub.amount); })) +
         ' akan keluar dalam 7 hari ke depan: ' + dekat.map(function (r) { return H(r.sub.name); }).join(', ') + '.</div></div>' : '') +
 
     '<div class="card' + (dekat.length ? ' mt' : '') + '"><div class="card-head"><h2>Langganan Bulanan</h2>' +
-        '<button class="btn primary" onclick="V.subForm()">+ Tambah Langganan</button></div>' +
+        '<button class="btn primary" onclick="V.subForm()">' + wrapIco('plus') + 'Tambah Langganan</button></div>' +
       (list.length
         ? '<div class="grid cols-3">' + kartu + '</div>'
-        : emptyBox('🔁', 'Belum ada langganan tercatat. Netflix, Spotify, iCloud, sewa domain. Masukkan di sini supaya tidak lupa.')) +
+        : emptyBox('refresh', 'Belum ada langganan tercatat. Netflix, Spotify, iCloud, sewa domain. Masukkan di sini supaya tidak lupa.')) +
       (list.length ? '<div class="grid cols-3 mt">' +
         '<div class="stat out"><div class="lbl">Total per bulan</div><div class="val" style="font-size:18px">' + U.fmtRpShort(totalBulan) + '</div>' +
           '<div class="sub">' + list.length + ' langganan aktif</div></div>' +
@@ -2085,7 +2112,7 @@
 
   function pilihanIkon(kini) {
     return '<div class="ikon-pilih" id="p-ikon">' + IKON_PROFIL.map(function (ic) {
-      return '<button type="button" title="Pilih ikon profil" class="ikon-btn' + (ic === kini ? ' on' : '') + '" data-ikon="' + ic + '">' + ic + '</button>';
+      return '<button type="button" title="Pilih ikon profil" class="ikon-btn' + (ic === kini ? ' on' : '') + '" data-emoji="' + ic + '">' + ic + '</button>';
     }).join('') + '</div>';
   }
   function pilihanWarna(kini) {
@@ -2107,7 +2134,7 @@
       ? '<div class="card"><div class="card-head"><h2>Akun</h2><span class="spacer"></span>' +
           '<span class="tag ok">masuk</span></div>' +
           '<div class="profil-list"><div class="profil-card on">' +
-            '<div class="pc-ic">👤</div>' +
+            '<div class="pc-ic">' + U.icon('user') + '</div>' +
             '<div class="pc-main"><div class="pc-nama">' + H(akun) + '</div>' +
               '<div class="pc-info muted">Akun yang sedang login. Catatan keuangan di bawah tetap tersimpan di perangkat ini.</div>' +
             '</div>' +
@@ -2129,11 +2156,11 @@
       })();
 
       return '<div class="profil-card' + (ini ? ' on' : '') + '" style="--pc:' + H(p.color) + '">' +
-        '<div class="pc-ic">' + H(p.icon) + '</div>' +
+        '<div class="pc-ic">' + emo(p.icon) + '</div>' +
         '<div class="pc-main">' +
           '<div class="pc-nama">' + H(p.name) +
             (ini ? ' <span class="tag ok">aktif</span>' : '') +
-            (p.pinHash ? ' <span class="tag">🔒 bersandi</span>' : '') +
+            (p.pinHash ? ' <span class="tag">' + wrapIco('lock') + 'bersandi</span>' : '') +
             (terkunci ? ' <span class="tag warn">terkunci</span>' : '') +
           '</div>' +
           '<div class="pc-info muted">' +
@@ -2142,17 +2169,15 @@
         '</div>' +
         '<div class="pc-act">' +
           (ini ? '' : '<button class="btn sm" onclick="V.profilPakai(\'' + p.id + '\')">Pakai</button>') +
-          '<button class="btn icon sm ghost" title="Ubah" onclick="V.profilForm(\'' + p.id + '\')">✏️</button>' +
-          (list.length > 1
-            ? '<button class="btn icon sm ghost" title="Hapus" onclick="V.profilDelete(\'' + p.id + '\')">🗑️</button>'
-            : '') +
+          iconBtn('Ubah', 'edit', 'V.profilForm(\'' + p.id + '\')') +
+          (list.length > 1 ? iconBtn('Hapus', 'trash', 'V.profilDelete(\'' + p.id + '\')') : '') +
         '</div>' +
       '</div>';
     }).join('');
 
     return kartuAkun + '<div class="card' + (kartuAkun ? ' mt' : '') + '"><div class="card-head">' +
         '<h2>Profil di perangkat ini</h2><span class="spacer"></span>' +
-        '<button class="btn primary" onclick="V.profilForm()">+ Profil Baru</button></div>' +
+        '<button class="btn primary" onclick="V.profilForm()">' + wrapIco('plus') + 'Profil Baru</button></div>' +
       '<p class="muted" style="margin:-4px 0 14px">Setiap profil punya catatan, dompet, anggaran, dan target sendiri. ' +
         'Data antar profil <b>terpisah total</b>, tidak bisa saling melihat.</p>' +
       '<div class="profil-list">' + kartu + '</div>' +
@@ -2161,10 +2186,10 @@
     '<div class="card mt"><div class="card-head"><h2>Pengamanan</h2></div>' +
       '<p class="muted" style="margin:-4px 0 12px">' +
         (berSandi
-          ? 'Ada ' + berSandi + ' profil yang dilindungi sandi. Tombol <b>🔒 Kunci</b> di sidebar akan menyembunyikan semua catatan sampai sandi dimasukkan. Berguna kalau komputernya dipakai bersama.'
-          : 'Belum ada profil yang bersandi. Tambahkan sandi lewat tombol ✏️ di atas supaya catatan tidak bisa dibuka orang lain.') +
+          ? 'Ada ' + berSandi + ' profil yang dilindungi sandi. Tombol <b>Kunci</b> di sidebar akan menyembunyikan semua catatan sampai sandi dimasukkan. Berguna kalau komputernya dipakai bersama.'
+          : 'Belum ada profil yang bersandi. Tambahkan sandi lewat tombol Ubah pada profil di atas supaya catatan tidak bisa dibuka orang lain.') +
       '</p>' +
-      (berSandi ? '<button class="btn" onclick="V.profilKunci()">🔒 Kunci Sekarang</button>' : '') +
+      (berSandi ? '<button class="btn" onclick="V.profilKunci()">' + wrapIco('lock') + 'Kunci Sekarang</button>' : '') +
       '<div class="hint" style="margin-top:10px">Catatan: sandi ini menjaga dari orang yang memakai browser yang sama. ' +
         'Ia <b>bukan</b> enkripsi, orang yang sangat paham teknis tetap bisa membaca data di browser ini.</div>' +
     '</div>';
@@ -2196,8 +2221,8 @@
     // ikon & warna: pilih lewat tombol, bukan teks
     let ikon = f.icon, warna = f.color;
     el('p-ikon').addEventListener('click', function (e) {
-      const b = e.target.closest('[data-ikon]'); if (!b) return;
-      ikon = b.dataset.ikon;
+      const b = e.target.closest('[data-emoji]'); if (!b) return;
+      ikon = b.dataset.emoji;
       Array.prototype.forEach.call(el('p-ikon').children, function (x) { x.classList.toggle('on', x === b); });
     });
     el('p-warna').addEventListener('click', function (e) {
@@ -2326,7 +2351,12 @@
     const p = S.Profiles.active();
     const akun = root.K && root.K.terbuka && root.K.nama ? root.K.nama : '';
     const ic = el('pb-ic'), nm = el('pb-nama'), ket = el('pb-ket');
-    if (ic) { ic.textContent = akun ? '👤' : (p ? p.icon : '👤'); U.polishIcons(ic.parentElement); }
+    /* Ikon sidebar: profil lokal memakai emoji pilihannya, akun login memakai
+       ikon garis supaya tidak tertukar dengan emoji profil. */
+    if (ic) {
+      if (akun) { ic.innerHTML = U.icon('user'); ic.querySelector('.ui-icon').setAttribute('aria-hidden', 'true'); }
+      else ic.innerHTML = emo(p ? p.icon : '👤');
+    }
     if (nm) nm.textContent = akun || (p ? p.name : 'Profil');
     if (ket) ket.textContent = akun
       ? (p ? p.name + ' · lokal' : 'catatan lokal')
@@ -2347,7 +2377,7 @@
     const p = P.active();
     if (!p || !p.pinHash) { V.toast('Profil ini tidak bersandi', 'err'); return; }
     P.lock(p.id);
-    V.toast('Catatan dikunci 🔒', 'ok');
+    V.toast('Catatan dikunci', 'ok');
     root.App.applyLockUI();
     root.App.render();
     V.profilGate();

@@ -182,42 +182,87 @@
       clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 7v5l3 2', heart:'M12 21L3 12a5 5 0 0 1 9-7 5 5 0 0 1 9 7z',
       cart:'M2 3h3l3 13h11l3-9H6 M9 21h.01 M18 21h.01', car:'M3 16V9l3-5h12l3 5v7z M3 10h18 M6 16v4 M18 16v4 M7 13h.01 M17 13h.01',
       book:'M12 5Q6 1 2 4v16q4-3 10 0 6-3 10 0V4q-4-3-10 1v15', food:'M4 3v6q0 3 3 3V3 M7 12v9 M18 3q-5 6 0 9v9 M18 3v9',
-      settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z', grid:'M4 6h16 M4 12h16 M4 18h16', gift:'M3 8h18v4H3z M5 12v9h14v-9 M12 8v13 M12 8C2 8 6-2 12 8c6-10 10 0 0 0', arrow:'M12 4v16 M6 14l6 6 6-6'
+      settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z', grid:'M4 6h16 M4 12h16 M4 18h16', gift:'M3 8h18v4H3z M5 12v9h14v-9 M12 8v13 M12 8C9 8 6 6.5 6 4.5A2.5 2.5 0 0 1 11 4.1L12 8c1-3.9 6-3.9 6-1.5C18 6.6 15 8 12 8', arrow:'M12 4v16 M6 14l6 6 6-6',
+      chevron:'M9 5l7 7-7 7', close:'M6 6l12 12 M18 6L6 18', eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6', pause:'M9 5v14 M15 5v14', play:'M8 5l11 7-11 7z'
     };
     return '<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + (shapes[name] || shapes.tag) + '"/></svg>';
   };
 
+  /* Ikon emoji hanya diganti di kontrol aksi (tombol, pintasan, kepala modal).
+     Emoji milik pengguna di dalam kartu data (dompet, kategori, target,
+     langganan, profil) dibiarkan apa adanya: di situlah emoji jadi penanda
+     yang dipilih sendiri, bukan hiasan. Menggantinya dengan bentuk generik
+     justru menghapus makna, karena 34 emoji hanya punya 20 bentuk. */
   U.polishIcons = function (scope) {
     if (!scope || typeof document === 'undefined') return;
-    const names = {'✏':'edit','🗑':'trash','⬇':'download','📥':'download','⬆':'upload','📤':'upload','🔒':'lock','☁':'cloud','🔄':'refresh','🔁':'refresh','💰':'wallet','💳':'wallet','🏦':'wallet','🏷':'tag','🎯':'target','🏆':'target','👤':'user','👦':'user','👧':'user','🧑':'user','👨':'user','📦':'folder','📂':'folder','🧾':'receipt','📝':'receipt','📈':'chart','📉':'chart','🔍':'search','📅':'calendar','ℹ':'info','❔':'info','⚠':'alert','🎉':'check','💪':'check','➕':'plus','➖':'minus','🏠':'home','🏢':'home','💼':'briefcase','🏪':'briefcase','⏰':'clock','💊':'heart','🤲':'heart','🛒':'cart','🚗':'car','📚':'book','🎓':'book','🍽':'food','☕':'food','🎁':'gift','🍃':'heart','⚡':'refresh','🔗':'refresh','💡':'info','🐖':'wallet','🐷':'wallet'};
-    const selector = 'h2,.btn,.seg button,.e-ic,.ico,.ico-badge,.pc-ic,.pb-ic,.brand-icon,.ikon-btn,.stat .lbl,.stat .sub,.tag,.toast,.bnav-fab,#total-pill,#btn-sync-cloud,.bar-cat';
-    const containers = Array.from(scope.querySelectorAll(selector));
-    containers.forEach(function (box) {
-      if (box.closest('svg')) return;
+    const names = {'✏':'edit','🗑':'trash','⬇':'download','📥':'download','⬆':'upload','📤':'upload','🔒':'lock','☁':'cloud','🔄':'refresh','🔁':'refresh','💰':'wallet','💳':'wallet','🏦':'wallet','🏷':'tag','🎯':'target','🏆':'target','👤':'user','👦':'user','👧':'user','🧑':'user','👨':'user','📦':'folder','📂':'folder','🧾':'receipt','📝':'receipt','📈':'chart','📉':'chart','🔍':'search','📅':'calendar','ℹ':'info','❔':'info','⚠':'alert','🎉':'check','💪':'check','➕':'plus','➖':'minus','🏠':'home','🏢':'home','💼':'briefcase','🏪':'briefcase','⏰':'clock','💊':'heart','🤲':'heart','🛒':'cart','🚗':'car','📚':'book','🎓':'book','🍽':'food','☕':'food','🎁':'gift','🍃':'heart','⚡':'refresh','🔗':'refresh','💡':'info','🐖':'wallet','🐷':'wallet','✕':'close','✖':'close','›':'chevron','‹':'chevron','👁':'eye','⏸':'pause','▶':'play'};
+    /* Daftar sempit dan disengaja: hanya elemen yang memang kontrol.
+       Jangan tambahkan .ico, .ico-badge, .pc-ic, .pb-ic, .e-ic, .lbl, .sub,
+       .tag, .bar-cat, atau .t2 ke sini; itu semua data pengguna. */
+    const selector = '.modal-head h2,.btn,.seg button,.brand-icon,.bnav-fab,#total-pill,#btn-sync-cloud,#mode-pill';
+    /* Wadah data pengguna: emoji di sini adalah penanda yang dipilih sendiri,
+       jadi tidak pernah dikonversi walau berada di dalam lingkup pemindaian. */
+    const dataSelectors = '.ico,.ico-badge,.pc-ic,.pb-ic,.e-ic,.t2,.tag,.bar-cat,.lbl,.sub,.ui-emoji';
+    const dari = [scope].concat(Array.from(scope.querySelectorAll(selector)));
+    dari.forEach(function (box) {
+      if (box !== scope && box.closest('svg')) return;
       const walker = document.createTreeWalker(box, 4);
       const nodes = []; let node;
       while ((node = walker.nextNode())) {
-        if (!node.parentElement.closest('svg,option,textarea,script,style')) nodes.push(node);
+        if (!node.parentElement.closest('svg,option,textarea,script,style,' + dataSelectors)) nodes.push(node);
       }
       nodes.forEach(function (text) {
         const value = text.nodeValue;
-        const regex = /\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*/gu;
-        if (!regex.test(value)) return;
-        regex.lastIndex = 0;
+        /* Satu regex untuk memindai lalu mengganti, supaya tidak ada dua pola
+           yang bisa berbeda diam-diam. matchAll selalu mulai dari awal. */
+        const hits = Array.from(value.matchAll(/\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*/gu));
+        /* Hanya emoji yang punya bentuk setara yang diganti. Emoji lain
+           dibiarkan: bentuk "tag" generik akan menyamakan arti yang berbeda. */
+        const ada = hits.some(function (m) {
+          return names[m[0].replace(/\uFE0F/g, '')] || names[Array.from(m[0])[0]];
+        });
+        if (!ada) return;
         const fragment = document.createDocumentFragment(); let last = 0;
-        value.replace(regex, function (emoji, offset) {
+        hits.forEach(function (m) {
+          const emoji = m[0], offset = m.index;
           fragment.appendChild(document.createTextNode(value.slice(last, offset)));
-          const span = document.createElement('span'); span.className = 'ui-icon-wrap';
-          span.innerHTML = U.icon(names[emoji.replace(/️/g, '')] || names[Array.from(emoji)[0]] || 'tag');
-          fragment.appendChild(span); last = offset + emoji.length;
-          return emoji;
+          const key = names[emoji.replace(/\uFE0F/g, '')] || names[Array.from(emoji)[0]];
+          if (key) {
+            const span = document.createElement('span'); span.className = 'ui-icon-wrap';
+            span.innerHTML = U.icon(key);
+            fragment.appendChild(span);
+          } else {
+            fragment.appendChild(document.createTextNode(emoji));
+          }
+          last = offset + emoji.length;
         });
         fragment.appendChild(document.createTextNode(value.slice(last)));
-        // Preserve a label for existing emoji-only controls without changing stored values.
-        const button = box.closest('button');
-        if (button && !button.textContent.replace(regex, '').trim() && !button.hasAttribute('aria-label')) button.setAttribute('aria-label', button.title || 'Ikon ' + value.trim());
         text.replaceWith(fragment);
       });
+      /* Tombol yang isinya hanya ikon tetap butuh nama untuk pembaca layar.
+         Diperiksa setelah konversi, karena saat itu emoji sudah jadi SVG. */
+      const btn = box.nodeType === 1 ? box.closest('button') : null;
+      if (btn && !btn.hasAttribute('aria-label') && !btn.textContent.trim() && btn.querySelector('svg.ui-icon')) {
+        btn.setAttribute('aria-label', btn.title || 'Ikon');
+      }
+    });
+  };
+
+  /* Ikon statis di HTML dasar. Ditulis sebagai atribut supaya markup tetap
+     terbaca walau JavaScript belum jalan; tidak memakai emoji di sana karena
+     emoji di kerangka aplikasi hanya jadi hiasan yang ikut berubah-ubah
+     tergantung font sistem.
+     Atribut dilepas setelah dicat: sebagian tempat (ikon profil di sidebar)
+     nanti diisi ulang oleh data pengguna dan tidak boleh ditimpa. */
+  U.pasangIkonStatis = function (scope) {
+    const box = scope || (typeof document !== 'undefined' ? document : null);
+    if (!box) return;
+    const slots = box.querySelectorAll('[data-ikon]');
+    Array.prototype.forEach.call(slots, function (el) {
+      const shape = el.getAttribute('data-ikon');
+      el.removeAttribute('data-ikon');
+      if (!shape) return;
+      el.innerHTML = U.icon(shape);
     });
   };
 

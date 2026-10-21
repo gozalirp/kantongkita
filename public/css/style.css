@@ -183,6 +183,9 @@ button:active, .btn:active, .tx-row:active, .bnav-item:active {
 .btn.sm{padding:6px 11px;font-size:12.5px}
 .btn.ghost{background:transparent}
 .btn.icon{padding:6px 9px}
+/* Tombol aksi baris: sasaran sentuh 44px di layar sentuh, kecil saat hanya
+   muncul pada hover di perangkat berpenunjuk. */
+.item .row-act .btn.icon{width:44px;height:44px;min-height:44px;padding:0}
 
 /* forms */
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
@@ -223,13 +226,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   overflow: hidden;
   transition: transform 0.2s ease, border-color 0.2s ease;
 }
-.stat::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(89, 85, 239, 0.38), transparent);
-}
-.stat .lbl{font-size:11.5px;color:var(--txt-dim);font-weight:600;text-transform:uppercase;letter-spacing:.8px}
+/* Judul kartu statistik memakai huruf normal: label uppercase bertracking lebar
+   hanya mempersulit kata biasa (merek dompet, nama kategori) tanpa menambah arti. */
+.stat .lbl{font-size:12px;color:var(--txt-dim);font-weight:600;letter-spacing:0}
 .stat .val{font-size:24px;font-weight:800;margin-top:8px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
 .stat.in .val{color:var(--in);text-shadow:none}
 .stat.out .val{color:var(--out);text-shadow:none}
@@ -256,14 +255,19 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .item .amt.in{color:var(--in)}
 .item .amt.out{color:var(--out)}
 .item .amt.move{color:var(--move)}
+/* Di layar sentuh angka dan aksi ditumpuk: dua tombol 44px yang berdampingan
+   memakan hampir seluruh lebar baris dan memotong nama dompet. */
+.item .right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:0 0 auto;text-align:right}
 
 .empty{padding:40px 16px;text-align:center;color:var(--txt-mute)}
 .empty .e-ic{font-size:38px;display:block;margin-bottom:10px;opacity:.55}
 .empty p{font-size:13.5px}
 
 /* tags */
-.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;
   background:var(--panel-2);color:var(--txt-dim)}
+.tag .ui-icon-wrap{margin:0}
+.tag .ui-icon{width:12px;height:12px}
 .tag.in{background:var(--in-soft);color:var(--in)}
 .tag.out{background:var(--out-soft);color:var(--out)}
 
@@ -355,6 +359,10 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .toasts:empty{display:none}
 .toast.ok{border-left-color:var(--in)}
 .toast.err{border-left-color:var(--out)}
+.toast{display:flex;align-items:center;gap:8px}
+.toast-ic{color:var(--accent-ink);margin:0}
+.toast.ok .toast-ic{color:var(--in)}
+.toast.err .toast-ic{color:var(--out)}
 @keyframes slide{from{opacity:0;transform:translateX(20px)}}
 
 .scrim{position:fixed;inset:0;background:rgba(15,23,42,.30);z-index:40;display:none}
@@ -369,7 +377,9 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .pb-teks{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-align:left}
 .pb-nama{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pb-ket{font-size:11px;color:var(--txt-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pb-chev{opacity:.45;font-size:16px}
+.pb-chev{display:flex;opacity:.45;font-size:16px}
+.pb-chev .ui-icon{width:16px;height:16px}
+.pb-chev .ui-icon-wrap{margin:0}
 
 /* saat profil terkunci: total saldo di topbar disembunyikan */
 body.terkunci .nav a[data-view="dashboard"],
@@ -535,7 +545,7 @@ body.terkunci #btn-add-tx{display:none}
 .planner-dashboard .btn.sm{min-height:44px}
 .planner-dashboard .grid>*{min-width:0}
 .planner-wallets .grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:12px}
-.planner-wallets .stat{background:#EAF0FF;border:0;box-shadow:none;border-left:0!important;min-width:0}
+.planner-wallets .stat{background:#EAF0FF;border:0;box-shadow:none;min-width:0}
 .planner-wallets .stat:nth-child(3n+2){background:#FFF2CD}
 .planner-wallets .stat:nth-child(3n){background:#FFE7EA}
 .planner-chart{background:#F0F3FF!important}
@@ -690,10 +700,49 @@ button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;transform:none;box-
 .ico .ui-icon,.ico-badge .ui-icon{width:21px;height:21px}
 .e-ic .ui-icon{width:40px;height:40px;color:var(--accent-ink)}
 .pc-ic .ui-icon{width:25px;height:25px}
-.brand-icon .ui-icon{width:28px;height:28px}
+.brand-icon .ui-icon{width:28px;height:28px;color:var(--accent-ink)}
+.hamburger .ui-icon{width:22px;height:22px}
+.hamburger .ui-icon-wrap{margin:0}
+#btn-sync-cloud .ui-icon-wrap{margin:0}
+#btn-sync-cloud .ui-icon{width:14px;height:14px}
+#total-pill .ui-icon{width:15px;height:15px}
+.modal-head .x .ui-icon{width:18px;height:18px}
+.modal-head .x .ui-icon-wrap{margin:0}
 .ikon-btn{display:inline-flex;align-items:center;justify-content:center}
-.ikon-btn .ui-icon-wrap,.ico .ui-icon-wrap,.ico-badge .ui-icon-wrap,.pc-ic .ui-icon-wrap{margin:0}
+.ikon-btn .ui-icon-wrap,.ico .ui-icon-wrap,.ico-badge .ui-icon-wrap,.pc-ic .ui-icon-wrap,.e-ic .ui-icon-wrap,.brand-icon .ui-icon-wrap,.pb-ic .ui-icon-wrap{margin:0}
+/* .btn sudah punya gap sendiri; margin tambahan membuat jarak ikon-teks ganda. */
+.btn .ui-icon-wrap{margin:0}
 .modal-head h2 .ui-icon{color:var(--accent-ink)}
+
+/* Emoji data pengguna (dompet, kategori, target, langganan, profil) tetap
+   emoji: itu penanda yang dipilih sendiri, bukan hiasan. Ukurannya disamakan
+   dengan ikon garis supaya sebaris rapi, tanpa mengubah maknanya. */
+.ui-emoji{display:inline-flex;align-items:center;justify-content:center;line-height:1;font-size:1em;margin-inline-end:.4em}
+.ui-emoji:only-child{margin-inline-end:0}
+.ico .ui-emoji{font-size:17px}
+.ico-badge .ui-emoji{font-size:20px}
+.wallet-heading .ico-badge .ui-emoji{font-size:20px}
+.pc-ic .ui-emoji{font-size:24px}
+.pb-ic .ui-emoji{font-size:17px}
+.bar-cat .ui-emoji{font-size:13px;margin-inline-end:4px}
+
+/* Dua aksi per baris transaksi hanya relevan saat baris itu disentuh.
+   Di perangkat penunjuk halus disembunyikan sampai hover/fokus, sehingga
+   daftar 10 transaksi tidak lagi menampilkan 20 tombol seragam. Di layar
+   sentuh (tanpa hover) tombol tetap selalu tampil. */
+.item .row-act{display:flex;gap:2px;justify-content:flex-end}
+/* Aksi disembunyikan sampai baris disentuh hanya kalau layarnya cukup lebar.
+   Di layar sempit (HP) dua tombol 44px akan memakan hampir seluruh lebar
+   baris dan memotong nama dompet, jadi di sana angka dan aksi ditumpuk dan
+   tombolnya selalu tampil. */
+@media (hover:hover) and (pointer:fine) and (min-width:560px){
+  .item .row-act{opacity:0;transition:opacity .12s ease}
+  .item:hover .row-act,.item:focus-within .row-act{opacity:1}
+  .item .row-act:focus-within{opacity:1}
+  .item .row-act .btn.icon{width:32px;height:32px;min-height:32px}
+  .item .right{flex-direction:row;align-items:center;gap:10px}
+}
+@media (prefers-reduced-motion:reduce){.item .row-act{transition:none}}
 
 /* Dompet dan profil: pisahkan identitas, informasi, dan aksi. */
 .wallet-grid{gap:16px}
@@ -923,7 +972,8 @@ body.mode-keluarga .topbar h1::after{content:'· keluarga';font-size:12px;font-w
 .gerbang-kartu{max-width:420px;margin:24px auto;padding:26px 22px;text-align:center}
 .gerbang-kartu h2{font-size:19px;margin:10px 0 8px;color:var(--txt)}
 .gerbang-kartu .field{text-align:left;margin-bottom:12px}
-.gerbang-ikon{font-size:34px;line-height:1}
+.gerbang-ikon{line-height:1;color:var(--accent-ink)}
+.gerbang-ikon .ui-icon{width:34px;height:34px}
 /* Dua tab di dalam kartu masuk. Sengaja memakai .seg yang sudah ada supaya
    bentuknya sama dengan pemilih Pribadi/Keluarga di dalam aplikasi. */
 .gerbang-tab{margin:16px 0 10px}
@@ -975,6 +1025,8 @@ body.wajib-masuk .gerbang-kartu{margin:auto;width:100%;max-width:400px;flex:0 0 
   background:var(--accent-soft);border:1px solid #DCD9FC;border-radius:999px;
   padding:5px 13px;margin-bottom:14px;
 }
+.gerbang-merek .ui-icon{width:15px;height:15px}
+.gerbang-merek .ui-icon-wrap{margin:0}
 
 /* Recovery email shares the account fields, including mobile font sizing. */
 .gerbang-kartu .email-hint{display:block;font-size:12px;line-height:1.5;color:var(--txt-dim);margin-top:2px}

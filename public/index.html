@@ -20,7 +20,7 @@
   <!-- ============ SIDEBAR ============ -->
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <span class="brand-icon">💰</span>
+      <span class="brand-icon" data-ikon="wallet"></span>
       <div>
         <strong>Money Planner</strong>
         <small>Catatan Keuangan</small>
@@ -42,14 +42,14 @@
 
     <div class="sidebar-foot">
       <button class="profil-btn" id="btn-profil" onclick="App.go('profil')">
-        <span class="pb-ic" id="pb-ic">🏠</span>
+        <span class="pb-ic" id="pb-ic" data-ikon="home"></span>
         <span class="pb-teks">
           <span class="pb-nama" id="pb-nama">Pribadi</span>
           <span class="pb-ket" id="pb-ket">profil lokal</span>
         </span>
-        <span class="pb-chev">›</span>
+        <span class="pb-chev" aria-hidden="true" data-ikon="chevron"></span>
       </button>
-      <button class="btn sm ghost full" id="btn-kunci" hidden onclick="V.profilKunci()">🔒 Kunci</button>
+      <button class="btn sm ghost full" id="btn-kunci" hidden onclick="V.profilKunci()"><span class="ui-icon-wrap" data-ikon="lock"></span> Kunci</button>
       <button class="btn ghost full" id="btn-keluar" hidden style="min-height:44px" onclick="App.keluarAkun(this)">Keluar akun</button>
       <div class="net-dot" id="net-dot"><span></span><em>Lokal</em></div>
     </div>
@@ -58,12 +58,12 @@
   <!-- ============ MAIN ============ -->
   <main class="main">
     <header class="topbar">
-      <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
+      <button class="hamburger" id="hamburger" aria-label="Menu"><span class="ui-icon-wrap" data-ikon="grid"></span></button>
       <h1 id="page-title">Dashboard</h1>
       <div class="topbar-actions">
-        <button class="mode-pill" id="mode-pill" onclick="App.gantiMode()" title="Catatan pribadi di perangkat ini">👤 Pribadi</button>
+        <button class="mode-pill" id="mode-pill" onclick="App.gantiMode()" title="Catatan pribadi di perangkat ini">Pribadi</button>
         <button class="btn sm" id="btn-sync-cloud" onclick="App.manualSyncCloud()" title="Sinkronkan Cloudflare" style="display:inline-flex;align-items:center;gap:4px;padding:4px 9px;font-size:12px;">
-          <span>🔄</span> <span class="sync-lbl">Sync</span>
+          <span class="ui-icon-wrap" data-ikon="refresh"></span> <span class="sync-lbl">Sync</span>
         </button>
         <span class="total-pill" id="total-pill">Rp 0</span>
       </div>
@@ -102,7 +102,7 @@
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <header class="modal-head">
       <h2 id="modal-title"></h2>
-      <button class="x" data-close aria-label="Tutup">✕</button>
+      <button class="x" data-close aria-label="Tutup"><span class="ui-icon-wrap" data-ikon="close"></span></button>
     </header>
     <div class="modal-body" id="modal-body"></div>
     <footer class="modal-foot" id="modal-foot"></footer>

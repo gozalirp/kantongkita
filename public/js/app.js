@@ -257,7 +257,7 @@
       const aktif = root.K && K.aktif();
       const pill = document.getElementById('mode-pill');
       if (pill) {
-        pill.textContent = aktif ? '👨‍👩‍👧 Keluarga' : '👤 Pribadi';
+        pill.textContent = aktif ? 'Keluarga' : 'Pribadi';
         pill.classList.toggle('keluarga', aktif);
         pill.title = aktif ? 'Buku bersama keluarga' : 'Catatan pribadi di perangkat ini';
       }
@@ -329,7 +329,7 @@
               self.db = S.normalize(res.data);
               S.Persist.save(self.db);
               self.render();
-              V.toast('Berhasil mengambil data terbaru dari Cloud! ☁️', 'ok');
+              V.toast('Berhasil mengambil data terbaru dari Cloud!', 'ok');
               if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
               App.updateNetDot(true, 'Cloudflare Aktif');
               return;
@@ -342,7 +342,7 @@
             body: JSON.stringify(self.db)
           }).then(function (postRes) {
             if (postRes.ok) {
-              V.toast('Berhasil mengirim data lokal ke Cloud! ☁️', 'ok');
+              V.toast('Berhasil mengirim data lokal ke Cloud!', 'ok');
               App.updateNetDot(true, 'Cloudflare Aktif');
             } else {
               V.toast('Gagal menyinkronkan data ke Cloud', 'err');
@@ -470,16 +470,18 @@
       /* Saat gerbang tertutup, saldo di kepala pun tidak boleh tampil. */
       const gerbang = root.K && K.uiGerbang && !K.bolehBuka() && name === 'masuk';
       const pill = document.getElementById('total-pill');
-      pill.textContent = (this.terkunci || gerbang) ? '🔒' : U.fmtRp(S.totalBalance(this.db));
+      pill.textContent = (this.terkunci || gerbang) ? '' : U.fmtRp(S.totalBalance(this.db));
+      if (this.terkunci || gerbang) pill.innerHTML = U.icon('lock');
       pill.hidden = !!gerbang;   // saat gerbang: gembok saja, tanpa angka
       pill.setAttribute('aria-label', gerbang ? 'Terkunci sampai masuk' : 'Total saldo');
       const isi = this.terkunci && VIEW_DATA.indexOf(name) > -1
-        ? '<div class="card"><div class="empty"><span class="e-ic">🔒</span>' +
+        ? '<div class="card"><div class="empty"><span class="e-ic">' + U.icon('lock') + '</span>' +
           '<p>Profil ini terkunci.</p><p class="muted" style="margin-top:8px">Masukkan sandi untuk membuka catatan.</p>' +
           '<button class="btn primary" style="margin-top:14px" onclick="V.profilGate()">Buka dengan Sandi</button></div></div>'
         : eval(PREFIX[name]);
       document.getElementById('content').innerHTML = (this._galat ? blokGalat() : '') + isi;
       U.polishIcons(document);
+      U.pasangIkonStatis(document);
       if (name === 'dashboard') this.cekJKeluarga();
       if (name === 'masuk') V.gerbangBind();
       const content = document.getElementById('content');
@@ -555,6 +557,7 @@
 
       // pastikan daftar profil ada (sekaligus memindahkan data lama ke profil pertama)
       S.Profiles.list();
+      U.pasangIkonStatis(document);
       if (root.K) K.init();
 
       /* Wajib masuk sebelum dashboard. Tanpa jalan pintas: data keuangan tidak
@@ -563,7 +566,7 @@
       if (root.K && K.uiGerbang && !K.bolehBuka()) {
         this.load();          // db perlu ada untuk render; isinya tidak ditampilkan
         document.getElementById('content').innerHTML =
-          '<div class="card"><div class="empty"><span class="e-ic">🔒</span>' +
+          '<div class="card"><div class="empty"><span class="e-ic">' + U.icon('lock') + '</span>' +
           '<p>Memeriksa sesi…</p></div></div>';
         K.uiGerbang().then(function (boleh) {
           if (!boleh) { self.tampilkanGerbang(); return; }
@@ -599,7 +602,7 @@
          data siap. Mode pribadi dibuka seketika seperti sebelumnya. */
       if (root.K && K.aktif()) {
         document.getElementById('content').innerHTML =
-          '<div class="card"><div class="empty"><span class="e-ic">👨‍👩‍👧</span>' +
+          '<div class="card"><div class="empty"><span class="e-ic">' + U.icon('user') + '</span>' +
           '<p>Memuat buku keluarga…</p></div></div>';
         const self = this;
         this.muat().then(function () {

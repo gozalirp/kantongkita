@@ -124,9 +124,10 @@ function s1(){try{
   probe.innerHTML='<button class="btn" title="Modifier">✏️</button><input value="🏠"><span class="ico">🏦</span>';
   d.body.appendChild(probe);
   w.U.polishIcons(probe);
-  say('T icon-conversion|'+(probe.querySelectorAll('svg').length===2 && probe.querySelector('input').value==='🏠' && !!probe.querySelector('button').getAttribute('aria-label')));
+  say('T icon-conversion|'+(probe.querySelectorAll('svg').length===1 && probe.querySelector('input').value==='🏠' && !!probe.querySelector('button').getAttribute('aria-label')));
+  say('T icon-data-emoji|'+(probe.querySelector('.ico').textContent.trim()==='🏦'));
   w.U.polishIcons(probe);
-  say('T icon-idempotent|'+(probe.querySelectorAll('svg').length===2));
+  say('T icon-idempotent|'+(probe.querySelectorAll('svg').length===1));
   probe.remove();
   d.querySelector('[data-view="transaksi"]').click();
   setTimeout(s2,400);
@@ -248,7 +249,7 @@ function s11(){try{
 function s12(){try{
   say('T target-tersimpan|'+w.App.db.goals.length);
   say('T target-jumlah|'+(w.App.db.goals[0]?w.App.db.goals[0].target:'-'));
-  var nb=Array.prototype.filter.call(d.querySelectorAll('#content button'),function(b){return b.textContent.indexOf('Nabung')>-1 && b.textContent.indexOf('+')>-1;})[0];
+  var nb=d.querySelector('#content button[onclick*="goalAdd"]');
   say('T target-tombol-nabung|'+(nb?'ADA':'TIDAK ADA'));
   nb.click(); setTimeout(s13,350);
 }catch(e){err(e);}}
@@ -349,7 +350,7 @@ function s21(){try{
   say('T pform-ikon-bisa-diklik|'+hit('#p-ikon .ikon-btn'));
   var ik=d.querySelectorAll('#p-ikon .ikon-btn')[2];
   var wl=d.querySelectorAll('#p-warna .warna-btn')[1];
-  say('T pform-ikon-dipilih|'+ik.getAttribute('data-ikon'));
+  say('T pform-ikon-dipilih|'+ik.getAttribute('data-emoji'));
   say('T pform-warna-dipilih|'+wl.getAttribute('data-warna'));
   ik.click(); wl.click();
   var n=d.getElementById('p-nama');n.value='Usaha Browser';n.dispatchEvent(new w.Event('input',{bubbles:true}));
@@ -582,7 +583,8 @@ function runHeadless(chrome, url) {
   ok('tab Menu berubah jadi tombol kembali saat daftar terbuka', v('menu-label-balik') === 'Kembali');
   ok('tekan tab Menu sekali lagi kembali ke halaman sebelumnya', v('menu-tap-lagi') === 'Dashboard');
   ok('label tab Menu pulih setelah keluar dari daftar', v('menu-label-pulih') === 'Menu');
-  ok('ikon diganti tanpa mengubah input dan memiliki label', v('icon-conversion') === 'true');
+  ok('ikon aksi diganti tanpa mengubah input dan memiliki label', v('icon-conversion') === 'true');
+  ok('emoji data pengguna tidak ikut diganti', v('icon-data-emoji') === 'true');
   ok('penggantian ikon aman dipanggil berulang', v('icon-idempotent') === 'true');
 
   section('3. Navigasi nyata lewat klik di browser');

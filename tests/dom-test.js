@@ -21,6 +21,8 @@ const { window } = dom;
 window.alert = () => {};
 window.confirm = () => true;
 window.HTMLAnchorElement.prototype.click = function () { window.__lastDownload = { name: this.download, href: this.href }; };
+/* jsdom tidak punya fetch; permintaan jaringan di luar uji dianggap gagal. */
+window.fetch = window.fetch || function () { return Promise.reject(new window.Error('offline')); };
 
 ['js/util.js', 'js/store.js', 'js/gdrive.js', 'js/views.js', 'js/app.js'].forEach(f => {
   window.eval(fs.readFileSync(path.join(ROOT, f), 'utf8'));
@@ -367,7 +369,7 @@ section('9. Konfirmasi hapus: batal lalu setuju');
   App.save();
   V.state.transaksi.type = 'move'; App.render();
   ok('baris pindah dana tampil', $('content').innerHTML.indexOf('Pindah Dana') > -1);
-  ok('menampilkan dompet asal → tujuan', $('content').innerHTML.indexOf('→') > -1);
+  ok('menampilkan dompet asal dan tujuan', $('content').innerHTML.indexOf('Tunai ke Dompet Lain') > -1);
   V.state.transaksi.type = 'all'; App.render();
 
   section('14. Rekap: 4 tab + ganti periode');
@@ -514,7 +516,9 @@ section('9. Konfirmasi hapus: batal lalu setuju');
       App.db.transactions = [{ id: 'txr', date: U.today(), type: 'out', amount: 5000, walletId: App.db.wallets[0].id, categoryId: '', note: 'pakai struk', receiptId: rid }];
       App.save();
       nav('transaksi');
-      ok('ikon struk muncul di daftar', $('content').innerHTML.indexOf('🧾') > -1);
+      // Struk ditandai ikon garis (bukan emoji) supaya beda dari ikon kategori.
+      ok('baris transaksi menampilkan penanda struk',
+        $('content').querySelector('.item .ico svg.ui-icon') !== null);
 
       V.receiptView(rid);
       ok('modal lihat struk terbuka', !$('modal-wrap').hidden);
@@ -772,7 +776,7 @@ section('9. Konfirmasi hapus: batal lalu setuju');
     ok('judul halaman profil', $('page-title').textContent === 'Profil');
     ok('daftar profil tampil', $('content').innerHTML.indexOf('profil-list') > -1);
     ok('nama profil pertama terlihat', $('content').innerHTML.indexOf('Pribadi') > -1);
-    ok('tombol tambah profil ada', $('content').innerHTML.indexOf('+ Profil Baru') > -1);
+    ok('tombol tambah profil ada', $('content').innerHTML.indexOf('Profil Baru</button>') > -1);
     const jml0 = P.list().length;
 
     // buat profil baru tanpa sandi -> langsung pindah ke sana
@@ -781,7 +785,7 @@ section('9. Konfirmasi hapus: batal lalu setuju');
     ok('pilihan ikon ada', $('p-ikon').children.length > 4);
     ok('pilihan warna ada', $('p-warna').children.length > 4);
     setVal($('p-nama'), 'Usaha');
-    const ikonPilih = $('p-ikon').children[1].dataset.ikon;
+    const ikonPilih = $('p-ikon').children[1].dataset.emoji;
     const warnaPilih = $('p-warna').children[1].dataset.warna;
     click($('p-ikon').children[1]);
     click($('p-warna').children[1]);

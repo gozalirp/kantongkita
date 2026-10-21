@@ -15,6 +15,15 @@ Menggunakan panduan design, design-system, dan ui-ux-pro-max. Pencarian design-s
 ## Komponen
 Navigasi menggunakan SVG lokal tanpa dependensi. Emoji untuk pilihan profil/kategori pengguna dipertahankan sebagai data. Halaman memiliki judul dan deskripsi singkat. Navigasi aktif memakai aria-current. Modal memiliki labelledby; toast berupa live region. Disabled, focus-visible dan reduced-motion wajib dipertahankan. Target sentuh HP 44px, input 16px untuk menghindari zoom otomatis iOS.
 
+## Bahasa ikon
+Satu peran, satu bahasa. **Ikon garis (SVG) hanya untuk kontrol**: tombol aksi, pintasan navigasi, kepala modal, keadaan kosong, dan notifikasi status. **Emoji hanya untuk data pilihan pengguna**: dompet, kategori, target tabungan, langganan, dan profil, dibungkus `<span class="ui-emoji">` supaya ukurannya setara ikon garis.
+
+Alasannya: 34 emoji hanya punya 20 bentuk garis, sehingga konversi memaksa arti berbeda tampil identik (Tunai dan GoPay sama-sama jadi "tag"; anggaran dan target sama-sama jadi sasaran). Emoji juga satu-satunya penanda yang benar-benar dibedakan pengguna. Karena itu `U.polishIcons` hanya memindai kontrol; jangan menambah `.ico`, `.ico-badge`, `.pc-ic`, `.pb-ic`, `.e-ic`, `.t2`, `.tag`, `.bar-cat`, `.lbl`, atau `.sub` ke daftar pemindaiannya. Emoji yang tidak punya bentuk garis setara dibiarkan, bukan dipaksa jadi bentuk generik.
+
+Aksi per baris (ubah, hapus) disembunyikan sampai baris di-hover atau difokus di perangkat berpenunjuk halus **dengan lebar layar ≥560px**, dan selalu tampil di layar sentuh maupun layar sempit. Di bawah 560px angka dan aksi ditumpuk: dua sasaran sentuh 44px yang berdampingan memakan hampir seluruh lebar baris dan memotong nama dompet. Label `aria-label` wajib untuk tombol yang hanya berisi ikon.
+
+Dua atribut, dua arti, jangan dicampur. `data-ikon="nama-bentuk"` hanya untuk slot ikon statis di kerangka HTML; `U.pasangIkonStatis` mengisi slot itu sekali lalu melepas atributnya supaya isi yang berasal dari data pengguna tidak tertimpa. Pemilih emoji (kategori, profil) memakai `data-emoji` karena isinya memang emoji, bukan nama bentuk. Ikon di dalam tombol berlabel memakai `wrapIco(nama)` sehingga jarak ikon ke teks diatur `gap` milik `.btn`, bukan spasi yang ditulis di teks. Panah arah dana (`↓ ↑ ⇄`) di tombol segmen tetap karakter teks: itu penanda arah, bukan hiasan, dan tidak ada bentuk garis yang lebih jelas.
+
 ## Batas perubahan
 Tidak mengubah struktur penyimpanan, perhitungan keuangan, API, atau alur sinkronisasi. Tidak menghapus data. Pengujian simulasi tidak menggantikan pengecekan HP fisik.
 
