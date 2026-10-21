@@ -90,9 +90,14 @@ function hit(sel){
     return 'TERTUTUP#'+h.id+'<'+h.tagName+'>';
   }catch(x){return 'ERR '+x.message;}
 }
+/* Uji ini memakai server statis: tidak ada /api/family/*. Gerbang dashboard
+   karenanya tidak bisa "terbukti login" lewat jaringan. Pakai kebijakan
+   tahan-gangguan yang sudah diuji terpisah: server tak terjangkau -> buka.
+   Tanpa ini, seluruh uji perilaku aplikasi ikut terhalang layar masuk. */
 function s1(){try{
   d=document.getElementById('f').contentDocument;w=document.getElementById('f').contentWindow;
   w.localStorage.clear();
+  w.K.bukaGerbang();
   say('T stylesheet|'+Array.prototype.filter.call(d.styleSheets,function(s){return s.href&&s.href.indexOf('css/style.css')>-1;}).length);
   say('T overlay-display|'+w.getComputedStyle(d.getElementById('modal-wrap')).display);
   say('T overlay-rect|'+Math.round(d.getElementById('modal-wrap').getBoundingClientRect().width));

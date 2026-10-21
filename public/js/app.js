@@ -9,22 +9,24 @@
   const TITLES = {
     menu: 'Menu', dashboard: 'Dashboard', transaksi: 'Catatan Transaksi', rekap: 'Rekap Transaksi',
     anggaran: 'Anggaran per Kategori', target: 'Target Tabungan', langganan: 'Langganan Bulanan',
-    dompet: 'Dompet & Bank', kategori: 'Kategori', pengaturan: 'Pengaturan', profil: 'Profil'
+    dompet: 'Dompet & Bank', kategori: 'Kategori', pengaturan: 'Pengaturan', profil: 'Profil',
+    masuk: 'Masuk ke akun'
   };
   const PREFIX = {
     menu: 'V.menu()', dashboard: 'V.dashboard()', transaksi: 'V.transaksi()', rekap: 'V.rekap()',
     anggaran: 'V.anggaran()', target: 'V.target()', langganan: 'V.langganan()',
-    dompet: 'V.dompet()', kategori: 'V.kategori()', pengaturan: 'V.pengaturan()', profil: 'V.profil()'
+    dompet: 'V.dompet()', kategori: 'V.kategori()', pengaturan: 'V.pengaturan()', profil: 'V.profil()',
+    masuk: 'V.gerbangMasuk()'
   };
   const BIND = {
     menu: null, dashboard: 'V.dashboardBind()', transaksi: 'V.transaksiBind()', rekap: 'V.rekapBind()',
     anggaran: null, target: null, langganan: null,
-    dompet: null, kategori: 'V.kategoriBind()', pengaturan: 'V.pengaturanBind()', profil: null
+    dompet: null, kategori: 'V.kategoriBind()', pengaturan: 'V.pengaturanBind()', profil: null, masuk: null
   };
 
   /* Kunci sepenuhnya halaman yang tidak butuh data keuangan — tetap bisa dibuka
      walau profil sedang terkunci (supaya orang bisa pindah profil). */
-  const VIEW_BEBAS = ['menu', 'profil', 'pengaturan'];
+  const VIEW_BEBAS = ['menu', 'profil', 'pengaturan', 'masuk'];
   /* Halaman yang tidak masuk daftar ini disembunyikan saat profil terkunci. */
   const VIEW_DATA = ['dashboard', 'transaksi', 'rekap', 'anggaran', 'target', 'langganan', 'dompet', 'kategori'];
 
@@ -388,7 +390,12 @@
         tabMenu.setAttribute('aria-label', bisaBalik ? 'Kembali ke halaman sebelumnya' : 'Menu daftar fitur');
       }
       document.getElementById('page-title').textContent = TITLES[name];
-      document.getElementById('total-pill').textContent = this.terkunci ? '🔒' : U.fmtRp(S.totalBalance(this.db));
+      /* Saat gerbang tertutup, saldo di kepala pun tidak boleh tampil. */
+      const gerbang = root.K && K.uiGerbang && !K.bolehBuka() && name === 'masuk';
+      const pill = document.getElementById('total-pill');
+      pill.textContent = (this.terkunci || gerbang) ? '🔒' : U.fmtRp(S.totalBalance(this.db));
+      pill.hidden = !!gerbang;   // saat gerbang: gembok saja, tanpa angka
+      pill.setAttribute('aria-label', gerbang ? 'Terkunci sampai masuk' : 'Total saldo');
       document.getElementById('content').innerHTML = this.terkunci && VIEW_DATA.indexOf(name) > -1
         ? '<div class="card"><div class="empty"><span class="e-ic">🔒</span>' +
           '<p>Profil ini terkunci.</p><p class="muted" style="margin-top:8px">Masukkan sandi untuk membuka catatan.</p>' +
@@ -396,6 +403,7 @@
         : eval(PREFIX[name]);
       U.polishIcons(document);
       if (name === 'dashboard') this.cekJKeluarga();
+      if (name === 'masuk') V.gerbangBind();
       const content = document.getElementById('content');
       content.dataset.page = name;
       const descriptions = {
@@ -434,9 +442,9 @@
 
     navigate: function () {
       const v = this.parseHash();
-      this.view = v;
+      this.view = (root.K && K.uiGerbang && !K.bolehBuka()) ? 'masuk' : v;
       this.applyLockUI();
-      this.updateNetDot(this.db.settings.driveEnabled && this.db.settings.driveFileId);
+      this.updateNetDot(!!(this.db && this.db.settings.driveEnabled && this.db.settings.driveFileId));
       this.render();
       const sb = document.querySelector('.sidebar');
       if (sb) sb.classList.remove('open');
@@ -471,6 +479,44 @@
       S.Profiles.list();
       if (root.K) K.init();
 
+      /* Wajib masuk sebelum dashboard. Tanpa jalan pintas: data keuangan tidak
+         ditampilkan dan tidak dimuat sebelum sesi terbukti. */
+      const self = this;
+      if (root.K && K.uiGerbang && !K.bolehBuka()) {
+        this.load();          // db perlu ada untuk render; isinya tidak ditampilkan
+        document.getElementById('content').innerHTML =
+          '<div class="card"><div class="empty"><span class="e-ic">🔒</span>' +
+          '<p>Memeriksa sesi…</p></div></div>';
+        K.uiGerbang().then(function (boleh) {
+          if (!boleh) { self.tampilkanGerbang(); return; }
+          self.mulai();
+        });
+        return;
+      }
+      this.mulai();
+    },
+
+    /* Isi terkunci sampai sesi terbukti: navigasi disembunyikan dan halaman
+       diarahkan ke layar masuk. */
+    tampilkanGerbang: function () {
+      document.body.classList.add('wajib-masuk');
+      this._gerbangTertutup = true;
+      this.view = 'masuk';
+      this.render();
+    },
+
+    mulai: function () {
+      /* Dipanggil ulang setelah gerbang dibuka: jangan pasang pengait dua kali. */
+      if (this._mulaiAktif) {
+        document.body.classList.remove('wajib-masuk');
+        this._gerbangTertutup = false;
+        this.navigate();
+        return;
+      }
+      this._mulaiAktif = true;
+      this._gerbangTertutup = false;
+      document.body.classList.remove('wajib-masuk');
+
       /* Mode keluarga perlu menunggu server, jadi aplikasi dimulai setelah
          data siap. Mode pribadi dibuka seketika seperti sebelumnya. */
       if (root.K && K.aktif()) {
@@ -503,8 +549,9 @@
        boleh mengisinya, perangkat yang sudah berisi tidak ditimpa. */
     tarikPribadi: async function () {
       if (!root.K) return null;
-      const login = await K.periksaPribadi();
-      if (!login) return null;
+      /* jangan ikut memutuskan gerbang di sini (balapan = true). */
+      const login = await K.periksaPribadi(true);
+      if (login !== true) return null;
       const jauh = await K.muatPribadi();
       if (!jauh || !jauh.transactions) return null;
       const lokal = this.db;

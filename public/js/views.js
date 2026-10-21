@@ -24,6 +24,64 @@
   };
 
   /* ============================================================
+     GERBANG MASUK
+     Dashboard tidak dibuka sebelum sesi terbukti. Halaman ini sengaja
+     tidak menampilkan angka keuangan apa pun.
+     ============================================================ */
+  V.gerbangMasuk = function () {
+    const lama = App._gerbangPesan || '';
+    return '' +
+      '<div class="card gerbang-kartu">' +
+        '<div class="gerbang-ikon">🔒</div>' +
+        '<h2>Masuk dulu untuk membuka catatan</h2>' +
+        '<p class="muted">Catatan keuangan tersimpan di akun, bukan di perangkat ini. ' +
+          'Tanpa masuk, tidak ada data yang ditampilkan.</p>' +
+        '<p class="muted">Belum punya akun? <a href="/keluarga?aksi=aktivasi">Buat akun</a> — ' +
+          'hanya bisa sekali untuk aplikasi ini.</p>' +
+        '<form id="g-form" autocomplete="on" style="margin-top:14px">' +
+          '<div class="field"><label for="g-user">Username</label>' +
+            '<input id="g-user" maxlength="32" autocomplete="username" required></div>' +
+          '<div class="field"><label for="g-pass">Password</label>' +
+            '<input id="g-pass" type="password" maxlength="180" autocomplete="current-password" required></div>' +
+          '<button class="btn primary" id="g-masuk" type="submit" style="width:100%;margin-top:6px">Masuk</button>' +
+        '</form>' +
+        '<p class="muted" id="g-pesan" style="margin-top:12px">' + U.esc(lama) + '</p>' +
+        '<p class="muted" style="margin-top:10px"><a href="/keluarga?aksi=lupa">Lupa password?</a></p>' +
+      '</div>';
+  };
+
+  V.gerbangBind = function () {
+    const form = document.getElementById('g-form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const user = document.getElementById('g-user').value.trim();
+      const pass = document.getElementById('g-pass').value;
+      const pesan = document.getElementById('g-pesan');
+      const tombol = document.getElementById('g-masuk');
+      if (!user || !pass) { pesan.textContent = 'Username dan password wajib diisi.'; return; }
+      tombol.disabled = true;
+      pesan.textContent = 'Memeriksa…';
+      fetch('/api/family/login', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, password: pass })
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (b) { return { status: r.status, body: b }; });
+      }).then(function (hasil) {
+        tombol.disabled = false;
+        if (hasil.status === 200) { location.reload(); return; }
+        pesan.textContent = hasil.status === 429
+          ? 'Terlalu banyak percobaan. Tunggu 15 menit.'
+          : (hasil.body.error || 'Username atau password salah.');
+      }).catch(function () {
+        tombol.disabled = false;
+        pesan.textContent = 'Tidak bisa menghubungi server. Periksa koneksi lalu coba lagi.';
+      });
+    });
+  };
+
+  /* ============================================================
      TOAST & MODAL & CONFIRM
      ============================================================ */
   V.toast = function (msg, kind) {

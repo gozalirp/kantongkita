@@ -61,13 +61,28 @@
      Kuncinya akun, jadi anggota keluarga lain tidak bisa membaca isi ini. */
   M.revisiPribadi = 0;
   M.punyaCloud = false;
+  /* true setelah sesi terbukti. Jadi gerbang dashboard hanya terbuka sekali
+     per pemuatan halaman, bukan setiap kali render. */
+  M.terbuka = false;
 
-  /* Dipanggil saat login/logout dan saat aplikasi dibuka. */
-  M.periksaPribadi = async function () {
+  /* Dipanggil saat login/logout dan saat aplikasi dibuka.
+     Mengembalikan true (sesi sah), false (bukan 200), atau 'ragu' (server tak
+     terjangkau). Penentuan tutup/buka ada di uiGerbang.js, bukan di sini. */
+  M.periksaPribadi = async function (balapan) {
     const me = await api('me', { method: 'GET' }).catch(function () { return { status: 0 }; });
-    M.punyaCloud = me.status === 200;
-    M.nama = (me.status === 200 && me.body.user && me.body.user.username) || '';
-    return M.punyaCloud;
+    if (balapan) return me.status === 200;
+    if (me.status === 200) {
+      M.punyaCloud = true;
+      M.terbuka = true;
+      M.nama = (me.body.user && me.body.user.username) || M.nama;
+      return true;
+    }
+    if (me.status === 401) {
+      M.punyaCloud = false;
+      M.terbuka = false;
+      return false;
+    }
+    return 'ragu';
   };
 
   /* Baca salinan pribadi dari server. null kalau belum pernah tersimpan. */
@@ -173,6 +188,8 @@
 
   M.keluar = function () {
     M.mode = 'pribadi';
+    M.terbuka = false;
+    M.punyaCloud = false;
     M.revisi = 0;
     M.sanggup = false;
     simpan(MODE_KEY, 'pribadi');
