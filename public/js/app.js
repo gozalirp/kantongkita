@@ -35,6 +35,12 @@
     view: 'dashboard',
     terkunci: false,
     _inited: false,
+    /* Keadaan layar masuk. Disimpan di App, bukan di DOM, supaya bertahan
+       saat kartu dirender ulang (pindah tab, atau kode pemulihan tampil). */
+    _gerbangPesan: '',
+    _gerbangDaftar: false,
+    _gerbangKode: '',
+    _gerbangAkun: null,
 
     /* ---------- penyimpanan ---------- */
     storageKey: function () { return S.Persist.key(); },

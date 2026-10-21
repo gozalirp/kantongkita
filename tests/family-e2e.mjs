@@ -24,13 +24,8 @@ const ownerPassword = 'password-rumah-panjang';
 const partnerPassword = 'password-istri-panjang';
 
 const activationAttempt = await call('activate', { body: { username: 'suami_' + stamp, password: ownerPassword } });
-check('aktivasi keluarga ditolak setelah keluarga ada atau berhasil', [409, 200].includes(activationAttempt.status));
+check('pendaftaran akun berhasil', activationAttempt.status === 200);
 let ownerName = 'suami_' + stamp;
-if (activationAttempt.status === 409) {
-  // A family already exists; use the stored credentials instead of creating a new one.
-  ownerName = process.env.OWNER_USERNAME;
-  if (!ownerName) { console.log('  • keluarga sudah aktif: lewati pengujian pembuatan akun'); process.exit(0); }
-}
 const login = await call('login', { body: { username: ownerName, password: ownerPassword } });
 check('login pemilik berhasil', login.status === 200 && !!login.cookie);
 check('password salah ditolak', (await call('login', { body: { username: ownerName, password: 'password-keliru-panjang' } })).status === 401);
@@ -44,7 +39,8 @@ if (invite.status === 409) { console.log('  • keluarga sudah berisi dua anggot
 const join = await call('join', { body: { username: 'istri_' + stamp, password: partnerPassword, code: invite.data.code } });
 check('pasangan bergabung lewat undangan', join.status === 200 && typeof join.data.recovery === 'string');
 check('undangan tidak bisa dipakai ulang', [403, 409].includes((await call('join', { body: { username: 'orang_' + stamp, password: partnerPassword, code: invite.data.code } })).status));
-check('aktivasi ulang ditolak karena keluarga sudah ada', (await call('activate', { body: { username: 'lain_' + stamp, password: ownerPassword } })).status === 409);
+check('pendaftar lain boleh membuat akunnya sendiri (tidak mengganggu keluarga ini)',
+  (await call('activate', { body: { username: 'lain_' + stamp, password: ownerPassword } })).status === 200);
 const partner = (await call('login', { body: { username: 'istri_' + stamp, password: partnerPassword } })).cookie;
 check('login pasangan berhasil', !!partner);
 check('pasangan tidak boleh mengundang', (await call('invite', { cookie: partner, body: {} })).status === 403);

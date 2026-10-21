@@ -81,10 +81,12 @@ export async function family(request, env) {
       }
       let familyId, invitation;
       if (path === 'activate') {
-        /* Tanpa kode aktivasi: siapa pun yang memegang alamat aplikasi boleh
-           membuat SATU keluarga. Penjaga "hanya satu keluarga" tetap ada di
-           family_activation, jadi aplikasi ini tidak berubah jadi pendaftaran umum. */
-        if (await q('SELECT id FROM family_activation WHERE id=1').first()) return fail('Keluarga sudah diaktifkan', 409);
+        /* Pendaftaran TERBUKA: siapa pun yang memegang alamat aplikasi boleh
+           membuat akun, dan tiap akun mendapat buku catatannya sendiri.
+           Dulu di sini ada penjaga "hanya satu keluarga" (family_activation)
+           yang menutup pintu setelah akun pertama; penjaga itu dilepas atas
+           permintaan pemilik aplikasi. Tabel family_activation sengaja TIDAK
+           dihapus supaya akun lama (pemiliknya) tetap utuh dan bisa masuk. */
         familyId = crypto.randomUUID();
       } else {
         if (typeof body.code !== 'string') return fail('Undangan diperlukan');
@@ -93,7 +95,10 @@ export async function family(request, env) {
         familyId = invitation.family_id;
       }
       const id = crypto.randomUUID(), recovery = token(), hash = await hashPassword(body.password);
-      const statements = path === 'activate' ? [q('INSERT INTO families VALUES(?,?)', familyId, now), q('INSERT INTO family_activation VALUES(1,?)', familyId)] : [];
+      /* Tanpa baris family_activation: tabel itu bertanda UNIK, jadi kalau
+         diisi di sini pendaftar kedua akan gagal. Penanda itu hanya dipakai
+         buku lama, bukan penjaga pendaftaran lagi. */
+      const statements = path === 'activate' ? [q('INSERT INTO families VALUES(?,?)', familyId, now)] : [];
       if (path === 'join') {
         // Conditional insertion + unique partner role make concurrent redemption atomic.
         statements.push(q(`INSERT INTO family_users SELECT ?,family_id,?,?,?,'partner',? FROM family_invites WHERE token_hash=? AND used_at IS NULL AND expires_at>?`, id, name, hash, await digest(recovery), now, invitation.token_hash, now));

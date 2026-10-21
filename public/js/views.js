@@ -28,40 +28,133 @@
      Dashboard tidak dibuka sebelum sesi terbukti. Halaman ini sengaja
      tidak menampilkan angka keuangan apa pun.
      ============================================================ */
+  /* Satu layar, dua keperluan: masuk atau buat akun. Formulirnya sama,
+     yang berubah hanya judul, tombol, dan endpoint yang dipanggil.
+     Setelah akun dibuat, kode pemulihan tampil SEKALI di kartu ini
+     (sebelumnya harus pindah ke halaman /keluarga dulu). */
+  const KODE_SESI = 'savingduit.kodepemulihan';
+
   V.gerbangMasuk = function () {
     const lama = App._gerbangPesan || '';
+    const kode = App._gerbangKode || '';
+    if (kode) {
+      return '' +
+        '<div class="card gerbang-kartu">' +
+          '<div class="gerbang-merek"><span aria-hidden="true">💰</span> Money Planner</div>' +
+          '<div class="gerbang-ikon">✅</div>' +
+          '<h2>Akun berhasil dibuat</h2>' +
+          '<p class="muted gerbang-tip">Simpan kode di bawah. Kode ini hanya tampil sekali ' +
+            'dan satu-satunya cara memulihkan akun kalau password lupa.</p>' +
+          '<div class="gerbang-kode" id="g-kode">' + U.esc(kode) + '</div>' +
+          '<button class="btn" id="g-salin" type="button" style="width:100%">Salin kode</button>' +
+          '<button class="btn primary" id="g-lanjut" type="button" style="width:100%;margin-top:10px">' +
+            (App._gerbangAkun ? 'Masuk sekarang' : 'Ke halaman masuk') + '</button>' +
+          '<p class="muted" id="g-pesan" style="margin-top:12px">' + U.esc(lama) + '</p>' +
+        '</div>';
+    }
+    const daftar = App._gerbangDaftar === true;
     return '' +
       '<div class="card gerbang-kartu">' +
         '<div class="gerbang-merek"><span aria-hidden="true">💰</span> Money Planner</div>' +
-        '<div class="gerbang-ikon">🔒</div>' +
-        '<h2>Masuk dulu untuk membuka catatan</h2>' +
-        '<p class="muted">Belum punya akun? <a href="/keluarga?aksi=aktivasi">Buat akun</a> — ' +
-          'hanya bisa sekali untuk aplikasi ini.</p>' +
-        '<form id="g-form" autocomplete="on" style="margin-top:14px">' +
+        '<div class="gerbang-ikon">' + (daftar ? '✨' : '🔒') + '</div>' +
+        '<h2>' + (daftar ? 'Buat akun baru' : 'Masuk dulu untuk membuka catatan') + '</h2>' +
+        '<div class="seg gerbang-tab" role="tablist" aria-label="Pilih keperluan">' +
+          '<button type="button" role="tab" id="g-tab-masuk" aria-selected="' + (daftar ? 'false' : 'true') + '"' +
+            ' class="' + (daftar ? '' : 'on') + '">Masuk</button>' +
+          '<button type="button" role="tab" id="g-tab-daftar" aria-selected="' + (daftar ? 'true' : 'false') + '"' +
+            ' class="' + (daftar ? 'on' : '') + '">Buat akun</button>' +
+        '</div>' +
+        '<p class="muted gerbang-tip">' +
+          (daftar
+            ? 'Akun baru langsung mendapat buku catatan sendiri, terpisah dari akun lain.'
+            : 'Punya kode undangan dari pasangan? <a href="/keluarga?aksi=undangan">Gabung keluarga</a>.') +
+        '</p>' +
+        '<form id="g-form" autocomplete="on">' +
           '<div class="field"><label for="g-user">Username</label>' +
-            '<input id="g-user" type="text" maxlength="32" autocomplete="username" required></div>' +
+            '<input id="g-user" type="text" maxlength="32" autocomplete="username" required' +
+            (daftar ? ' pattern="[A-Za-z0-9_]{3,32}" spellcheck="false" placeholder="3–32: huruf, angka, garis bawah"' : '') + '></div>' +
           '<div class="field"><label for="g-pass">Password</label>' +
-            '<input id="g-pass" type="password" maxlength="180" autocomplete="current-password" required></div>' +
-          '<button class="btn primary" id="g-masuk" type="submit" style="width:100%;margin-top:6px">Masuk</button>' +
+            '<input id="g-pass" type="password" maxlength="180" required' +
+            ' autocomplete="' + (daftar ? 'new-password' : 'current-password') + '"' +
+            (daftar ? ' minlength="12" placeholder="minimal 12 karakter"' : '') + '></div>' +
+          '<button class="btn primary" id="g-masuk" type="submit" style="width:100%;margin-top:6px">' +
+            (daftar ? 'Buat akun' : 'Masuk') + '</button>' +
         '</form>' +
         '<p class="muted" id="g-pesan" style="margin-top:12px">' + U.esc(lama) + '</p>' +
-        '<p class="muted" style="margin-top:10px"><a href="/keluarga?aksi=lupa">Lupa password?</a></p>' +
+        '<p class="muted" style="margin-top:10px"><a href="/keluarga?aksi=' +
+          (daftar ? 'pulih' : 'lupa') + '">' + (daftar ? 'Sudah punya akun?' : 'Lupa password?') + '</a></p>' +
       '</div>';
   };
 
   V.gerbangBind = function () {
+    const pesan = document.getElementById('g-pesan');
+
+    /* --- keadaan "kode pemulihan tampil" --- */
+    if (App._gerbangKode) {
+      const salin = document.getElementById('g-salin');
+      const lanjut = document.getElementById('g-lanjut');
+      if (salin) salin.addEventListener('click', function () {
+        const kode = App._gerbangKode;
+        const beres = function () {
+          salin.textContent = 'Tersalin';
+          setTimeout(function () { salin.textContent = 'Salin kode'; }, 2000);
+        };
+        if (navigator.clipboard) navigator.clipboard.writeText(kode).then(beres, function () {
+          if (pesan) pesan.textContent = 'Tidak bisa menyalin otomatis. Salin manual kode di atas.';
+        });
+        else if (pesan) pesan.textContent = 'Salin manual kode di atas.';
+      });
+      if (lanjut) lanjut.addEventListener('click', function () {
+        const akun = App._gerbangAkun;
+        App._gerbangKode = '';
+        try { sessionStorage.removeItem(KODE_SESI); } catch (e) {}
+        if (!akun) { App._gerbangDaftar = false; App.render(); return; }
+        lanjut.disabled = true;
+        if (pesan) pesan.textContent = 'Memeriksa…';
+        fetch('/api/family/login', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: akun.user, password: akun.pass })
+        }).then(function (r) {
+          if (r.status !== 200) throw new Error('gagal');
+          location.reload();
+        }).catch(function () {
+          lanjut.disabled = false;
+          App._gerbangAkun = null;
+          App._gerbangDaftar = false;
+          App._gerbangPesan = 'Akun sudah dibuat. Silakan masuk dengan password tadi.';
+          App.render();
+        });
+      });
+      return;
+    }
+
+    /* --- keadaan formulir --- */
     const form = document.getElementById('g-form');
     if (!form) return;
+    const tombol = document.getElementById('g-masuk');
+
+    function pindah(daftar) {
+      App._gerbangDaftar = daftar;
+      App._gerbangPesan = '';
+      App.render();
+    }
+    const tabMasuk = document.getElementById('g-tab-masuk');
+    const tabDaftar = document.getElementById('g-tab-daftar');
+    if (tabMasuk) tabMasuk.addEventListener('click', function () { if (App._gerbangDaftar) pindah(false); });
+    if (tabDaftar) tabDaftar.addEventListener('click', function () { if (!App._gerbangDaftar) pindah(true); });
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+      const daftar = App._gerbangDaftar === true;
       const user = document.getElementById('g-user').value.trim();
       const pass = document.getElementById('g-pass').value;
-      const pesan = document.getElementById('g-pesan');
-      const tombol = document.getElementById('g-masuk');
       if (!user || !pass) { pesan.textContent = 'Username dan password wajib diisi.'; return; }
+      if (daftar && user.length < 3) { pesan.textContent = 'Username minimal 3 karakter.'; return; }
+      if (daftar && pass.length < 12) { pesan.textContent = 'Password minimal 12 karakter.'; return; }
       tombol.disabled = true;
-      pesan.textContent = 'Memeriksa…';
-      fetch('/api/family/login', {
+      pesan.textContent = daftar ? 'Membuat akun…' : 'Memeriksa…';
+      fetch('/api/family/' + (daftar ? 'activate' : 'login'), {
         method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: user, password: pass })
@@ -69,10 +162,20 @@
         return r.json().catch(function () { return {}; }).then(function (b) { return { status: r.status, body: b }; });
       }).then(function (hasil) {
         tombol.disabled = false;
-        if (hasil.status === 200) { location.reload(); return; }
+        if (hasil.status === 200) {
+          if (!daftar) { location.reload(); return; }
+          /* Kode disimpan hanya di memori + sessionStorage (hilang saat tab
+             ditutup), bukan localStorage: ini kunci pemulihan akun. */
+          const kode = hasil.body.recovery || '';
+          App._gerbangKode = kode;
+          App._gerbangAkun = kode ? { user: user, pass: pass } : null;
+          if (kode) { try { sessionStorage.setItem(KODE_SESI, kode); } catch (e2) {} }
+          App.render();
+          return;
+        }
         pesan.textContent = hasil.status === 429
           ? 'Terlalu banyak percobaan. Tunggu 15 menit.'
-          : (hasil.body.error || 'Username atau password salah.');
+          : (hasil.body.error || (daftar ? 'Gagal membuat akun.' : 'Username atau password salah.'));
       }).catch(function () {
         tombol.disabled = false;
         pesan.textContent = 'Tidak bisa menghubungi server. Periksa koneksi lalu coba lagi.';

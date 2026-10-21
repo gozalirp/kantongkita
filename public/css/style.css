@@ -919,6 +919,18 @@ body.mode-keluarga .topbar h1::after{content:'· keluarga';font-size:12px;font-w
 .gerbang-kartu h2{font-size:19px;margin:10px 0 8px;color:var(--txt)}
 .gerbang-kartu .field{text-align:left;margin-bottom:12px}
 .gerbang-ikon{font-size:34px;line-height:1}
+/* Dua tab di dalam kartu masuk. Sengaja memakai .seg yang sudah ada supaya
+   bentuknya sama dengan pemilih Pribadi/Keluarga di dalam aplikasi. */
+.gerbang-tab{margin:16px 0 10px}
+.gerbang-tab button{min-height:44px;font-size:13px}
+.gerbang-tip{font-size:12px;line-height:1.55;margin:0 0 14px}
+.gerbang-kartu .field:last-of-type{margin-bottom:8px}
+/* Kode pemulihan: satu-satunya salinan yang dilihat user, jadi dibuat mudah
+   dibaca dan disalin (monospace, boleh dibungkus, latar berbeda). */
+.gerbang-kode{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12px;line-height:1.5;word-break:break-all;text-align:center;
+  background:#F0F1FA;border:1px solid #E0E2F0;border-radius:var(--r-sm);
+  padding:12px 10px;margin-bottom:14px;color:var(--txt);user-select:all}
 /* Selama gerbang tertutup, seluruh kerangka aplikasi disembunyikan:
    tidak ada sidebar kiri, topbar, maupun navigasi bawah. Yang tampil
    hanya layar masuk, di tengah layar. */
