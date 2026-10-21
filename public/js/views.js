@@ -41,7 +41,7 @@
           'hanya bisa sekali untuk aplikasi ini.</p>' +
         '<form id="g-form" autocomplete="on" style="margin-top:14px">' +
           '<div class="field"><label for="g-user">Username</label>' +
-            '<input id="g-user" maxlength="32" autocomplete="username" required></div>' +
+            '<input id="g-user" type="text" maxlength="32" autocomplete="username" required></div>' +
           '<div class="field"><label for="g-pass">Password</label>' +
             '<input id="g-pass" type="password" maxlength="180" autocomplete="current-password" required></div>' +
           '<button class="btn primary" id="g-masuk" type="submit" style="width:100%;margin-top:6px">Masuk</button>' +
