@@ -398,7 +398,7 @@
   }
 
   function pilihanKategori(db, sel, type) {
-    return '<option value="">— pilih kategori —</option>' + (db.categories || [])
+    return '<option value="">(pilih kategori)</option>' + (db.categories || [])
       .filter(function (c) { return !c.archived && c.type === (type || 'out'); })
       .map(function (c) {
         return '<option value="' + H(c.id) + '"' + (c.id === sel ? ' selected' : '') + '>' +
@@ -407,7 +407,7 @@
   }
 
   function pilihanDompet(db, sel, exclude) {
-    return '<option value="">— pilih dompet —</option>' + (db.wallets || [])
+    return '<option value="">(pilih dompet)</option>' + (db.wallets || [])
       .filter(function (w) { return !w.archived && w.id !== exclude; })
       .map(function (w) {
         return '<option value="' + H(w.id) + '"' + (w.id === sel ? ' selected' : '') + '>' +
@@ -510,7 +510,7 @@
         const v = U.parseAmount(amt.value);
         amt.value = v ? U.fmtNum(v) : '';
         const hint = el('f-amount-hint');
-        hint.textContent = v ? U.fmtRp(v) + '  —  diisi untuk transaksi ini' : '';
+        hint.textContent = v ? U.fmtRp(v) + ' (diisi untuk transaksi ini)' : '';
       });
 
       const wSel = el('f-wallet');
@@ -573,7 +573,7 @@
     fr.onload = function () {
       const id = U.uid('rcp');
       root.App.db.receipts[id] = { name: file.name, mime: file.type, size: file.size, data: fr.result };
-      if (root.App.save() === 'slim') V.toast('Penyimpanan hampir penuh — struk lama dipangkas', 'err');
+      if (root.App.save() === 'slim') V.toast('Penyimpanan hampir penuh, struk lama dipangkas', 'err');
       cb(id);
     };
     fr.onerror = function () { V.toast('Gagal membaca berkas', 'err'); };
@@ -683,7 +683,7 @@
       U.fmtRpShort(categoryTotal) + '</strong><span>Pengeluaran</span></div></div>';
 
     return '<div class="planner-dashboard">' +
-      '<header class="planner-welcome"><div><span class="planner-eyebrow">CATATAN KEUANGAN PRIBADI</span>' +
+      '<header class="planner-welcome"><div>' +
         '<h2>Rencana uangmu, lebih terarah.</h2><p>Pantau saldo dan wujudkan targetmu, sedikit demi sedikit.</p></div>' +
         '<button class="btn primary" onclick="V.txForm()">+ Catat transaksi</button></header>' +
       '<div class="card fam-masuk"><div class="fam-masuk-txt"><strong>Keuangan keluarga</strong>' +
@@ -934,8 +934,8 @@
         table = '<div class="tbl-wrap"><table><thead><tr><th>Tanggal</th><th>Hari</th><th class="n">Masuk</th><th class="n">Keluar</th><th class="n">Selisih</th><th class="n">Jml</th></tr></thead><tbody>' +
           rows.map(function (d) {
             return '<tr><td>' + H(U.fmtDate(d.date)) + '</td><td class="dim">' + U.DAYS[U.strToDate(d.date).getDay()] + '</td>' +
-              '<td class="n" style="color:var(--in)">' + (d.income ? U.fmtNum(d.income) : '—') + '</td>' +
-              '<td class="n" style="color:var(--out)">' + (d.expense ? U.fmtNum(d.expense) : '—') + '</td>' +
+              '<td class="n" style="color:var(--in)">' + (d.income ? U.fmtNum(d.income) : '') + '</td>' +
+              '<td class="n" style="color:var(--out)">' + (d.expense ? U.fmtNum(d.expense) : '') + '</td>' +
               '<td class="n" style="color:' + (d.net >= 0 ? 'var(--in)' : 'var(--out)') + '">' + (d.net >= 0 ? '+' : '−') + U.fmtNum(Math.abs(d.net)) + '</td>' +
               '<td class="n dim">' + d.count + '</td></tr>';
           }).join('') + '</tbody></table></div>';
@@ -959,8 +959,8 @@
           rows.map(function (d) {
             return '<tr><td>' + H(U.fmtDate(d.week)) + ' – ' + H(U.fmtDate(d.end)) + '</td>' +
               '<td class="n dim">' + d.activeDays + '</td>' +
-              '<td class="n" style="color:var(--in)">' + (d.income ? U.fmtNum(d.income) : '—') + '</td>' +
-              '<td class="n" style="color:var(--out)">' + (d.expense ? U.fmtNum(d.expense) : '—') + '</td>' +
+              '<td class="n" style="color:var(--in)">' + (d.income ? U.fmtNum(d.income) : '') + '</td>' +
+              '<td class="n" style="color:var(--out)">' + (d.expense ? U.fmtNum(d.expense) : '') + '</td>' +
               '<td class="n" style="color:' + (d.net >= 0 ? 'var(--in)' : 'var(--out)') + '">' + (d.net >= 0 ? '+' : '−') + U.fmtNum(Math.abs(d.net)) + '</td>' +
               '<td class="n dim">' + d.count + '</td></tr>';
           }).join('') + '</tbody></table></div>';
@@ -982,10 +982,10 @@
         table = '<div class="tbl-wrap"><table><thead><tr><th>Bulan</th><th class="n">Masuk</th><th class="n">Keluar</th><th class="n">Selisih</th><th class="n">Pindah dana</th><th class="n">Jml</th></tr></thead><tbody>' +
           rows.map(function (d) {
             return '<tr><td>' + H(U.fmtMonth(d.month)) + '</td>' +
-              '<td class="n" style="color:var(--in)">' + (d.income ? U.fmtNum(d.income) : '—') + '</td>' +
-              '<td class="n" style="color:var(--out)">' + (d.expense ? U.fmtNum(d.expense) : '—') + '</td>' +
+              '<td class="n" style="color:var(--in)">' + (d.income ? U.fmtNum(d.income) : '') + '</td>' +
+              '<td class="n" style="color:var(--out)">' + (d.expense ? U.fmtNum(d.expense) : '') + '</td>' +
               '<td class="n" style="color:' + (d.net >= 0 ? 'var(--in)' : 'var(--out)') + '">' + (d.net >= 0 ? '+' : '−') + U.fmtNum(Math.abs(d.net)) + '</td>' +
-              '<td class="n dim">' + (d.moved ? U.fmtNum(d.moved) : '—') + '</td>' +
+              '<td class="n dim">' + (d.moved ? U.fmtNum(d.moved) : '') + '</td>' +
               '<td class="n dim">' + d.count + '</td></tr>';
           }).join('') + '</tbody></table></div>';
       }
@@ -1008,7 +1008,7 @@
               '<td class="n" style="color:var(--in)">' + U.fmtNum(d.income) + '</td>' +
               '<td class="n" style="color:var(--out)">' + U.fmtNum(d.expense) + '</td>' +
               '<td class="n" style="color:' + (d.net >= 0 ? 'var(--in)' : 'var(--out)') + '"><b>' + (d.net >= 0 ? '+' : '−') + U.fmtNum(Math.abs(d.net)) + '</b></td>' +
-              '<td class="n dim">' + (d.moved ? U.fmtNum(d.moved) : '—') + '</td>' +
+              '<td class="n dim">' + (d.moved ? U.fmtNum(d.moved) : '') + '</td>' +
               '<td class="n dim">' + d.count + '</td></tr>';
           }).join('') + '</tbody></table></div>';
       }
@@ -1401,7 +1401,7 @@
 
     '<div class="card mt"><div class="card-head"><h2>ℹ️ Tentang</h2></div>' +
       '<div class="tbl-wrap"><table><tbody>' +
-        '<tr><td class="dim">Versi aplikasi</td><td>1.0.0 — Tahap 1</td></tr>' +
+        '<tr><td class="dim">Versi aplikasi</td><td>1.0.0 (Tahap 1)</td></tr>' +
         '<tr><td class="dim">Versi skema data</td><td>' + db.version + '</td></tr>' +
         '<tr><td class="dim">Dibuat</td><td>' + H(db.meta.created ? new Date(db.meta.created).toLocaleString('id-ID') : '-') + '</td></tr>' +
         '<tr><td class="dim">Terakhir diubah</td><td>' + H(db.meta.updated ? new Date(db.meta.updated).toLocaleString('id-ID') : '-') + '</td></tr>' +
@@ -1627,7 +1627,7 @@
     const db = root.App.db;
     const b = id ? (db.budgets || []).filter(function (x) { return x.id === id; })[0] : null;
     const catOut = (db.categories || []).filter(function (c) { return !c.archived && c.type === 'out'; });
-    if (!catOut.length) { V.toast('Belum ada kategori pengeluaran — tambahkan dulu di menu Kategori', 'err'); return; }
+    if (!catOut.length) { V.toast('Belum ada kategori pengeluaran, tambahkan dulu di menu Kategori', 'err'); return; }
     const f = b || { id: '', categoryId: presetCat || '', limit: '', period: 'month', note: '' };
 
     V.modal.open({
@@ -1657,7 +1657,7 @@
       if (!catId) { V.toast('Pilih kategori dulu', 'err'); return; }
       if (!(limit > 0)) { V.toast('Batas anggaran harus lebih dari 0', 'err'); return; }
       const lain = (db.budgets || []).filter(function (x) { return x.categoryId === catId && (!b || x.id !== b.id); })[0];
-      if (lain) { V.toast('Kategori ini sudah punya anggaran — ubah yang ada saja', 'err'); return; }
+      if (lain) { V.toast('Kategori ini sudah punya anggaran, ubah yang ada saja', 'err'); return; }
       const obj = {
         id: b ? b.id : U.uid('bud'),
         categoryId: catId, limit: limit,
@@ -1764,7 +1764,7 @@
             (f.saved ? U.fmtNum(f.saved) : '') + '" placeholder="0"></div></div>' +
         '<div class="field"><label>Dompet tujuan <span class="muted">(opsional)</span></label>' +
           '<select id="g-wallet">' + pilihanDompet(db, f.walletId) + '</select>' +
-          '<span class="hint">Penanda saja — uangnya tetap dihitung di saldo dompet.</span></div>' +
+          '<span class="hint">Penanda saja, uangnya tetap dihitung di saldo dompet.</span></div>' +
         '<div class="field"><label>Tenggat <span class="muted">(opsional)</span></label>' +
           '<input type="date" id="g-due" value="' + H(f.due) + '">' +
           '<span class="hint">Dengan tenggat, aplikasi menghitung berapa yang perlu ditabung per bulan.</span></div>' +
@@ -1927,7 +1927,7 @@
         '<button class="btn primary" onclick="V.subForm()">+ Tambah Langganan</button></div>' +
       (list.length
         ? '<div class="grid cols-3">' + kartu + '</div>'
-        : emptyBox('🔁', 'Belum ada langganan tercatat. Netflix, Spotify, iCloud, sewa domain — masukkan di sini supaya tidak lupa.')) +
+        : emptyBox('🔁', 'Belum ada langganan tercatat. Netflix, Spotify, iCloud, sewa domain. Masukkan di sini supaya tidak lupa.')) +
       (list.length ? '<div class="grid cols-3 mt">' +
         '<div class="stat out"><div class="lbl">Total per bulan</div><div class="val" style="font-size:18px">' + U.fmtRpShort(totalBulan) + '</div>' +
           '<div class="sub">' + list.length + ' langganan aktif</div></div>' +
@@ -2025,7 +2025,7 @@
     const today = U.today();
     if (S.subPaidIn(db, s, U.monthOf(today))) { V.toast('Bulan ini sudah ditandai lunas', 'err'); return; }
     const walletId = s.walletId || ((db.wallets || [])[0] || {}).id;
-    if (!walletId) { V.toast('Belum ada dompet — tambahkan dulu di menu Dompet & Bank', 'err'); return; }
+    if (!walletId) { V.toast('Belum ada dompet, tambahkan dulu di menu Dompet & Bank', 'err'); return; }
     const tx = S.mkTx({
       date: today, type: 'out', amount: s.amount, walletId: walletId,
       categoryId: s.categoryId || '',
@@ -2154,7 +2154,7 @@
         '<h2>Profil di perangkat ini</h2><span class="spacer"></span>' +
         '<button class="btn primary" onclick="V.profilForm()">+ Profil Baru</button></div>' +
       '<p class="muted" style="margin:-4px 0 14px">Setiap profil punya catatan, dompet, anggaran, dan target sendiri. ' +
-        'Data antar profil <b>terpisah total</b> — tidak bisa saling melihat.</p>' +
+        'Data antar profil <b>terpisah total</b>, tidak bisa saling melihat.</p>' +
       '<div class="profil-list">' + kartu + '</div>' +
     '</div>' +
 
@@ -2166,7 +2166,7 @@
       '</p>' +
       (berSandi ? '<button class="btn" onclick="V.profilKunci()">🔒 Kunci Sekarang</button>' : '') +
       '<div class="hint" style="margin-top:10px">Catatan: sandi ini menjaga dari orang yang memakai browser yang sama. ' +
-        'Ia <b>bukan</b> enkripsi — orang yang sangat paham teknis tetap bisa membaca data di browser ini.</div>' +
+        'Ia <b>bukan</b> enkripsi, orang yang sangat paham teknis tetap bisa membaca data di browser ini.</div>' +
     '</div>';
   };
 
@@ -2244,7 +2244,7 @@
       title: 'Pindah ke profil ini?',
       body: '<p>Data yang sekarang terbuka akan diganti dengan data profil <b>' +
             H((P.get(id) || {}).name || '') + '</b>.</p>' +
-            '<p class="muted" style="margin-top:8px">Catatanmu tidak hilang — hanya disimpan, dan bisa dibuka lagi kapan saja.</p>',
+            '<p class="muted" style="margin-top:8px">Catatanmu tidak hilang, hanya disimpan, dan bisa dibuka lagi kapan saja.</p>',
       foot: '<button class="btn" data-close>Batal</button>' +
             '<button class="btn primary" id="pp-ok">Pindah</button>'
     });

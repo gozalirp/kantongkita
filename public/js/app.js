@@ -18,6 +18,15 @@
     dompet: 'V.dompet()', kategori: 'V.kategori()', pengaturan: 'V.pengaturan()', profil: 'V.profil()',
     masuk: 'V.gerbangMasuk()'
   };
+  /* Blok galat yang tetap terlihat. Toast hilang sendiri, jadi kegagalan
+     memuat data akan tampak seperti halaman normal tanpa ini. */
+  function blokGalat() {
+    return '<div class="card alert" id="blok-galat" role="alert">' +
+      '<div class="card-head"><h2>Data belum bisa dimuat</h2></div>' +
+      '<p class="dim" style="font-size:13.5px;margin-bottom:14px">' + U.esc(App._galat) + '</p>' +
+      '<button class="btn primary" onclick="App.ulangGalat()">Coba lagi</button>' +
+      '</div>';
+  }
   const BIND = {
     menu: null, dashboard: 'V.dashboardBind()', transaksi: 'V.transaksiBind()', rekap: 'V.rekapBind()',
     anggaran: null, target: null, langganan: null,
@@ -42,6 +51,9 @@
     _gerbangKode: '',
     _gerbangAkun: null,
     _emailAktif: false,
+    /* Pesan galat yang harus tetap terlihat di halaman, bukan sekadar toast
+       yang hilang sendiri. Kosong berarti tidak ada galat. */
+    _galat: '',
 
     keluarAkun: async function (button) {
       if (!confirm('Keluar dari akun? Catatan di perangkat ini tidak akan dihapus.')) return;
@@ -74,6 +86,7 @@
     storageKey: function () { return S.Persist.key(); },
 
     load: function () {
+      this._galat = '';
       let raw = S.Persist.load();
       if (!raw) { this.db = S.seedDB(); this.save(); }
       else this.db = S.normalize(raw);
@@ -87,6 +100,7 @@
       if (!root.K || !K.aktif()) { K && K.init(); return this.load(); }
       try {
         const buku = await K.muat();
+        this._galat = '';
         this.db = S.normalize(buku);
         this.dbBaru = true;
         return this.db;
@@ -96,11 +110,38 @@
         this.lupakanAkun();
         this.db = S.seedDB();
         this.dbBaru = true;
-        V.toast(e.message === 'LOGIN'
+        this.galat(e.message === 'LOGIN'
           ? 'Sesi keluarga berakhir. Masuk lagi untuk melihat buku bersama.'
-          : 'Tidak bisa memuat buku keluarga. Periksa koneksi.', 'err');
+          : 'Buku keluarga tidak bisa dimuat. Periksa koneksi lalu coba lagi.');
         return this.db;
       }
+    },
+
+    /* Catat galat yang harus tetap terlihat di halaman. Toast saja tidak cukup:
+       ia hilang sendiri, dan halaman akan tampak normal seolah tidak ada masalah. */
+    galat: function (pesan) {
+      this._galat = String(pesan || '');
+      V.toast(this._galat, 'err');
+      /* Gambar ulang supaya blok galat benar-benar terlihat, bukan hanya toast. */
+      if (this._inited && !this._muatUlang) this.render();
+    },
+
+    /* Coba lagi setelah galat: muat ulang data lalu gambar halaman ini. */
+    ulangGalat: function () {
+      if (this._muatUlang) return;
+      const self = this;
+      this._muatUlang = true;
+      this._galat = '';
+      const konten = document.getElementById('content');
+      konten.innerHTML = '<div class="card"><div class="empty"><span class="e-ic">⏳</span>' +
+        '<p>Memuat ulang…</p></div></div>';
+      this.muat().then(function () {
+        self._muatUlang = false;
+        self.render();
+      }, function () {
+        self._muatUlang = false;
+        self.render();
+      });
     },
 
     save: function () {
@@ -114,7 +155,7 @@
       }
 
       const r = S.Persist.save(this.db);
-      if (r === 'slim') V.toast('Penyimpanan penuh — struk dihapus otomatis, transaksi tetap aman', 'err');
+      if (r === 'slim') V.toast('Penyimpanan penuh, struk dihapus otomatis, transaksi tetap aman', 'err');
 
       /* Salinan pribadi ke server, hanya bila sudah login. Lokal tetap sumber
          utama; server dipakai untuk membuka catatan di perangkat lain. */
@@ -159,7 +200,7 @@
             if (jauh && jauh.transactions) V.toast('Versi cloud punya ' + jauh.transactions.length + ' transaksi. Backup lokal dulu sebelum memilih.', 'err');
           });
         } else if (hasil === 'keluar') V.toast('Sesi berakhir. Catatan baru tetap tersimpan di perangkat ini.', 'err');
-        else if (hasil === 'luring') App.updateNetDot(false, 'Offline — salinan cloud tertunda');
+        else if (hasil === 'luring') App.updateNetDot(false, 'Offline, salinan cloud tertunda');
         return hasil;
       });
     },
@@ -184,10 +225,10 @@
           return;
         }
         if (r.status === 401) { K.keluar(); V.toast('Sesi keluarga berakhir. Kembali ke catatan pribadi.', 'err'); self.gantiMode(); return; }
-        if (r.status === 409) { V.toast('Data diubah anggota lain. Menampilkan versi terbaru…', 'err'); self.sinkronKeluarga(); return; }
-        V.toast('Gagal menyimpan ke buku keluarga.', 'err');
+        if (r.status === 409) { V.toast('Data diubah anggota lain. Menampilkan versi terbaru', 'err'); self.sinkronKeluarga(); return; }
+        self.galat('Perubahan belum tersimpan ke buku keluarga. Data tetap aman di perangkat ini.');
       }).catch(function () {
-        V.toast('Offline — perubahan belum terkirim ke buku keluarga.', 'err');
+        self.galat('Sedang offline, perubahan belum terkirim ke buku keluarga.');
       });
     },
 
@@ -432,11 +473,12 @@
       pill.textContent = (this.terkunci || gerbang) ? '🔒' : U.fmtRp(S.totalBalance(this.db));
       pill.hidden = !!gerbang;   // saat gerbang: gembok saja, tanpa angka
       pill.setAttribute('aria-label', gerbang ? 'Terkunci sampai masuk' : 'Total saldo');
-      document.getElementById('content').innerHTML = this.terkunci && VIEW_DATA.indexOf(name) > -1
+      const isi = this.terkunci && VIEW_DATA.indexOf(name) > -1
         ? '<div class="card"><div class="empty"><span class="e-ic">🔒</span>' +
           '<p>Profil ini terkunci.</p><p class="muted" style="margin-top:8px">Masukkan sandi untuk membuka catatan.</p>' +
           '<button class="btn primary" style="margin-top:14px" onclick="V.profilGate()">Buka dengan Sandi</button></div></div>'
         : eval(PREFIX[name]);
+      document.getElementById('content').innerHTML = (this._galat ? blokGalat() : '') + isi;
       U.polishIcons(document);
       if (name === 'dashboard') this.cekJKeluarga();
       if (name === 'masuk') V.gerbangBind();
@@ -651,7 +693,7 @@
       // backup otomatis harian (unduh sekali sehari)
       const last = this.db.settings.lastBackup ? this.db.settings.lastBackup.slice(0, 10) : '';
       if (last && U.diffDays(U.today(), last) >= 7) {
-        setTimeout(function () { V.toast('Sudah seminggu sejak backup terakhir — pertimbangkan unduh backup di Pengaturan'); }, 1500);
+        setTimeout(function () { V.toast('Sudah seminggu sejak backup terakhir, pertimbangkan unduh backup di Pengaturan'); }, 1500);
       }
 
       if (root.GDrive && this.db.settings.driveClientId) root.GDrive.clientId = this.db.settings.driveClientId;

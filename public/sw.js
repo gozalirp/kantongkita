@@ -1,5 +1,5 @@
 /* Service Worker untuk PWA SavingDuit (Offline-first & Installable) */
-const CACHE_NAME = 'savingduit-v32-akun-profil';
+const CACHE_NAME = 'savingduit-v33-antislop';
 const ASSETS = [
   './',
   './index.html',

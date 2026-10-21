@@ -377,7 +377,7 @@
       case '7d': return '7 hari terakhir';
       case '30d': return '30 hari terakhir';
       case 'all': return 'Semua waktu';
-      default: return from && to ? (U.fmtDate(from) + ' — ' + U.fmtDate(to)) : 'Semua waktu';
+      default: return from && to ? (U.fmtDate(from) + ' sampai ' + U.fmtDate(to)) : 'Semua waktu';
     }
   };
 
