@@ -223,12 +223,13 @@
       el('modal-body').innerHTML = opt.body || '';
       el('modal-foot').innerHTML = opt.foot || '';
       U.polishIcons(el('modal'));
+      U.ikatLabel(el('modal'));
       el('modal-wrap').hidden = false;
       el('modal-wrap').classList.add('show');
       el('modal-wrap').classList.toggle('locked', !!opt.lock);
       modalLocked = !!opt.lock;
       modalOnClose = opt.onClose || null;
-      const first = el('modal-body').querySelector('input,select,textarea');
+      const first = el('modal-body').querySelector('input:not([type=hidden]),select,textarea');
       if (first) setTimeout(function () { first.focus(); }, 40);
     },
     close: function (force) {
@@ -281,7 +282,9 @@
   }
 
   function segBtn(active, val, label, cls) {
-    return '<button type="button" data-seg="' + H(val) + '" class="' + (active === val ? 'on ' + (cls || '') : '') + '">' + label + '</button>';
+    const on = active === val;
+    return '<button type="button" data-seg="' + H(val) + '" class="' + (on ? 'on ' + (cls || '') : '') +
+      '" aria-pressed="' + (on ? 'true' : 'false') + '">' + label + '</button>';
   }
   /* Panah arah dana bukan emoji: dipakai sebagai penanda arah, bukan hiasan. */
   const ARAH = { in: '↓ ', out: '↑ ', move: '⇄ ' };
@@ -294,6 +297,43 @@
      jadi teksnya tidak perlu spasi pembuka lagi. */
   function wrapIco(shape) {
     return '<span class="ui-icon-wrap" aria-hidden="true">' + U.icon(shape) + '</span>';
+  }
+
+  /* Pilihan ikon & warna. Emoji di sini tetap emoji karena ini data yang
+     dipilih pengguna, bukan hiasan kontrol; hanya dibungkus .ui-emoji supaya
+     ukurannya terkendali dan tidak ikut dikonversi jadi SVG. */
+  const IKON_DOMPET = ['🏦','💳','💵','🐖','👛','📱','🏧','💼','📈','🏠'];
+  const IKON_TARGET = ['🎯','🏠','✈️','🚗','💻','📚','💍','🎓','🐖','🎁'];
+  const IKON_LANGGANAN = ['🔁','📶','🎬','🎵','☁️','📱','💡','🛡️','📺','🎮'];
+  const IKON_PROFIL = ['🏠', '💼', '👦', '👧', '💰', '🎓', '🏢', '🧑', '👨‍👩‍👧', '🐷'];
+  const WARNA_DOMPET = ['#22c55e', '#3d7bff', '#a78bfa', '#fbbf24', '#f4586c', '#06b6d4', '#ec4899', '#94a3b8'];
+  const WARNA_PROFIL = ['#5b8def', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#14b8a6', '#ec4899', '#64748b'];
+
+  function pilihanEmoji(id, daftar, kini) {
+    return '<div class="ikon-pilih" id="' + id + '">' + daftar.map(function (e) {
+      const on = e === kini;
+      return '<button type="button" class="ikon-btn' + (on ? ' on' : '') + '" data-emoji="' + H(e) + '"' +
+        ' aria-pressed="' + (on ? 'true' : 'false') + '" aria-label="Ikon ' + H(e) + '">' + emo(e) + '</button>';
+    }).join('') + '</div>';
+  }
+  /* Bentuk swatch dipakai untuk dua jenis data berbeda, jadi nama atributnya
+     ikut dikirim: dompet memakai data-color, profil memakai data-warna. */
+  function pilihanSwatch(id, daftar, kini, attr) {
+    return '<div class="warna-pilih" id="' + id + '">' + daftar.map(function (c) {
+      const on = c === kini;
+      return '<button type="button" class="warna-btn' + (on ? ' on' : '') + '" ' + attr + '="' + H(c) + '"' +
+        ' aria-pressed="' + (on ? 'true' : 'false') + '" aria-label="Warna ' + H(c) + '" style="background:' + H(c) + '"></button>';
+    }).join('') + '</div>';
+  }
+  /* Satu pilihan aktif per kelompok: kelas .on untuk mata, aria-pressed untuk
+     pembaca layar. Tidak ada lagi border/background yang ditulis dari JS. */
+  function tandaiPilihan(box, aktif) {
+    if (!box) return;
+    Array.prototype.forEach.call(box.children, function (b) {
+      const on = b === aktif;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
   }
 
   /* Tombol aksi berikon: satu bentuk untuk semua baris. Label teks tetap ada
@@ -478,7 +518,7 @@
       const rcp = form.receiptId && db.receipts[form.receiptId];
 
       const body =
-        '<div class="seg" id="f-type" style="margin-bottom:16px">' +
+        '<div class="seg" id="f-type" role="group" aria-label="Jenis transaksi" style="margin-bottom:16px">' +
           segBtn(form.type, 'in', ARAH.in + 'Pemasukan', 'in') +
           segBtn(form.type, 'out', ARAH.out + 'Pengeluaran', 'out') +
           segBtn(form.type, 'move', ARAH.move + 'Pindah Dana', 'move') +
@@ -490,7 +530,7 @@
         '<div class="field"><label>Nominal</label>' +
           '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="f-amount" ' +
           'value="' + (form.amount ? U.fmtNum(form.amount) : '') + '" placeholder="0"></div>' +
-          '<span class="hint" id="f-amount-hint"></span></div>' +
+          '<span class="hint" id="f-amount-hint" aria-live="polite"></span></div>' +
 
         '<div class="field"><label>' + (isMove ? 'Dari Dompet' : 'Dompet / Bank') + '</label>' +
           '<select id="f-wallet">' + walletOptions(db, form.walletId) + '</select></div>' +
@@ -857,15 +897,15 @@
             segBtn(st.preset, 'month', 'Bulan') + segBtn(st.preset, 'year', 'Tahun') +
             segBtn(st.preset, '7d', '7 Hari') + segBtn(st.preset, 'all', 'Semua') +
           '</div>' +
-          '<input type="text" id="tx-q" placeholder="Cari catatan / kategori…" value="' + H(st.q) + '" style="max-width:240px">' +
+          '<input type="search" id="tx-q" aria-label="Cari transaksi" placeholder="Cari catatan / kategori…" value="' + H(st.q) + '" style="max-width:240px">' +
           '<button class="btn primary" onclick="V.txForm()">' + wrapIco('plus') + 'Catat Transaksi</button>' +
         '</div>' +
         '<div class="row mt" style="gap:12px">' +
-          '<select id="tx-wallet" style="max-width:230px"><option value="">Semua dompet</option>' +
+          '<select id="tx-wallet" aria-label="Saring dompet" style="max-width:230px"><option value="">Semua dompet</option>' +
             walletOptions(db, st.walletId) + '</select>' +
-          '<select id="tx-cat" style="max-width:230px"><option value="">Semua kategori</option>' +
+          '<select id="tx-cat" aria-label="Saring kategori" style="max-width:230px"><option value="">Semua kategori</option>' +
             categoryOptions(db, st.catId) + '</select>' +
-          '<select id="tx-type" style="max-width:200px">' +
+          '<select id="tx-type" aria-label="Saring jenis transaksi" style="max-width:200px">' +
             '<option value="all"' + (st.type === 'all' ? ' selected' : '') + '>Semua jenis</option>' +
             '<option value="in"' + (st.type === 'in' ? ' selected' : '') + '>Pemasukan</option>' +
             '<option value="out"' + (st.type === 'out' ? ' selected' : '') + '>Pengeluaran</option>' +
@@ -952,7 +992,7 @@
     let picker = '', table = '', totalRow = '', caption = '';
 
     if (st.tab === 'hari') {
-      picker = '<input type="month" id="rk-ym" value="' + H(st.ym) + '" style="max-width:190px">';
+      picker = '<input type="month" id="rk-ym" aria-label="Bulan rekap" value="' + H(st.ym) + '" style="max-width:190px">';
       const from = st.ym + '-01', to = U.monthEnd(from);
       caption = U.fmtMonth(st.ym);
       const rows = S.byDay(db, from, to).sort(function (a, b) { return a.date < b.date ? 1 : -1; });
@@ -976,7 +1016,7 @@
     }
 
     if (st.tab === 'minggu') {
-      picker = '<input type="month" id="rk-ym" value="' + H(st.ym) + '" style="max-width:190px">';
+      picker = '<input type="month" id="rk-ym" aria-label="Bulan rekap" value="' + H(st.ym) + '" style="max-width:190px">';
       const from = st.ym + '-01', to = U.monthEnd(from);
       caption = 'Minggu dalam ' + U.fmtMonth(st.ym);
       const rows = S.byWeek(db, from, to);
@@ -1048,7 +1088,7 @@
         table + (totalRow ? '<div class="mt" style="border-top:1px solid var(--line);padding-top:14px">' + totalRow + '</div>' : '') +
       '</div>' +
       '<div class="card mt"><div class="card-head"><h2>Grafik Rekap</h2>' +
-        '<button class="btn sm" onclick="V.exportCSV()">⬇️ Unduh CSV</button></div>' +
+        '<button class="btn sm" onclick="V.exportCSV()">' + wrapIco('download') + 'Unduh CSV</button></div>' +
         (st.tab === 'tahun'
           ? dualBars(S.byYear(db).map(function (d) { return { label: d.year, income: d.income, expense: d.expense }; }))
           : st.tab === 'bulan'
@@ -1114,7 +1154,7 @@
     /* Kartu akun hanya relevan kalau memang ada akun yang login. */
     const akun = root.K && root.K.terbuka && root.K.nama ? root.K.nama : '';
     const kartuAkun = akun
-      ? '<div class="card mt"><div class="card-head"><h2>Akun</h2><span class="spacer"></span>' +
+      ? '<div class="card mt"><div class="card-head"><h2>Akun login</h2><span class="spacer"></span>' +
         '<span class="tag ok">masuk</span></div>' +
         '<p class="muted">Masuk sebagai <b>' + H(akun) + '</b>. Keluar tidak menghapus catatan yang tersimpan di perangkat ini.</p>' +
         '<div class="actions"><button class="btn" style="min-height:44px" onclick="App.emailAkun(this)">Status / verifikasi email</button>' +
@@ -1175,24 +1215,19 @@
   V.walletForm = function (id) {
     const db = root.App.db;
     const w = id ? db.wallets.filter(function (x) { return x.id === id; })[0] : null;
-    const COLORS = ['#22c55e', '#3d7bff', '#a78bfa', '#fbbf24', '#f4586c', '#06b6d4', '#ec4899', '#94a3b8'];
     const TYPES = [['cash', 'Tunai'], ['bank', 'Rekening Bank'], ['ewallet', 'E-Wallet'], ['credit', 'Kartu Kredit'], ['investment', 'Investasi'], ['other', 'Lainnya']];
     const f = w || { id: '', name: '', type: 'bank', icon: '🏦', color: '#3d7bff', initial: 0 };
 
     V.modal.open({
       title: w ? 'Ubah Dompet' : 'Tambah Dompet',
       body:
-        '<div class="field"><label>Nama</label><input type="text" id="w-name" value="' + H(f.name) + '" placeholder="contoh: BCA Gozali"></div>' +
+        '<div class="field"><label>Nama</label><input type="text" id="w-name" autocomplete="off" value="' + H(f.name) + '" placeholder="contoh: BCA Gozali"></div>' +
         '<div class="field"><label>Jenis</label><select id="w-type">' +
           TYPES.map(function (t) { return '<option value="' + t[0] + '"' + (f.type === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') +
         '</select></div>' +
-        '<div class="field"><label>Ikon (emoji)</label><input type="text" id="w-icon" value="' + H(f.icon) + '" maxlength="3"></div>' +
-        '<div class="field"><label>Warna</label><div class="row" id="w-colors">' +
-          COLORS.map(function (c) {
-            return '<button type="button" aria-label="Warna ' + c + '" data-color="' + c + '" style="width:44px;height:44px;border-radius:12px;border:2px solid ' +
-              (f.color === c ? '#0F172A' : 'transparent') + ';background:' + c + ';cursor:pointer"></button>';
-          }).join('') +
-        '</div></div>' +
+        '<div class="field"><label>Ikon</label>' + pilihanEmoji('w-icons', IKON_DOMPET, f.icon) +
+          '<input type="hidden" id="w-icon" value="' + H(f.icon) + '"></div>' +
+        '<div class="field"><label>Warna</label>' + pilihanSwatch('w-colors', WARNA_DOMPET, f.color, 'data-color') + '</div>' +
         '<div class="field"><label>Saldo awal <span class="muted">(opsional)</span></label>' +
           '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="w-initial" value="' + (f.initial ? U.fmtNum(f.initial) : '') + '" placeholder="0"></div>' +
           '<span class="hint">Saldo saat ini di dompet ini sebelum dicatat di aplikasi.</span></div>',
@@ -1200,11 +1235,15 @@
     });
 
     let color = f.color;
+    el('w-icons').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-emoji]'); if (!b) return;
+      el('w-icon').value = b.dataset.emoji;
+      tandaiPilihan(el('w-icons'), b);
+    });
     el('w-colors').addEventListener('click', function (e) {
       const b = e.target.closest('[data-color]'); if (!b) return;
       color = b.dataset.color;
-      Array.prototype.forEach.call(el('w-colors').children, function (c) { c.style.borderColor = 'transparent'; });
-      b.style.borderColor = '#0F172A';
+      tandaiPilihan(el('w-colors'), b);
     });
     const initIn = el('w-initial');
     initIn.addEventListener('input', function () {
@@ -1302,17 +1341,11 @@
     V.modal.open({
       title: c ? 'Ubah Kategori' : 'Tambah Kategori',
       body:
-        '<div class="field"><label>Nama</label><input type="text" id="c-name" value="' + H(f.name) + '" placeholder="contoh: Kopi &amp; Jajan"></div>' +
+        '<div class="field"><label>Nama</label><input type="text" id="c-name" autocomplete="off" value="' + H(f.name) + '" placeholder="contoh: Kopi &amp; Jajan"></div>' +
         '<div class="field"><label>Jenis</label><div class="seg" id="c-type">' +
           segBtn(f.type, 'out', ARAH.out + 'Pengeluaran', 'out') + segBtn(f.type, 'in', ARAH.in + 'Pemasukan', 'in') + '</div></div>' +
-        '<div class="field"><label>Ikon</label>' +
-          '<div class="row" id="c-icons" style="gap:6px">' +
-            EMOJI.map(function (e) {
-              return '<button type="button" data-emoji="' + e + '" style="width:34px;height:34px;font-size:17px;border-radius:8px;cursor:pointer;border:1px solid ' +
-                (f.icon === e ? 'var(--accent)' : 'var(--line)') + ';background:' + (f.icon === e ? 'var(--accent-soft)' : 'var(--panel-2)') + '">' + e + '</button>';
-            }).join('') +
-          '</div>' +
-          '<input type="text" id="c-icon" value="' + H(f.icon) + '" maxlength="3" style="margin-top:8px;max-width:110px"></div>',
+        '<div class="field"><label>Ikon</label>' + pilihanEmoji('c-icons', EMOJI, f.icon) +
+          '<input type="hidden" id="c-icon" value="' + H(f.icon) + '"></div>',
       foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="c-save">Simpan</button>'
     });
 
@@ -1320,17 +1353,18 @@
     el('c-type').addEventListener('click', function (e) {
       const b = e.target.closest('[data-seg]'); if (!b) return;
       type = b.dataset.seg;
-      Array.prototype.forEach.call(el('c-type').children, function (x) { x.className = ''; });
-      b.className = 'on ' + (type === 'in' ? 'in' : 'out');
+      Array.prototype.forEach.call(el('c-type').children, function (x) {
+        const on = x === b;
+        x.className = on ? 'on ' + (type === 'in' ? 'in' : 'out') : '';
+        x.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
     });
     el('c-icons').addEventListener('click', function (e) {
       const b = e.target.closest('[data-emoji]'); if (!b) return;
+      el('c-icon').value = b.dataset.emoji;
       icon = b.dataset.emoji;
-      el('c-icon').value = icon;
-      Array.prototype.forEach.call(el('c-icons').children, function (x) { x.style.borderColor = 'var(--line)'; x.style.background = 'var(--panel-2)'; });
-      b.style.borderColor = 'var(--accent)'; b.style.background = 'var(--accent-soft)';
+      tandaiPilihan(el('c-icons'), b);
     });
-    el('c-icon').addEventListener('input', function () { icon = el('c-icon').value; });
 
     el('c-save').onclick = function () {
       const name = el('c-name').value.trim();
@@ -1398,10 +1432,10 @@
     '</div>' +
 
     '<div class="card mt"><div class="card-head"><h2>Cloudflare D1 Cloud Sync (Otomatis)</h2>' +
-      '<span class="net-dot on"><span></span><em>Aktif Realtime</em></span></div>' +
+      '<span class="net-dot" id="st-net-dot"><span></span><em>Lokal</em></span></div>' +
       '<p class="dim" style="font-size:13px;margin-bottom:14px">' +
-        'Data Anda otomatis tersinkronkan ke database serverless Cloudflare D1 di latar belakang setiap ada perubahan. ' +
-        'Jika Anda ingin memaksa sinkronisasi sekarang secara manual, klik tombol di bawah.</p>' +
+        'Data kamu otomatis tersinkronkan ke database serverless Cloudflare D1 di latar belakang setiap ada perubahan. ' +
+        'Kalau mau memaksa sinkronisasi sekarang, klik tombol Sinkronkan Sekarang.</p>' +
       '<div class="row">' +
         '<button class="btn primary" onclick="App.manualSyncCloud()">' + wrapIco('refresh') + 'Sinkronkan Sekarang (Cloudflare)</button>' +
       '</div>' +
@@ -1414,8 +1448,8 @@
         'Supaya data ikut tersimpan ke Drive, isi <b>OAuth Client ID</b> dari Google Cloud Console di bawah, ' +
         'lalu klik <b>Sambungkan Drive</b>. Tanpa Client ID, aplikasi tetap berjalan normal dengan penyimpanan lokal.</p>' +
       '<div class="field"><label>OAuth Client ID</label>' +
-        '<input type="text" id="st-client" value="' + H(st.driveClientId) + '" placeholder="xxxxx.apps.googleusercontent.com">' +
-        '<span class="hint">Buat di console.cloud.google.com → APIs &amp; Services → Credentials → OAuth client ID → Web application. ' +
+        '<input type="text" id="st-client" aria-describedby="st-client-hint" value="' + H(st.driveClientId) + '" placeholder="xxxxx.apps.googleusercontent.com">' +
+        '<span class="hint" id="st-client-hint">Buat di console.cloud.google.com → APIs &amp; Services → Credentials → OAuth client ID → Web application. ' +
         'Tambahkan <code>' + H(location.origin || 'file://') + '</code> ke Authorized JavaScript origins, dan aktifkan <b>Google Drive API</b>.</span></div>' +
       '<div class="row">' +
         '<button class="btn primary" id="st-drive-connect" ' + (st.driveClientId ? '' : 'disabled style="opacity:.5"') + '>' + wrapIco('cloud') + 'Sambungkan Drive</button>' +
@@ -1615,8 +1649,9 @@
     (db.budgets || []).forEach(function (b) { dipakai[b.categoryId] = true; });
     const belum = catOut.filter(function (c) { return !dipakai[c.id]; });
 
-    return '<div class="card"><div class="card-head"><h2>Anggaran per Kategori</h2>' +
+    return '<div class="card"><div class="card-head">' +
         '<span class="muted" style="font-size:12px">' + U.fmtMonth(U.monthOf(today)) + '</span>' +
+        '<span class="spacer"></span>' +
         '<button class="btn primary" onclick="V.budgetForm()">' + wrapIco('plus') + 'Tambah Anggaran</button></div>' +
       (rows.length
         ? '<div class="grid cols-3">' + kartu + '</div>'
@@ -1753,7 +1788,7 @@
       '</div>';
     }).join('');
 
-    return '<div class="card"><div class="card-head"><h2>Target Tabungan</h2>' +
+    return '<div class="card"><div class="card-head"><span class="spacer"></span>' +
         '<button class="btn primary" onclick="V.goalForm()">' + wrapIco('plus') + 'Tambah Target</button></div>' +
       (list.length
         ? '<div class="grid cols-3">' + kartu + '</div>'
@@ -1778,14 +1813,12 @@
       title: g ? 'Ubah Target' : 'Tambah Target Tabungan',
       body:
         '<div class="field"><label>Nama target</label>' +
-          '<input type="text" id="g-name" value="' + H(f.name) + '" placeholder="contoh: Dana darurat"></div>' +
-        '<div class="row" style="gap:12px;align-items:flex-start">' +
-          '<div class="field" style="flex:0 0 92px"><label>Ikon</label>' +
-            '<input type="text" id="g-icon" value="' + H(f.icon) + '" maxlength="3"></div>' +
-          '<div class="field" style="flex:1"><label>Target dana</label>' +
-            '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="g-target" value="' +
-              (f.target ? U.fmtNum(f.target) : '') + '" placeholder="contoh: 20.000.000"></div></div>' +
-        '</div>' +
+          '<input type="text" id="g-name" autocomplete="off" value="' + H(f.name) + '" placeholder="contoh: Dana darurat"></div>' +
+        '<div class="field"><label>Ikon</label>' + pilihanEmoji('g-icons', IKON_TARGET, f.icon) +
+          '<input type="hidden" id="g-icon" value="' + H(f.icon) + '"></div>' +
+        '<div class="field"><label>Target dana</label>' +
+          '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="g-target" value="' +
+            (f.target ? U.fmtNum(f.target) : '') + '" placeholder="contoh: 20.000.000"></div></div>' +
         '<div class="field"><label>Sudah terkumpul <span class="muted">(opsional)</span></label>' +
           '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="g-saved" value="' +
             (f.saved ? U.fmtNum(f.saved) : '') + '" placeholder="0"></div></div>' +
@@ -1798,6 +1831,12 @@
         '<div class="field"><label>Catatan <span class="muted">(opsional)</span></label>' +
           '<input type="text" id="g-note" value="' + H(f.note) + '" placeholder="contoh: untuk beli laptop kerja"></div>',
       foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="g-save">Simpan</button>'
+    });
+
+    el('g-icons').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-emoji]'); if (!b) return;
+      el('g-icon').value = b.dataset.emoji;
+      tandaiPilihan(el('g-icons'), b);
     });
 
     ['g-target', 'g-saved'].forEach(function (id2) {
@@ -1950,7 +1989,7 @@
       '<div class="muted" style="font-size:13px">Total ' + U.fmtRp(U.sum(dekat, function (r) { return Number(r.sub.amount); })) +
         ' akan keluar dalam 7 hari ke depan: ' + dekat.map(function (r) { return H(r.sub.name); }).join(', ') + '.</div></div>' : '') +
 
-    '<div class="card' + (dekat.length ? ' mt' : '') + '"><div class="card-head"><h2>Langganan Bulanan</h2>' +
+    '<div class="card' + (dekat.length ? ' mt' : '') + '"><div class="card-head"><span class="spacer"></span>' +
         '<button class="btn primary" onclick="V.subForm()">' + wrapIco('plus') + 'Tambah Langganan</button></div>' +
       (list.length
         ? '<div class="grid cols-3">' + kartu + '</div>'
@@ -1978,12 +2017,10 @@
     V.modal.open({
       title: s ? 'Ubah Langganan' : 'Tambah Langganan',
       body:
-        '<div class="row" style="gap:12px;align-items:flex-start">' +
-          '<div class="field" style="flex:0 0 92px"><label>Ikon</label>' +
-            '<input type="text" id="s-icon" value="' + H(f.icon) + '" maxlength="3"></div>' +
-          '<div class="field" style="flex:1"><label>Nama langganan</label>' +
-            '<input type="text" id="s-name" value="' + H(f.name) + '" placeholder="contoh: Netflix"></div>' +
-        '</div>' +
+        '<div class="field"><label>Nama langganan</label>' +
+          '<input type="text" id="s-name" autocomplete="off" value="' + H(f.name) + '" placeholder="contoh: Netflix"></div>' +
+        '<div class="field"><label>Ikon</label>' + pilihanEmoji('s-icons', IKON_LANGGANAN, f.icon) +
+          '<input type="hidden" id="s-icon" value="' + H(f.icon) + '"></div>' +
         '<div class="row" style="gap:12px;align-items:flex-start">' +
           '<div class="field" style="flex:1"><label>Nominal</label>' +
             '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="s-amount" value="' +
@@ -1993,12 +2030,18 @@
         '</div>' +
         '<div class="field"><label>Tanggal jatuh tempo</label>' +
           '<input type="number" id="s-day" min="1" max="31" value="' + H(f.day) + '">' +
-          '<span class="hint" id="s-day-hint"></span></div>' +
+          '<span class="hint" id="s-day-hint" aria-live="polite"></span></div>' +
         '<div class="field"><label>Dompet pembayar</label><select id="s-wallet">' + pilihanDompet(db, f.walletId) + '</select></div>' +
         '<div class="field"><label>Kategori</label><select id="s-cat">' + pilihanKategori(db, f.categoryId, 'out') + '</select></div>' +
         '<div class="field"><label>Catatan <span class="muted">(opsional)</span></label>' +
           '<input type="text" id="s-note" value="' + H(f.note) + '" placeholder="contoh: paket keluarga 4 layar"></div>',
       foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="s-save">Simpan</button>'
+    });
+
+    el('s-icons').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-emoji]'); if (!b) return;
+      el('s-icon').value = b.dataset.emoji;
+      tandaiPilihan(el('s-icons'), b);
     });
 
     const amtIn = el('s-amount');
@@ -2107,20 +2150,6 @@
      VIEW: PROFIL — beberapa "akun" lokal
      Tiap profil menyimpan datanya sendiri (lihat S.Profiles).
      ============================================================ */
-  const IKON_PROFIL = ['🏠', '💼', '👦', '👧', '💰', '🎓', '🏢', '🧑', '👨‍👩‍👧', '🐷'];
-  const WARNA_PROFIL = ['#5b8def', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#14b8a6', '#ec4899', '#64748b'];
-
-  function pilihanIkon(kini) {
-    return '<div class="ikon-pilih" id="p-ikon">' + IKON_PROFIL.map(function (ic) {
-      return '<button type="button" title="Pilih ikon profil" class="ikon-btn' + (ic === kini ? ' on' : '') + '" data-emoji="' + ic + '">' + ic + '</button>';
-    }).join('') + '</div>';
-  }
-  function pilihanWarna(kini) {
-    return '<div class="warna-pilih" id="p-warna">' + WARNA_PROFIL.map(function (c) {
-      return '<button type="button" class="warna-btn' + (c === kini ? ' on' : '') + '" aria-label="Warna ' + c + '" data-warna="' + c + '" style="background:' + c + '"></button>';
-    }).join('') + '</div>';
-  }
-
   V.profil = function () {
     const P = S.Profiles;
     const list = P.list();
@@ -2131,18 +2160,39 @@
     /* Akun yang sedang login ditampilkan terpisah dari profil lokal, supaya
        jelas mana yang tersimpan di server dan mana yang di perangkat ini. */
     const kartuAkun = akun
-      ? '<div class="card"><div class="card-head"><h2>Akun</h2><span class="spacer"></span>' +
+      ? '<div class="card"><div class="card-head"><h2>Akun login</h2><span class="spacer"></span>' +
           '<span class="tag ok">masuk</span></div>' +
           '<div class="profil-list"><div class="profil-card on">' +
             '<div class="pc-ic">' + U.icon('user') + '</div>' +
             '<div class="pc-main"><div class="pc-nama">' + H(akun) + '</div>' +
-              '<div class="pc-info muted">Akun yang sedang login. Catatan keuangan di bawah tetap tersimpan di perangkat ini.</div>' +
+              '<div class="pc-info muted">Identitas untuk masuk dan mengakses buku keluarga. Pasangan memakai akun sendiri, bukan password kamu.</div>' +
             '</div>' +
             '<div class="pc-act"><button class="btn sm" onclick="App.emailAkun(this)">Status email</button>' +
               '<button class="btn sm ghost" onclick="App.keluarAkun(this)">Keluar</button></div>' +
           '</div></div>' +
         '</div>'
-      : '';
+      : '<div class="card"><div class="card-head"><h2>Akun login</h2></div>' +
+          '<p class="muted">Belum masuk. Akun login berbeda dari profil lokal di perangkat ini.</p>' +
+          '<a class="btn" href="/keluarga?aksi=masuk">Masuk ke akun</a></div>';
+
+    const keluargaAktif = !!(root.K && root.K.aktif && root.K.aktif());
+    const kartuKeluarga = '<section class="card mt" aria-labelledby="profil-keluarga-title">' +
+      '<div class="card-head"><h2 id="profil-keluarga-title">Keluarga</h2></div>' +
+      '<p class="muted">Satu buku bersama, dua akun masing-masing. Bukan satu password untuk berdua.</p>' +
+      (akun
+        ? '<p>Buka buku keluarga untuk mencatat bersama. Untuk mengundang pasangan, buka Kelola keluarga lalu pilih <b>Buat undangan pasangan</b> jika tersedia.</p>' +
+          '<div class="row"><button class="btn primary" onclick="App.gantiMode(\'keluarga\')"' + (keluargaAktif ? ' disabled' : '') + '>' +
+            (keluargaAktif ? 'Buku keluarga sedang aktif' : 'Buka buku keluarga') + '</button>' +
+            '<a class="btn" href="/keluarga">Kelola keluarga &amp; undangan</a></div>'
+        : '<p>Mulai dari salah satu langkah berikut:</p>' +
+          '<div class="row"><a class="btn primary" href="/keluarga?aksi=aktivasi">Buat akun pertama</a>' +
+            '<a class="btn" href="/keluarga?aksi=undangan">Gabung dengan kode undangan</a></div>') +
+      '<ol><li>Pemilik akun membuat undangan dan mengirim kodenya ke pasangan.</li>' +
+        '<li>Pasangan membuka <b>Punya kode undangan?</b> di perangkat sendiri, lalu membuat username dan password sendiri.</li>' +
+        '<li>Setelah bergabung, keduanya memakai buku keluarga yang sama.</li></ol>' +
+      '<p class="hint">Maksimal 2 anggota. Kode berlaku 24 jam dan sekali pakai. Buku keluarga memerlukan internet.</p>' +
+      '<p class="muted"><b>Data lama tidak otomatis digabung.</b> Catatan pribadi dan profil lokal tetap terpisah dari buku keluarga. Profil Baru di bawah bukan untuk mengundang pasangan.</p>' +
+    '</section>';
 
     const kartu = list.map(function (p) {
       const ini = p.id === aktif;
@@ -2175,11 +2225,12 @@
       '</div>';
     }).join('');
 
-    return kartuAkun + '<div class="card' + (kartuAkun ? ' mt' : '') + '"><div class="card-head">' +
+    return kartuAkun + kartuKeluarga + '<div class="card' + (kartuAkun ? ' mt' : '') + '"><div class="card-head">' +
         '<h2>Profil di perangkat ini</h2><span class="spacer"></span>' +
-        '<button class="btn primary" onclick="V.profilForm()">' + wrapIco('plus') + 'Profil Baru</button></div>' +
+        '<button class="btn primary" id="profil-baru" onclick="V.profilForm()">' + wrapIco('plus') + 'Profil Baru</button></div>' +
       '<p class="muted" style="margin:-4px 0 14px">Setiap profil punya catatan, dompet, anggaran, dan target sendiri. ' +
-        'Data antar profil <b>terpisah total</b>, tidak bisa saling melihat.</p>' +
+        'Gunakan untuk memisahkan catatan, misalnya Pribadi dan Usaha. Ini <b>bukan akun pasangan</b> dan tidak menambah anggota keluarga.</p>' +
+      (keluargaAktif ? '<p class="hint">Saat ini buku keluarga sedang aktif. Daftar berikut adalah profil lokal, bukan daftar anggota keluarga.</p>' : '') +
       '<div class="profil-list">' + kartu + '</div>' +
     '</div>' +
 
@@ -2207,8 +2258,8 @@
       body:
         '<div class="field"><label>Nama profil</label>' +
           '<input type="text" id="p-nama" value="' + H(f.name) + '" placeholder="contoh: Pribadi, Usaha, Anak" maxlength="24"></div>' +
-        '<div class="field"><label>Ikon</label>' + pilihanIkon(f.icon) + '</div>' +
-        '<div class="field"><label>Warna</label>' + pilihanWarna(f.color) + '</div>' +
+        '<div class="field"><label>Ikon</label>' + pilihanEmoji('p-ikon', IKON_PROFIL, f.icon) + '</div>' +
+        '<div class="field"><label>Warna</label>' + pilihanSwatch('p-warna', WARNA_PROFIL, f.color, 'data-warna') + '</div>' +
         '<div class="field"><label>Sandi <span class="muted">(opsional)</span></label>' +
           '<input type="password" id="p-pin" inputmode="numeric" autocomplete="new-password" ' +
             'placeholder="' + (p && p.pinHash ? 'biarkan kosong bila tidak ingin mengubah' : 'contoh: 1234 (boleh kosong)') + '">' +
@@ -2223,12 +2274,12 @@
     el('p-ikon').addEventListener('click', function (e) {
       const b = e.target.closest('[data-emoji]'); if (!b) return;
       ikon = b.dataset.emoji;
-      Array.prototype.forEach.call(el('p-ikon').children, function (x) { x.classList.toggle('on', x === b); });
+      tandaiPilihan(el('p-ikon'), b);
     });
     el('p-warna').addEventListener('click', function (e) {
       const b = e.target.closest('[data-warna]'); if (!b) return;
       warna = b.dataset.warna;
-      Array.prototype.forEach.call(el('p-warna').children, function (x) { x.classList.toggle('on', x === b); });
+      tandaiPilihan(el('p-warna'), b);
     });
 
     el('p-save').onclick = function () {
@@ -2316,8 +2367,9 @@
       title: p.icon + '  ' + p.name,
       body: '<p class="muted">Profil ini dilindungi sandi. Masukkan sandi untuk melihat catatan.</p>' +
             '<div class="field" style="margin-top:14px"><label>Sandi</label>' +
-            '<input type="password" id="pg-pin" inputmode="numeric" autocomplete="current-password" placeholder="••••"></div>' +
-            '<div class="hint" id="pg-err" style="color:var(--out)"></div>',
+            '<input type="password" id="pg-pin" inputmode="numeric" autocomplete="current-password" ' +
+            'aria-describedby="pg-err" placeholder="••••"></div>' +
+            '<div class="hint" id="pg-err" aria-live="polite" style="color:var(--out)"></div>',
       foot: '<button class="btn" id="pg-lain">Ganti Profil</button>' +
             '<button class="btn primary" id="pg-ok">Buka</button>',
       lock: true

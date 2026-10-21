@@ -133,7 +133,7 @@
       this._muatUlang = true;
       this._galat = '';
       const konten = document.getElementById('content');
-      konten.innerHTML = '<div class="card"><div class="empty"><span class="e-ic">⏳</span>' +
+      konten.innerHTML = '<div class="card"><div class="empty"><span class="e-ic">' + U.icon('clock') + '</span>' +
         '<p>Memuat ulang…</p></div></div>';
       this.muat().then(function () {
         self._muatUlang = false;
@@ -375,16 +375,19 @@
     },
 
     /* ---------- net indicator ---------- */
+    /* Satu status untuk semua badge jaringan. Nilainya disimpan supaya badge
+       yang baru digambar ulang (mis. kartu di Pengaturan) mewarisi keadaan
+       terakhir, bukan mengarang "aktif" sendiri. */
     updateNetDot: function (online, label) {
-      const d = document.getElementById('net-dot');
-      if (!d) return;
       const on = !!online;
-      d.classList.toggle('on', on);
-      if (label) {
-        d.querySelector('em').textContent = label;
-      } else {
-        d.querySelector('em').textContent = on ? 'Tersinkron' : 'Lokal';
-      }
+      const teks = label || (on ? 'Tersinkron' : 'Lokal');
+      this._net = { on: on, label: teks };
+      const dots = document.querySelectorAll('#net-dot,#st-net-dot');
+      Array.prototype.forEach.call(dots, function (d) {
+        d.classList.toggle('on', on);
+        const em = d.querySelector('em');
+        if (em) em.textContent = teks;
+      });
     },
 
     /* ---------- profil ---------- */
@@ -482,6 +485,8 @@
       document.getElementById('content').innerHTML = (this._galat ? blokGalat() : '') + isi;
       U.polishIcons(document);
       U.pasangIkonStatis(document);
+      U.ikatLabel(document);
+      if (this._net) this.updateNetDot(this._net.on, this._net.label);
       if (name === 'dashboard') this.cekJKeluarga();
       if (name === 'masuk') V.gerbangBind();
       const content = document.getElementById('content');
@@ -496,7 +501,7 @@
         dompet: 'Kelola saldo tunai, rekening, dan uang digitalmu.',
         kategori: 'Rapikan catatan dengan kategori yang sesuai kebutuhanmu.',
         pengaturan: 'Kelola backup, sinkronisasi, dan preferensi aplikasi.',
-        profil: 'Pisahkan catatan keuangan pribadi dan kebutuhan lainnya.'
+        profil: 'Kelola akun login, akses keluarga, dan profil lokal di perangkat ini.'
       };
       if (descriptions[name] && !this.terkunci) {
         const heading = document.createElement('header');

@@ -329,13 +329,14 @@ function s19(){try{
 function s20(){try{
   say('T profil-judul|'+d.getElementById('page-title').textContent);
   say('T profil-kartu|'+d.querySelectorAll('#content .profil-card').length);
-  say('T profil-tombol-baru|'+hit('#content .btn.primary'));
+  d.querySelector('#profil-baru').scrollIntoView({block:'center'});
+  say('T profil-tombol-baru|'+hit('#profil-baru'));
   say('T profil-nama-aktif|'+d.getElementById('pb-nama').textContent.trim());
   say('T profil-ikon-sidebar|'+d.getElementById('pb-ic').textContent.trim());
   say('T profil-btn-sidebar-terlihat|'+(d.getElementById('btn-profil').getBoundingClientRect().width>40?'YA':'TIDAK'));
   say('T profil-kunci-tersembunyi|'+(d.getElementById('btn-kunci').hidden?'YA':'TIDAK'));
   // buka form profil baru
-  var b=d.querySelector('#content .btn.primary');
+  var b=d.querySelector('#profil-baru');
   b.click();
   setTimeout(s21,400);
 }catch(e){err(e);}}
@@ -485,7 +486,8 @@ function s32(){try{
 }catch(e){err(e);}}
 function s33(){try{
   say('T akhir-halaman-profil|'+(d.getElementById('content').innerHTML.indexOf('profil-list')>-1?'YA':'TIDAK'));
-  say('T akhir-tombol-tambah|'+hit('#content .btn.primary'));
+  d.querySelector('#profil-baru').scrollIntoView({block:'center'});
+  say('T akhir-tombol-tambah|'+hit('#profil-baru'));
   say('T akhir-nav-dashboard|'+hit('[data-view="dashboard"]'));
   var nol=[];
   Array.prototype.forEach.call(d.querySelectorAll('#content .profil-card'),function(c){

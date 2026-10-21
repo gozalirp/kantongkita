@@ -248,6 +248,44 @@
     });
   };
 
+  /* Label formulir harus benar-benar terhubung ke kontrolnya. Label yang
+     cuma bersebelahan secara visual tidak dibacakan pembaca layar dan tidak
+     memfokuskan apa pun saat diklik. Satu lintasan setelah render, karena
+     markup formulir tersebar di banyak tempat dan ditulis tangan. */
+  U.ikatLabel = function (scope) {
+    const box = scope || (typeof document !== 'undefined' ? document : null);
+    if (!box || !box.querySelectorAll) return;
+    const fields = box.querySelectorAll('.field');
+    Array.prototype.forEach.call(fields, function (field) {
+      const label = field.querySelector('label');
+      const grup = field.querySelector('.ikon-pilih,.warna-pilih,.seg');
+      /* Kontrol isian dilewati kalau tersembunyi: kolom emoji sekarang jadi
+         wadah nilai, bukan sesuatu yang bisa diketik. */
+      const ctl = field.querySelector('input:not([type=hidden]),select,textarea');
+      const target = ctl || grup;
+      if (label && !label.htmlFor && target) {
+        if (ctl) {
+          if (!ctl.id) ctl.id = U.uid('fld');
+          label.htmlFor = ctl.id;
+        } else {
+          /* Field tanpa isian (pemilih ikon/warna): jadikan kelompok berlabel. */
+          if (!label.id) label.id = U.uid('lbl');
+          grup.setAttribute('role', 'group');
+          grup.setAttribute('aria-labelledby', label.id);
+        }
+      }
+      /* Petunjuk di bawah kontrol ikut dibacakan sebagai bagian dari kontrol. */
+      const hint = field.querySelector('.hint[id]');
+      if (hint && target) {
+        const ada = (target.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+        if (ada.indexOf(hint.id) < 0) {
+          ada.push(hint.id);
+          target.setAttribute('aria-describedby', ada.join(' '));
+        }
+      }
+    });
+  };
+
   /* Ikon statis di HTML dasar. Ditulis sebagai atribut supaya markup tetap
      terbaca walau JavaScript belum jalan; tidak memakai emoji di sana karena
      emoji di kerangka aplikasi hanya jadi hiasan yang ikut berubah-ubah

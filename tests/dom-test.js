@@ -777,6 +777,23 @@ section('9. Konfirmasi hapus: batal lalu setuju');
     ok('daftar profil tampil', $('content').innerHTML.indexOf('profil-list') > -1);
     ok('nama profil pertama terlihat', $('content').innerHTML.indexOf('Pribadi') > -1);
     ok('tombol tambah profil ada', $('content').innerHTML.indexOf('Profil Baru</button>') > -1);
+    ok('profil menjelaskan bukan akun pasangan', $('content').textContent.includes('bukan akun pasangan'));
+    ok('profil menjelaskan data tidak digabung', $('content').textContent.includes('Data lama tidak otomatis digabung'));
+    const kAsli = window.K;
+    try {
+      window.K = { terbuka: false, aktif: () => false };
+      let tampilan = V.profil();
+      ok('profil belum login menawarkan join', tampilan.includes('/keluarga?aksi=undangan'));
+      ok('profil belum login menawarkan akun pertama', tampilan.includes('/keluarga?aksi=aktivasi'));
+      window.K = { terbuka: true, nama: 'Anggota', aktif: () => false };
+      tampilan = V.profil();
+      ok('profil login menawarkan kelola keluarga', tampilan.includes('Kelola keluarga &amp; undangan'));
+      ok('profil login menawarkan buku bersama', tampilan.includes('Buka buku keluarga'));
+      ok('profil login tidak menawarkan akun baru', !tampilan.includes('/keluarga?aksi=aktivasi'));
+      window.K.aktif = () => true;
+      tampilan = V.profil();
+      ok('profil keluarga aktif ditandai', tampilan.includes('disabled>Buku keluarga sedang aktif'));
+    } finally { window.K = kAsli; }
     const jml0 = P.list().length;
 
     // buat profil baru tanpa sandi -> langsung pindah ke sana
