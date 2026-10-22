@@ -2287,7 +2287,7 @@
           '<div class="profil-list"><div class="profil-card on">' +
             '<div class="pc-ic">' + U.icon('user') + '</div>' +
             '<div class="pc-main"><div class="pc-nama">' + H(akun) + '</div>' +
-              '<div class="pc-info muted">Identitas untuk masuk dan mengakses buku keluarga. Pasangan memakai akun sendiri, bukan password kamu.</div>' +
+              '<div class="pc-info muted">Untuk masuk dan membuka buku keluarga. Pasangan memakai akun sendiri.</div>' +
             '</div>' +
             '<div class="pc-act"><button class="btn sm" onclick="App.emailAkun(this)">Status email</button>' +
               '<button class="btn sm ghost" onclick="App.keluarAkun(this)">Keluar</button></div>' +
@@ -2300,19 +2300,19 @@
     const keluargaAktif = !!(root.K && root.K.aktif && root.K.aktif());
     const kartuKeluarga = '<section class="card mt" aria-labelledby="profil-keluarga-title">' +
       '<div class="card-head"><h2 id="profil-keluarga-title">Keluarga</h2></div>' +
-      '<p class="muted">Satu buku bersama, dua akun masing-masing. Bukan satu password untuk berdua.</p>' +
+      '<p class="muted" style="margin:-4px 0 14px">Satu buku bersama untuk dua akun, masing-masing tetap masuk dengan akun sendiri.</p>' +
       (akun
-        ? '<p>Gunakan tombol undangan untuk mengajak pasangan memakai catatan bersama. Hanya pemilik keluarga yang dapat mengundang, selama anggota belum berjumlah dua.</p>' +
-          '<div class="row">' + (root.Buku ? '<button class="btn primary" id="profil-tambah-keluarga" onclick="Buku.undang(this)">' + wrapIco('plus') + 'Undang pasangan</button>' : '<a class="btn primary" id="profil-tambah-keluarga" href="/#/dashboard">' + wrapIco('plus') + 'Buka dashboard</a>') +
+        ? '<div class="row">' + (root.Buku ? '<button class="btn primary" id="profil-tambah-keluarga" onclick="Buku.undang(this)">' + wrapIco('plus') + 'Undang pasangan</button>' : '<a class="btn primary" id="profil-tambah-keluarga" href="/#/dashboard">' + wrapIco('plus') + 'Buka dashboard</a>') +
             (root.Buku ? '<button class="btn" onclick="App.go(\'dashboard\')">Lihat dashboard bersama</button></div>' : '<button class="btn" onclick="App.gantiMode(\'keluarga\')"' + (keluargaAktif ? ' disabled' : '') + '>' + (keluargaAktif ? 'Buku keluarga sedang aktif' : 'Buka buku keluarga') + '</button></div>')
-        : '<p>Mulai dari salah satu langkah berikut:</p>' +
-          '<div class="row"><a class="btn primary" href="/#/masuk">Buat akun pertama</a>' +
+        : '<div class="row"><a class="btn primary" href="/#/masuk">Buat akun pertama</a>' +
             '<a class="btn" href="/#/masuk">Masuk lalu gunakan kode pasangan</a></div>') +
-      '<ol><li>Pemilik akun membuat undangan dan mengirim kodenya ke pasangan.</li>' +
-        '<li>Pasangan membuat akun atau masuk di perangkat sendiri, lalu memasukkan kode lewat <b>Undang pasangan</b> di dashboard.</li>' +
-        '<li>Setelah bergabung, keduanya memakai buku keluarga yang sama.</li></ol>' +
-      '<p class="hint">Maksimal 2 anggota. Kode berlaku 24 jam dan sekali pakai. Buku keluarga memerlukan internet.</p>' +
-      '<p class="muted"><b>Data lama tidak otomatis digabung.</b> Catatan pribadi dan profil lokal tetap terpisah dari buku keluarga. Profil Baru di bawah bukan untuk mengundang pasangan.</p>' +
+      '<details class="lipat"><summary>' + wrapIco('chevron') + 'Cara mengundang pasangan</summary><div class="lipat-isi">' +
+        '<ol><li>Pemilik akun membuat undangan lalu mengirim kodenya ke pasangan.</li>' +
+          '<li>Pasangan membuat akun atau masuk di perangkat sendiri, lalu memasukkan kode lewat <b>Undang pasangan</b> di dashboard.</li>' +
+          '<li>Setelah bergabung, keduanya memakai buku keluarga yang sama.</li></ol>' +
+        '<p class="muted" style="margin:10px 0 0">Hanya pemilik keluarga yang dapat mengundang, dan hanya selama anggota belum berjumlah dua. Maksimal 2 anggota, kode berlaku 24 jam dan sekali pakai. Buku keluarga memerlukan internet.</p>' +
+      '</div></details>' +
+      '<p class="hint"><b>Data lama tidak otomatis digabung.</b> Catatan pribadi dan profil lokal tetap terpisah dari buku keluarga.</p>' +
     '</section>';
 
     const kartu = list.map(function (p) {
@@ -2349,8 +2349,8 @@
     return kartuAkun + kartuKeluarga + '<div class="card' + (kartuAkun ? ' mt' : '') + '"><div class="card-head">' +
         '<h2>Profil di perangkat ini</h2><span class="spacer"></span>' +
         '<button class="btn primary" id="profil-baru" onclick="V.profilForm()">' + wrapIco('plus') + 'Profil Baru</button></div>' +
-      '<p class="muted" style="margin:-4px 0 14px">Setiap profil punya catatan, dompet, anggaran, dan target sendiri. ' +
-        'Gunakan untuk memisahkan catatan, misalnya Pribadi dan Usaha. Ini <b>bukan akun pasangan</b> dan tidak menambah anggota keluarga.</p>' +
+      '<p class="muted" style="margin:-4px 0 14px">Pisahkan catatan untuk orang atau usaha yang berbeda. ' +
+        'Setiap profil punya catatan, dompet, anggaran, dan target sendiri. Ini <b>bukan akun pasangan</b>.</p>' +
       (keluargaAktif ? '<p class="hint">Saat ini buku keluarga sedang aktif. Daftar berikut adalah profil lokal, bukan daftar anggota keluarga.</p>' : '') +
       '<div class="profil-list">' + kartu + '</div>' +
     '</div>' +
@@ -2358,12 +2358,11 @@
     '<div class="card mt"><div class="card-head"><h2>Pengamanan</h2></div>' +
       '<p class="muted" style="margin:-4px 0 12px">' +
         (berSandi
-          ? 'Ada ' + berSandi + ' profil yang dilindungi sandi. Tombol <b>Kunci</b> di sidebar akan menyembunyikan semua catatan sampai sandi dimasukkan. Berguna kalau komputernya dipakai bersama.'
-          : 'Belum ada profil yang bersandi. Tambahkan sandi lewat tombol Ubah pada profil di atas supaya catatan tidak bisa dibuka orang lain.') +
+          ? 'Ada ' + berSandi + ' profil bersandi. Tombol Kunci di sidebar menyembunyikan semua catatan sampai sandi dimasukkan.'
+          : 'Belum ada profil bersandi. Tambahkan sandi lewat tombol Ubah di atas supaya catatan tidak sembarangan dibuka.') +
       '</p>' +
       (berSandi ? '<button class="btn" onclick="V.profilKunci()">' + wrapIco('lock') + 'Kunci Sekarang</button>' : '') +
-      '<div class="hint" style="margin-top:10px">Catatan: sandi ini menjaga dari orang yang memakai browser yang sama. ' +
-        'Ia <b>bukan</b> enkripsi, orang yang sangat paham teknis tetap bisa membaca data di browser ini.</div>' +
+      '<p class="hint">Sandi menjaga dari orang yang memakai browser ini. Ini <b>bukan</b> enkripsi.</p>' +
     '</div>';
   };
 

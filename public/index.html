@@ -50,8 +50,10 @@
         </span>
         <span class="pb-chev" aria-hidden="true" data-ikon="chevron"></span>
       </button>
-      <button class="btn sm ghost full" id="btn-kunci" hidden onclick="V.profilKunci()"><span class="ui-icon-wrap" data-ikon="lock"></span> Kunci</button>
-      <button class="btn ghost full" id="btn-keluar" hidden style="min-height:44px" onclick="App.keluarAkun(this)">Keluar akun</button>
+      <div class="pb-aksi">
+        <button class="btn sm ghost" id="btn-kunci" hidden onclick="V.profilKunci()"><span class="ui-icon-wrap" data-ikon="lock"></span> Kunci</button>
+        <button class="btn sm ghost" id="btn-keluar" hidden aria-label="Keluar akun" title="Keluar akun" onclick="App.keluarAkun(this)">Keluar</button>
+      </div>
       <div class="net-dot" id="net-dot"><span></span><em>Lokal</em></div>
     </div>
   </aside>

@@ -55,6 +55,19 @@ window.addEventListener('load',()=>setTimeout(async()=>{
   check(rect.right<=width+1,width+' wallet modal overflow');
   check(d.querySelector('label[for="w-name"]'),width+' wallet name accessible label');
   w.V.modal.close();
+ // Halaman Profil: penjelasan panjang dilipat supaya halaman tetap pendek.
+ w.App.view='profil';w.App.render();await new Promise(r=>setTimeout(r,20));
+ const lipat=d.querySelector('.lipat'),ringkas=lipat&&lipat.querySelector('summary'),profil=d.getElementById('content');
+ check(!!lipat&&!lipat.open,width+' profil explanation folded by default');
+ check(!!ringkas&&ringkas.getBoundingClientRect().height>=44,width+' folded heading touch size');
+ check(!!ringkas.querySelector('svg.ui-icon'),width+' folded heading shows an indicator');
+ check(profil.textContent.includes('bukan akun pasangan'),width+' profil keeps the local-profile warning');
+ check(d.querySelectorAll('#content .card, #content section.card').length===4,width+' profil stays four cards');
+ check(profil.scrollHeight<=(width<=500?1750:1300),width+' profil page stays short '+profil.scrollHeight);
+ lipat.open=true;await new Promise(r=>setTimeout(r,20));
+ check(w.getComputedStyle(lipat.querySelector('.ui-icon-wrap')).transform!=='none',width+' folded heading marks its open state');
+ check(profil.scrollWidth<=profil.clientWidth+1,width+' folded profil has no overflow');
+ lipat.open=false;
  }
  // Empty shared state must offer a useful action and retain data boundary.
  w.Buku.keluarga=w.S.normalize({});w.App.view='dashboard';w.App.render();
@@ -86,6 +99,25 @@ window.addEventListener('load',()=>setTimeout(async()=>{
    kontras(w.getComputedStyle(bi).color,over(w.getComputedStyle(bi).backgroundColor,sbg),width+' logo mark contrast');
    kontras(over(w.getComputedStyle(d.querySelector('.net-dot')).color,sbg),sbg,width+' sync status text contrast');
    check(d.querySelector('.profil-btn').getBoundingClientRect().height>=44,width+' account card touch size');
+   const kaki=d.querySelector('.sidebar-foot'),kartu=d.querySelector('.profil-btn'),aksi=kaki.querySelector('.pb-aksi'),kiri=e=>Math.round(e.getBoundingClientRect().left);
+   const ikon=items[0].querySelector('.ic').getBoundingClientRect();
+   check(!!aksi&&aksi.querySelectorAll('button').length===2,width+' account actions share one row');
+   check(kiri(kartu)===kiri(items[0]),width+' account card shares the menu left edge');
+   check(Math.abs(kartu.getBoundingClientRect().width-items[0].getBoundingClientRect().width)<1,width+' account card matches menu row width');
+   check(Math.abs(kiri(d.querySelector('.pb-ic'))-ikon.left)<=1,width+' account icon aligns with menu icons');
+   check(Math.abs(kiri(d.querySelector('.pb-teks'))-kiri(items[0].querySelector('.nav-lbl')))<=1,width+' account text aligns with menu labels');
+   const bt=Array.from(aksi.querySelectorAll('button')),kunci=d.getElementById('btn-kunci'),keluar=d.getElementById('btn-keluar');
+   check(w.getComputedStyle(aksi).display==='none',width+' empty account actions collapse');
+   kunci.hidden=false;keluar.hidden=false;
+   const celah=bt[1].getBoundingClientRect().left-bt[0].getBoundingClientRect().right;
+   check(celah>=6,width+' account actions keep a gap '+Math.round(celah)+'px');
+   check(bt.every(b=>b.getBoundingClientRect().height>=44),width+' account actions reach 44px');
+   check(bt.every(b=>b.getBoundingClientRect().width>=88),width+' account actions stay readable');
+   check(d.querySelector('.net-dot').getBoundingClientRect().top-aksi.getBoundingClientRect().bottom>=6,width+' sync status not touching account actions');
+   kunci.hidden=true;keluar.hidden=true;
+   check(Math.abs(kiri(d.querySelector('.net-dot span'))-ikon.left)<=1,width+' sync dot aligns with menu icons');
+   check(kaki.getBoundingClientRect().height<=170,width+' footer stays compact');
+   check(d.querySelector('#btn-keluar').getAttribute('aria-label')==='Keluar akun',width+' short logout label keeps a full accessible name');
   }
   const bn=d.getElementById('bottom-nav');
   if(w.getComputedStyle(bn).display!=='none'&&bn.getBoundingClientRect().height>0){
