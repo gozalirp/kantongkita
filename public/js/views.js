@@ -14,7 +14,7 @@
      ============================================================ */
   V.state = {
     dashboard: { chart: '6m', range: 'month' },
-    transaksi: { preset: 'month', walletId: '', type: 'all', catId: '', q: '', from: '', to: '' },
+    transaksi: { preset: 'month', walletId: '', type: 'all', catId: '', q: '', by: '', from: '', to: '' },
     rekap:     { tab: 'hari', ym: '', year: '' },
     dompet:    {},
     kategori:  { tab: 'out' },
@@ -928,9 +928,20 @@
     st.from = r.from; st.to = r.to;
     const sum = S.summary(db, st.from, st.to);
     let list = sum.list;
+    /* Pilihan pencatat diambil dari seluruh transaksi pada periode ini, bukan
+       dari hasil saringan, supaya pilihannya tidak ikut berkedip saat filter
+       lain diubah. Buku bersama menandai pencatat lewat field 'by'. */
+    const pencatat = (function () {
+      const nama = {};
+      sum.list.forEach(function (t) { if (t.by) nama[t.by] = 1; });
+      const daftar = Object.keys(nama);
+      if (st.by && daftar.indexOf(st.by) === -1) daftar.push(st.by);
+      return daftar.sort();
+    })();
     if (st.walletId) list = list.filter(function (t) { return t.walletId === st.walletId || t.walletTo === st.walletId; });
     if (st.type !== 'all') list = list.filter(function (t) { return t.type === st.type; });
     if (st.catId) list = list.filter(function (t) { return t.categoryId === st.catId; });
+    if (st.by) list = list.filter(function (t) { return String(t.by || '') === st.by; });
     if (st.q) {
       const q = st.q.toLowerCase();
       list = list.filter(function (t) {
@@ -953,6 +964,20 @@
           '<button class="btn primary" onclick="V.txForm()">' + wrapIco('plus') + 'Catat Transaksi</button>' +
         '</div>' +
         '<div class="row mt" style="gap:12px">' +
+          (pencatat.length >= 2 || st.by ?
+            '<select id="tx-by" aria-label="Saring pencatat" style="max-width:190px">' +
+              '<option value="">Semua pencatat</option>' +
+              pencatat.map(function (n) {
+                return '<option value="' + H(n) + '"' + (st.by === n ? ' selected' : '') + '>' +
+                  (root.K && K.nama === n ? 'kamu (' + H(n) + ')' : H(n)) + '</option>';
+              }).join('') +
+            '</select>' : '') +
+          (root.Buku && !Buku.bersama() && Buku.keluarga ?
+            '<select id="tx-buku" aria-label="Saring asal buku" style="max-width:180px">' +
+              [['semua', 'Semua buku'], ['pribadi', 'Buku pribadi'], ['keluarga', 'Buku keluarga']].map(function (p) {
+                return '<option value="' + p[0] + '"' + (Buku.filter === p[0] ? ' selected' : '') + '>' + p[1] + '</option>';
+              }).join('') +
+            '</select>' : '') +
           '<select id="tx-wallet" aria-label="Saring dompet" style="max-width:230px"><option value="">Semua dompet</option>' +
             walletOptions(db, st.walletId) + '</select>' +
           '<select id="tx-cat" aria-label="Saring kategori" style="max-width:230px"><option value="">Semua kategori</option>' +
@@ -1011,6 +1036,8 @@
       V.state.transaksi.preset = b.dataset.seg; root.App.render();
     });
     const w = el('tx-wallet'); if (w) w.onchange = function () { V.state.transaksi.walletId = w.value; root.App.render(); };
+    const by = el('tx-by');   if (by) by.onchange = function () { V.state.transaksi.by = by.value; root.App.render(); };
+    const bk = el('tx-buku'); if (bk) bk.onchange = function () { Buku.pilih(bk.value); };
     const c = el('tx-cat');    if (c) c.onchange = function () { V.state.transaksi.catId = c.value; root.App.render(); };
     const ty = el('tx-type');  if (ty) ty.onchange = function () { V.state.transaksi.type = ty.value; root.App.render(); };
     const q = el('tx-q');

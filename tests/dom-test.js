@@ -371,6 +371,20 @@ section('9. Konfirmasi hapus: batal lalu setuju');
   ok('filter kategori menyaring benar', $('content').innerHTML.indexOf('berkategori') > -1 && $('content').innerHTML.indexOf('kopi pagi') === -1);
   V.state.transaksi.catId = ''; App.render();
 
+  // Saring pencatat (akun): hanya berguna kalau ada lebih dari satu penanda
+  App.db.transactions.push({ id: 'f8', date: U.today(), type: 'out', amount: 100, walletId: App.db.wallets[0].id, categoryId: '', note: 'dicatat saya', by: 'dummy' });
+  App.save(); App.render();
+  ok('filter pencatat belum tampil kalau hanya satu nama', !$('tx-by'));
+  App.db.transactions.push({ id: 'f7', date: U.today(), type: 'out', amount: 100, walletId: App.db.wallets[0].id, categoryId: '', note: 'dicatat pasangan', by: 'dummy2' });
+  App.save(); App.render();
+  ok('filter pencatat tampil saat ada dua nama', !!$('tx-by'));
+  eq('pilihan pencatat lengkap', $('tx-by').options.length, 3);
+  ok('nama pencatat jadi pilihan', $('tx-by').textContent.indexOf('dummy2') > -1);
+  V.state.transaksi.by = 'dummy2'; App.render();
+  ok('filter pencatat menyaring benar', $('content').innerHTML.indexOf('dicatat pasangan') > -1 && $('content').innerHTML.indexOf('dicatat saya') === -1);
+  eq('jumlah di kepala ikut menyaring', $('content').textContent.indexOf('1 transaksi') > -1, true);
+  V.state.transaksi.by = ''; App.render();
+
   // pindah dana tampil sebagai satu baris "ke dompet"
   App.db.transactions.push({ id: 'f6', date: U.today(), type: 'move', amount: 250000, walletId: App.db.wallets[0].id, walletTo: 'wOther', categoryId: '', note: 'pindahan' });
   App.save();

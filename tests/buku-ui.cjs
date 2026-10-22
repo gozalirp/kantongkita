@@ -123,6 +123,28 @@ w.fetch = async (url, options) => {
   assert(/1 anggota/.test(B.anggotaKeluarga()));
   assert(/Anggota kedua belum ada/.test(B.anggotaKeluarga()));
   B.anggota = anggotaPenuh;
-  console.log('PASS: combined dashboard, wallet routing, family create/edit isolation, invitation modal, family members');
+  // Filter Transaksi: pencatat (akun) + asal buku (pribadi/keluarga).
+  B.jumlah = 1; // paksa mode dua buku supaya dropdown asal buku ikut tampil
+  B.keluarga.transactions.push({ id: 'kt1', date: w.U.today(), type: 'out', amount: 1000, walletId: 'w_bersama', categoryId: '', note: 'belanja pasangan', by: 'pasangan' });
+  B.keluarga.transactions.push({ id: 'kt2', date: w.U.today(), type: 'out', amount: 2000, walletId: 'w_bersama', categoryId: '', note: 'belanja sendiri', by: 'owner' });
+  App.view = 'transaksi'; V.state.transaksi.preset = 'all'; V.state.transaksi.by = ''; B.filter = 'semua'; App.render();
+  assert($('tx-by'), 'filter pencatat tampil saat ada dua pencatat');
+  assert.equal($('tx-by').options.length, 3);
+  assert($('tx-by').textContent.includes('kamu (owner)'), 'nama sendiri ditandai kamu');
+  assert($('tx-by').textContent.includes('pasangan'));
+  V.state.transaksi.by = 'pasangan'; App.render();
+  assert($('content').innerHTML.includes('belanja pasangan'));
+  assert(!$('content').innerHTML.includes('belanja sendiri'), 'baris pencatat lain disembunyikan');
+  assert($('content').innerHTML.includes('tx-by'), 'baris menandai siapa pencatatnya');
+  assert($('tx-buku'), 'dropdown asal buku tampil saat buku keluarga termuat');
+  assert.equal($('tx-buku').value, 'semua');
+  $('tx-buku').value = 'keluarga'; $('tx-buku').onchange();
+  assert.equal(B.filter, 'keluarga');
+  assert.equal(V.state.transaksi.by, '', 'filter pencatat dikosongkan saat pindah buku');
+  assert($('content').innerHTML.includes('belanja pasangan'), 'buku keluarga tetap tampil');
+  $('tx-buku').value = 'pribadi'; $('tx-buku').onchange();
+  assert(!$('content').innerHTML.includes('belanja pasangan'), 'buku pribadi tidak memuat baris keluarga');
+  B.filter = 'semua'; B.jumlah = 2; V.state.transaksi.by = ''; V.state.transaksi.preset = 'month'; App.render();
+  console.log('PASS: combined dashboard, wallet routing, family create/edit isolation, invitation modal, family members, transaction filters');
   dom.window.close(); process.exit(0);
 })().catch(e => { console.error(e); dom.window.close(); process.exit(1); });

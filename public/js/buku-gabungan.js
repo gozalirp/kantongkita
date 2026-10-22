@@ -99,6 +99,7 @@
     if (!['semua', 'pribadi', 'keluarga'].includes(nilai)) return;
     B.filter = nilai;
     root.V.state.transaksi.walletId = ''; root.V.state.transaksi.catId = '';
+    root.V.state.transaksi.by = '';
     root.App.render();
   };
   /* Siapa saja yang ada di keluarga ini — supaya pasangan langsung kelihatan,

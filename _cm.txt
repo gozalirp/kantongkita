@@ -1,0 +1,20 @@
+feat: filter transaksi per pencatat dan asal buku
+
+Halaman Transaksi bisa disaring per akun pencatat (siapa yang mencatat)
+dan per asal buku (pribadi atau keluarga), di samping filter dompet,
+kategori, jenis, dan periode yang sudah ada.
+
+- views.js: state transaksi.by, daftar pencatat dihitung dari seluruh
+  transaksi pada periode berjalan (bukan hasil saringan) supaya pilihan
+  tidak berubah saat filter lain diubah; dropdown #tx-by dan #tx-buku
+- buku-gabungan.js: pindah buku ikut mengosongkan filter pencatat karena
+  nama pencatat berbeda antar buku
+- dropdown pencatat hanya tampil kalau ada lebih dari satu nama pencatat;
+  dropdown asal buku hanya tampil kalau buku keluarga termuat dan tidak
+  sedang memakai satu buku bersama, jadi tampilan pribadi tidak berubah
+- sw.js: cache v38 ke v39
+- uji baru di dom-test.js dan buku-ui.cjs
+
+Uji: npm test 269/86/349 GAGAL 0, buku-ui PASS, test:browser 152 plus
+ui-responsive 393. Diverifikasi di browser asli pada 952px dan 375px
+tanpa luber, dan pada aplikasi live memilih pasangan menyaring daftar.
