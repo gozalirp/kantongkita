@@ -17,6 +17,9 @@ gradle-error-extracted/
 # Berkas sementara dari tests/browser-test.js
 public/_probe.html
 
+# Pesan commit sementara (git commit -F)
+_cm.txt
+
 # Berkas hasil generate Capacitor (build CI)
 android/
 www/
