@@ -487,13 +487,14 @@ section('9. Konfirmasi hapus: batal lalu setuju');
   window.document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Escape menutup modal', $('modal-wrap').hidden);
 
-  section('21. Sidebar mobile');
-  click($('hamburger'));
-  ok('sidebar terbuka', q('.sidebar').classList.contains('open'));
-  ok('scrim muncul', q('.scrim').classList.contains('show'));
-  click(q('.scrim'));
-  ok('sidebar tertutup lagi', !q('.sidebar').classList.contains('open'));
-  ok('scrim hilang', !q('.scrim').classList.contains('show'));
+  section('21. Navigasi ponsel satu pola saja');
+  /* Laci sidebar ponsel sudah dihapus: tombol pemicunya display:none di
+     semua lebar layar dan tidak ada aturan .sidebar.open sama sekali, jadi
+     yang tersisa hanya menu bawah + halaman Menu. */
+  eq('tombol hamburger dihapus', $('hamburger'), null);
+  eq('lapisan scrim dihapus', $('scrim'), null);
+  ok('tidak ada kelas open yang nyangkut', !q('.sidebar').classList.contains('open'));
+  ok('menu bawah punya satu-satunya pintu', q('#bottom-nav .bnav-item[data-bview="menu"]') !== null);
 
   section('22. Total saldo di topbar ikut berubah');
   App.db.wallets = [

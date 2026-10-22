@@ -60,6 +60,51 @@ window.addEventListener('load',()=>setTimeout(async()=>{
  w.Buku.keluarga=w.S.normalize({});w.App.view='dashboard';w.App.render();
  check(!!d.querySelector('.wallet-onboarding .btn'),'empty wallet CTA');
  w.V.txForm();check(!!d.getElementById('w-name'),'empty transaction flow creates wallet first');w.V.modal.close();
+ // Navigasi: satu pola per ukuran layar, tinggi seragam, teks >=4.5:1.
+ const px=s=>((s||'').replace(/[^0-9.]+/g,' ').trim().split(' ').filter(Boolean)).map(Number);
+ const lum=c=>{const m=px(c);if(m.length<3)return NaN;const f=v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};return 0.2126*f(m[0])+0.7152*f(m[1])+0.0722*f(m[2])};
+ const cr=(a,b)=>{const x=lum(a),y=lum(b),hi=Math.max(x,y),lo=Math.min(x,y);return Math.round(((hi+0.05)/(lo+0.05))*100)/100};
+ const over=(fg,bg)=>{const m=px(fg),n=px(bg);if(m.length<3||n.length<3)return 'rgb(0,0,0)';const a=m.length>3?m[3]:1;return 'rgb('+[0,1,2].map(i=>Math.round(m[i]*a+n[i]*(1-a))).join(',')+')'};
+ const kontras=(a,b,label)=>check(cr(a,b)>=4.5,label+' '+cr(a,b)+':1');
+ for(const width of [375,1440]){
+  frame.style.width=width+'px';await new Promise(r=>setTimeout(r,60));
+  const side=d.getElementById('sidebar');
+  check(!d.getElementById('hamburger')&&!d.getElementById('scrim'),width+' dead sidebar drawer stays removed');
+  if(w.getComputedStyle(side).display!=='none'){
+   const sbg=w.getComputedStyle(side).backgroundColor;
+   const items=Array.from(side.querySelectorAll('#nav a'));
+   check(items.length===10,width+' sidebar lists 10 pages');
+   check(items.every(a=>a.getBoundingClientRect().height>=44),width+' sidebar rows reach 44px');
+   check(new Set(items.map(a=>Math.round(a.getBoundingClientRect().height))).size===1,width+' sidebar rows uniform height');
+   check(new Set(items.map(a=>Math.round(a.querySelector('.nav-lbl').getBoundingClientRect().left))).size===1,width+' sidebar labels share one left edge');
+   check(items.every(a=>a.querySelector('.nav-lbl').getBoundingClientRect().height<24),width+' sidebar labels stay on one line');
+   check(items.filter(a=>a.getAttribute('aria-current')==='page').length===1,width+' exactly one current page');
+   const aktif=items.filter(a=>a.classList.contains('active'))[0],pasif=items.filter(a=>!a.classList.contains('active'))[0];
+   kontras(w.getComputedStyle(aktif).color,over(w.getComputedStyle(aktif).backgroundColor,sbg),width+' active row contrast');
+   kontras(over(w.getComputedStyle(pasif).color,sbg),sbg,width+' resting row contrast');
+   const bi=d.querySelector('.brand-icon');
+   kontras(w.getComputedStyle(bi).color,over(w.getComputedStyle(bi).backgroundColor,sbg),width+' logo mark contrast');
+   kontras(over(w.getComputedStyle(d.querySelector('.net-dot')).color,sbg),sbg,width+' sync status text contrast');
+   check(d.querySelector('.profil-btn').getBoundingClientRect().height>=44,width+' account card touch size');
+  }
+  const bn=d.getElementById('bottom-nav');
+  if(w.getComputedStyle(bn).display!=='none'&&bn.getBoundingClientRect().height>0){
+   const its=Array.from(bn.querySelectorAll('.bnav-item')),fab=bn.querySelector('.bnav-fab'),br=bn.getBoundingClientRect();
+   check(its.length===4&&!!fab,width+' bottom bar keeps 4 tabs plus one action');
+   check(its.every(a=>a.getBoundingClientRect().height>=44),width+' bottom tabs reach 44px');
+   check(new Set(its.map(a=>Math.round(a.querySelector('.bnav-lbl').getBoundingClientRect().top))).size===1,width+' bottom labels share one baseline');
+   check(its.every(a=>a.querySelector('.bnav-lbl').scrollWidth<=a.querySelector('.bnav-lbl').clientWidth+1),width+' bottom labels not cut off');
+   const fr=fab.getBoundingClientRect();
+   check(fr.top>=br.top-1&&fr.bottom<=br.bottom+1,width+' center action stays inside the bar');
+   check(fr.width>=44&&fr.height>=44,width+' center action touch size');
+   check(fr.left-(its[1].getBoundingClientRect().right)>=2,width+' center action not touching its neighbours');
+   const a2=its.filter(a=>a.classList.contains('active'))[0],p2=its.filter(a=>!a.classList.contains('active'))[0];
+   check(Math.abs(a2.querySelector('.bnav-lbl').getBoundingClientRect().top-p2.querySelector('.bnav-lbl').getBoundingClientRect().top)<0.5,width+' current tab does not shift its label');
+   kontras(w.getComputedStyle(a2).color,'rgb(254,254,255)',width+' current tab contrast');
+   kontras(w.getComputedStyle(p2).color,'rgb(254,254,255)',width+' resting tab contrast');
+   check(bn.getBoundingClientRect().bottom<=w.innerHeight+1,width+' bottom bar sits on the screen edge');
+  }
+ }
  // Reduced-motion CSS and keyboard navigation entry point.
  check(!!d.querySelector('.skip-link[href="#content"]'),'skip link');
  check(w.getComputedStyle(d.querySelector('.btn')).transitionDuration==='0s','reduced-motion honored');

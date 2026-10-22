@@ -498,9 +498,6 @@
       this.applyLockUI();
       this.updateNetDot(!!(this.db && this.db.settings.driveEnabled && this.db.settings.driveFileId));
       this.render();
-      const sb = document.querySelector('.sidebar');
-      if (sb) sb.classList.remove('open');
-      document.querySelector('.scrim').classList.remove('show');
     },
 
     /* Kartu "Buat akun / Masuk" di beranda disembunyikan kalau sudah login.
@@ -655,11 +652,6 @@
           App.go(sebelum);
         });
       }
-
-      // sidebar mobile
-      const sb = document.querySelector('.sidebar'), sc = document.querySelector('.scrim');
-      document.getElementById('hamburger').onclick = function () { sb.classList.add('open'); sc.classList.add('show'); };
-      sc.onclick = function () { sb.classList.remove('open'); sc.classList.remove('show'); };
 
       // modal
       document.getElementById('modal-wrap').addEventListener('click', function (e) {
