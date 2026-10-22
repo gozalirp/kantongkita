@@ -254,46 +254,63 @@
       const aktif = root.K && K.aktif();
       const pill = document.getElementById('mode-pill');
       if (pill) {
-        pill.textContent = root.Buku ? 'Semua catatan' : (aktif ? 'Keluarga' : 'Pribadi');
+        pill.textContent = root.Buku ? (Buku.bersama() ? 'Dashboard bersama' : 'Semua catatan') : (aktif ? 'Keluarga' : 'Pribadi');
         pill.classList.toggle('keluarga', aktif);
         pill.title = aktif ? 'Buku bersama keluarga' : 'Catatan pribadi di perangkat ini';
       }
       document.body.classList.toggle('mode-keluarga', aktif);
     },
     /* Manual Trigger Sync Cloudflare dari Button Topbar / Pengaturan:
-       simpan salinan pribadi ke akun cloud & muat ulang buku keluarga terbaru. */
+       simpan salinan pribadi ke akun cloud & muat ulang buku keluarga terbaru.
+       Setiap tugas membawa hasilnya sendiri, jadi buku keluarga yang gagal
+       dimuat tidak pernah dilaporkan sebagai "berhasil". */
     manualSyncCloud: function () {
       const btn = document.getElementById('btn-sync-cloud');
-      if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
-      V.toast('Menyinkronkan data dengan Cloud...');
       const self = this;
-      const tugas = [];
-      if (root.K && K.punyaCloud) tugas.push(K.simpanPribadi(this.db));
-      if (root.Buku) tugas.push(Buku.muat());
+      const selesai = function () { if (btn) { btn.disabled = false; btn.style.opacity = '1'; } };
+      const gagal = function (pesan) {
+        selesai();
+        self.updateNetDot(false, 'Offline (Lokal)');
+        V.toast(pesan, 'err');
+        self.render();
+      };
 
-      if (!tugas.length) {
-        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      if (!root.K || !K.terbuka) {
         V.toast('Masuk dulu ke akun keluarga agar catatan tersinkron ke cloud.', 'err');
         return;
       }
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+      V.toast('Menyinkronkan data dengan Cloud...');
 
-      Promise.all(tugas).then(function (hasil) {
-        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-        const statusPribadi = hasil[0];
-        if (statusPribadi === 'ok') {
-          self.updateNetDot(true, 'Cloud Aktif');
-          V.toast('Berhasil menyinkronkan data ke Cloud!', 'ok');
-        } else if (statusPribadi === 'bentrok') {
-          V.toast('Ada versi lebih baru di cloud, salinan lokal tidak ditimpa.', 'err');
-        } else {
-          self.updateNetDot(true, 'Cloud Aktif');
-          V.toast('Data keluarga terbaru berhasil dimuat.', 'ok');
+      const tugas = [];
+      if (K.punyaCloud) tugas.push(K.simpanPribadi(this.db).then(function (status) {
+        return { jenis: 'pribadi', status: status };
+      }));
+      if (root.Buku) tugas.push(Buku.muat().then(function (status) {
+        return { jenis: 'keluarga', status: status, pesan: Buku.pesan };
+      }));
+
+      return Promise.all(tugas).then(function (hasil) {
+        const cari = function (jenis) { return hasil.filter(function (h) { return h.jenis === jenis; })[0]; };
+        const pribadi = cari('pribadi'), keluarga = cari('keluarga');
+
+        if (pribadi) {
+          if (pribadi.status === 'bentrok') return gagal('Ada versi lebih baru di cloud, salinan lokal tidak ditimpa.');
+          if (pribadi.status === 'keluar') return gagal('Sesi akun berakhir. Masuk ulang supaya catatan bisa tersinkron.');
+          if (pribadi.status === 'gagal' || pribadi.status === 'luring') return gagal('Catatan pribadi belum tersinkron. Periksa koneksi lalu coba lagi.');
         }
+        if (keluarga && keluarga.status !== 'ok') {
+          return gagal(keluarga.status === 'sibuk'
+            ? 'Catatan keluarga masih dimuat. Tunggu sebentar lalu coba lagi.'
+            : (keluarga.pesan || 'Catatan keluarga belum bisa dimuat.'));
+        }
+
+        selesai();
+        self.updateNetDot(true, 'Cloud Aktif');
+        V.toast(pribadi ? 'Berhasil menyinkronkan data ke Cloud!' : 'Data keluarga terbaru berhasil dimuat.', 'ok');
         self.render();
       }).catch(function () {
-        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-        self.updateNetDot(false, 'Offline (Lokal)');
-        V.toast('Gagal menyinkronkan data ke Cloud', 'err');
+        gagal('Gagal menyinkronkan data ke Cloud. Periksa koneksi lalu coba lagi.');
       });
     },
 
@@ -400,6 +417,8 @@
 
     render: function () {
       const name = this.view;
+      const mode = document.getElementById('mode-pill');
+      if (mode && root.Buku) { mode.textContent = Buku.bersama() ? 'Bersama' : 'Semua catatan'; mode.title = Buku.bersama() ? 'Catatan yang terlihat oleh kedua anggota keluarga' : 'Lihat ringkasan catatan'; }
       this.catatTerakhir(name);
       this.catatJejak(name);
       const tabMenu = document.querySelector('.bnav-item[data-bview="menu"]');
@@ -413,10 +432,14 @@
       /* Saat gerbang tertutup, saldo di kepala pun tidak boleh tampil. */
       const gerbang = root.K && K.uiGerbang && !K.bolehBuka() && name === 'masuk';
       const pill = document.getElementById('total-pill');
-      pill.textContent = (this.terkunci || gerbang) ? '' : U.fmtRp(S.totalBalance(root.Buku && ['dashboard', 'transaksi', 'rekap', 'anggaran', 'target', 'langganan'].includes(name) ? Buku.data() : this.db));
+      pill.textContent = (this.terkunci || gerbang) ? '' : U.fmtRp(S.totalBalance(root.Buku && (Buku.bersama() || ['dashboard', 'transaksi', 'rekap', 'anggaran', 'target', 'langganan'].includes(name)) ? Buku.data() : this.db));
       if (this.terkunci || gerbang) pill.innerHTML = U.icon('lock');
       pill.hidden = !!gerbang;   // saat gerbang: gembok saja, tanpa angka
       pill.setAttribute('aria-label', gerbang ? 'Terkunci sampai masuk' : 'Total saldo');
+      if (root.Buku && Buku.bersama() && !Buku.keluarga) {
+        document.getElementById('content').innerHTML = Buku.kontrol();
+        return;
+      }
       const isi = this.terkunci && VIEW_DATA.indexOf(name) > -1
         ? '<div class="card"><div class="empty"><span class="e-ic">' + U.icon('lock') + '</span>' +
           '<p>Profil ini terkunci.</p><p class="muted" style="margin-top:8px">Masukkan sandi untuk membuka catatan.</p>' +
@@ -431,8 +454,8 @@
       if (name === 'masuk') V.gerbangBind();
       const content = document.getElementById('content');
       content.dataset.page = name;
-      if (root.Buku && !this.terkunci && ['rekap', 'anggaran', 'target', 'langganan'].includes(name)) content.insertAdjacentHTML('afterbegin', Buku.kontrol());
-      if (root.Buku && ['dompet', 'kategori'].includes(name)) {
+      if (root.Buku && !this.terkunci && ['rekap', 'anggaran', 'target', 'langganan', 'dompet', 'kategori'].includes(name)) content.insertAdjacentHTML('afterbegin', Buku.kontrol());
+      if (root.Buku && !Buku.bersama() && ['dompet', 'kategori'].includes(name)) {
         const notice = document.createElement('p'); notice.className = 'hint'; notice.textContent = 'Pengelolaan catatan pribadi. Catatan keluarga tersedia di Dashboard dan Transaksi.'; content.prepend(notice);
       }
       const descriptions = {

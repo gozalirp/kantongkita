@@ -116,8 +116,9 @@ function s1(){try{
   say('T topbar-total|'+hit('#total-pill'));
   var manageSelector='#content .planner-wallets button';
   var b=d.querySelector(manageSelector);
+  if(b) b.scrollIntoView({block:'center',behavior:'instant'});
   say('T tombol-konten|'+(b?b.textContent.trim()+'|'+hit(manageSelector):'TIDAK ADA'));
-  say('T planner-donut|'+!!d.querySelector('.planner-donut[role="img"][aria-label]'));
+  say('T planner-donut|'+(!!d.querySelector('.pie-disc[role="img"][aria-label]')||d.querySelector('.planner-breakdown').textContent.indexOf('Belum ada data')>-1));
   say('T planner-chart|'+!!d.querySelector('#dash-chart'));
   say('T content-svg|'+(d.querySelectorAll('#content .ui-icon').length > 0));
   var probe=d.createElement('div');
@@ -573,7 +574,7 @@ function runHeadless(chrome, url) {
      /Kelola/.test(vAll('tombol-konten')[0] || '') && (vAll('tombol-konten')[1] === 'BISA_DIKLIK'),
      'hasil = ' + vAll('tombol-konten').join(' | '));
 
-  ok('diagram donat dashboard memiliki label aksesibel', v('planner-donut') === 'true');
+  ok('pie chart dashboard aksesibel atau menampilkan kondisi kosong', v('planner-donut') === 'true');
   ok('pemilih periode statistik tetap tersedia', v('planner-chart') === 'true');
   ok('ikon SVG tersedia dalam konten dashboard', v('content-svg') === 'true');
   ok('menu menampilkan daftar fitur', Number(v('menu-jumlah')) >= 10);

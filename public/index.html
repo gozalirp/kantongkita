@@ -15,6 +15,7 @@
 </head>
 <body>
 
+<a class="skip-link" href="#content">Lewati ke konten utama</a>
 <div id="app">
 
   <!-- ============ SIDEBAR ============ -->
@@ -62,14 +63,14 @@
       <h1 id="page-title">Dashboard</h1>
       <div class="topbar-actions">
         <button class="mode-pill" id="mode-pill" onclick="App.go('dashboard')" title="Lihat semua catatan">Semua catatan</button>
-        <button class="btn sm" id="btn-sync-cloud" onclick="App.manualSyncCloud()" title="Sinkronkan Cloudflare" style="display:inline-flex;align-items:center;gap:4px;padding:4px 9px;font-size:12px;">
-          <span class="ui-icon-wrap" data-ikon="refresh"></span> <span class="sync-lbl">Sync</span>
+        <button class="btn sm" id="btn-sync-cloud" onclick="App.manualSyncCloud()" title="Sinkronkan catatan" aria-label="Sinkronkan catatan">
+          <span class="ui-icon-wrap" data-ikon="refresh"></span> <span class="sync-lbl">Sinkronkan</span>
         </button>
         <span class="total-pill" id="total-pill">Rp 0</span>
       </div>
     </header>
 
-    <div class="content" id="content"></div>
+    <div class="content" id="content" tabindex="-1"></div>
   </main>
   <!-- ============ BOTTOM NAV (NATIVE APP STYLE) ============ -->
   <nav class="bottom-nav" id="bottom-nav" aria-label="Navigasi ponsel">

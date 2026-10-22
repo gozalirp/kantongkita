@@ -15,7 +15,7 @@ Menggunakan panduan design, design-system, dan ui-ux-pro-max. Pencarian design-s
 ## Komponen
 Navigasi menggunakan SVG lokal tanpa dependensi. Emoji untuk pilihan profil/kategori pengguna dipertahankan sebagai data. Halaman memiliki judul dan deskripsi singkat.
 
-Setiap halaman HTML (`index.html`, `keluarga.html`, `akun-email.html`) wajib memuat tautan Google Fonts Plus Jakarta Sans sendiri. `style.css` hanya menyebut nama fontnya; tanpa tautan itu browser diam-diam jatuh ke sans-serif sistem dan halaman terlihat beda tanpa ada yang error. Navigasi aktif memakai aria-current. Modal memiliki labelledby; toast berupa live region. Disabled, focus-visible dan reduced-motion wajib dipertahankan. Target sentuh HP 44px, input 16px untuk menghindari zoom otomatis iOS.
+Setiap halaman HTML (`index.html`, `akun-email.html`) wajib memuat tautan Google Fonts Plus Jakarta Sans sendiri. `style.css` hanya menyebut nama fontnya; tanpa tautan itu browser diam-diam jatuh ke sans-serif sistem dan halaman terlihat beda tanpa ada yang error. Navigasi aktif memakai aria-current. Modal memiliki labelledby; toast berupa live region. Disabled, focus-visible dan reduced-motion wajib dipertahankan. Target sentuh HP 44px, input 16px untuk menghindari zoom otomatis iOS.
 
 ## Bahasa ikon
 Satu peran, satu bahasa. **Ikon garis (SVG) hanya untuk kontrol**: tombol aksi, pintasan navigasi, kepala modal, keadaan kosong, dan notifikasi status. **Emoji hanya untuk data pilihan pengguna**: dompet, kategori, target tabungan, langganan, dan profil, dibungkus `<span class="ui-emoji">` supaya ukurannya setara ikon garis.
@@ -45,3 +45,15 @@ Tidak mengubah struktur penyimpanan, perhitungan keuangan, API, atau alur sinkro
 - **Tangga elevasi bayangan.** Kartu `0 3px 16px` pada alfa 2% (nyaris rata, hanya pemisah), tombol aksi `0 4px 14px`, tombol mengambang HP `0 8px 20px`, modal `0 24px 80px`. Empat tingkat, bukan bayangan tebal di semua elemen.
 - **Tema terang tetap, tanpa toggle (R-21).** Alasan produk: aplikasi ini dipakai di HP sambil melihat struk dan mencatat di siang hari, dan arah acuan pemilik adalah dashboard terang. Mode gelap belum dibangun, jadi tidak ada toggle yang bisa rusak (R-34).
 - **Keadaan galat memakai kartu peringatan yang menetap** di atas isi halaman, dengan tombol Coba lagi. Toast sendirian tidak cukup karena hilang sendiri, sehingga halaman akan tampak normal padahal datanya gagal dimuat.
+
+
+## Penyempurnaan UI/UX lintas halaman (2026-10-22)
+- Pertahankan warna ungu pastel dan Plus Jakarta Sans. Hasil pencarian skill untuk finance minimalism mendukung hierarki bersih, tetapi pola landing page trust/sales dan palet navy/gold tidak cocok untuk aplikasi ini sehingga tidak diterapkan.
+- Kartu keluarga menampilkan ringkasan singkat; anggota, penjelasan privasi, dan impor lama berada di disclosure native `details/summary`. Galat tetap terlihat di luar disclosure.
+- Saldo utama paling menonjol; angka tabular; warna pastel sebagai latar, bukan warna teks bermakna. Label tetap minimal 12px, form 13px/16px mobile.
+- Kondisi dashboard tanpa dompet menawarkan tombol Tambah dompet. Akun bersama langsung membuka form transaksi tanpa pemilih sumber tambahan; jika dompet kosong, buka form dompet dahulu.
+- Tombol minimal 44px di HP, skip-link ke konten, checkbox pilihan data lama bersasaran besar, halaman tidak boleh overflow horizontal pada 375/768/1024/1440px.
+- Tes `tests/ui-responsive.cjs` menguji layout Chrome 11 halaman dengan buku keluarga, disclosure, form, kondisi kosong, label, dan reduced motion. Tes hit-target lama menggulir tombol ke viewport sebelum memeriksa elementFromPoint.
+
+## Grafik berdasarkan fungsi menu (2026-10-22)
+Permintaan terbaru menggantikan semua-pie: dashboard 6/12 bulan dan rekap agregat menggunakan batang berpasangan dengan skala nol bersama; tren 30 hari dan rekap harian menggunakan garis (masuk utuh, keluar putus-putus), hari kosong diisi nol pada presentasi tanpa mengubah model. Komposisi kategori dashboard memakai donat; peringkat halaman kategori memakai batang horizontal terurut. Nominal dan persentase komposisi tampil dalam legenda; grafik waktu menyediakan tabel nominal yang bisa dibuka, bukan tooltip-only. Anggaran/target tetap indikator progres, bukan pie. Tidak menambah dependensi.

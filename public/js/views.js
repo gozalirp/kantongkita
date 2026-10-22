@@ -67,7 +67,7 @@
         '<p class="muted gerbang-tip">' +
           (daftar
             ? 'Akun baru langsung mendapat buku catatan sendiri, terpisah dari akun lain.'
-            : 'Punya kode undangan dari pasangan? <a href="/keluarga?aksi=undangan">Gabung keluarga</a>.') +
+            : 'Untuk bergabung, buat akun atau masuk dahulu, lalu gunakan kode pasangan lewat tombol Undang pasangan di dashboard.') +
         '</p>' +
         '<form id="g-form" autocomplete="on">' +
           '<div class="field"><label for="g-user">Username</label>' +
@@ -406,44 +406,97 @@
     return '<div class="empty"><span class="e-ic">' + U.icon(icon) + '</span><p>' + text + '</p></div>';
   }
 
-  // grafik batang CSS: data = [{label, in, out, net}]
-  function dualBars(data, opts) {
-    opts = opts || {};
-    if (!data.length) return emptyBox('chart', 'Belum ada data untuk digambar.');
-    const max = Math.max.apply(null, data.map(function (d) { return Math.max(d.income || 0, d.expense || 0); }).concat([1]));
-    const showVal = opts.showVal !== false;
-    return '<div class="bars">' + data.map(function (d) {
-      const wi = U.pct(d.income || 0, max), wo = U.pct(d.expense || 0, max);
-      return '<div class="bar-row">' +
-        '<div class="bar-cat" title="' + H(d.label) + '">' + H(d.label) + '</div>' +
-        '<div style="display:flex;flex-direction:column;gap:4px">' +
-          '<div class="bar-track"><div class="bar-fill in" style="width:' + wi + '%"></div></div>' +
-          '<div class="bar-track"><div class="bar-fill out" style="width:' + wo + '%"></div></div>' +
-        '</div>' +
-        (showVal ? '<div class="right num" style="font-size:11.5px;line-height:1.45">' +
-          '<div style="color:var(--in)">' + U.fmtRpShort(d.income || 0) + '</div>' +
-          '<div style="color:var(--out)">' + U.fmtRpShort(d.expense || 0) + '</div>' +
-        '</div>' : '') +
-      '</div>';
-    }).join('') + '</div>' +
-    '<div class="row" style="margin-top:14px;font-size:11.5px;color:var(--txt-mute);gap:16px">' +
-      '<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--in);margin-right:6px"></i>Pemasukan</span>' +
-      '<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--out);margin-right:6px"></i>Pengeluaran</span>' +
-    '</div>';
+  const PIE_COLORS = ['#5955EF', '#D97706', '#E11D48', '#0284C7', '#059669', '#9333EA', '#B45309', '#0E7490'];
+
+  function pieChart(rows, title) {
+    rows = rows.filter(function (r) { return Number.isFinite(r.amount) && r.amount > 0; });
+    const total = U.sum(rows, function (r) { return r.amount; });
+    if (!total) return emptyBox('chart', 'Belum ada data ' + title.toLowerCase() + ' pada periode ini.');
+    // Irisan kecil tetap dihitung utuh melalui kelompok Lainnya.
+    if (rows.length > 8) {
+      rows = rows.slice().sort(function (a, b) { return b.amount - a.amount; });
+      rows = rows.slice(0, 7).concat([{ name: 'Lainnya (' + (rows.length - 7) + ')', amount: U.sum(rows.slice(7), function (r) { return r.amount; }) }]);
+    }
+    let cursor = 0;
+    const stops = rows.map(function (r, i) {
+      const start = cursor; cursor += r.amount / total * 100;
+      return PIE_COLORS[i] + ' ' + start + '% ' + (i === rows.length - 1 ? 100 : cursor) + '%';
+    });
+    return '<figure class="pie-chart donut-chart"><figcaption><strong>' + H(title) + '</strong><span>Total ' + U.fmtRp(total) + '</span></figcaption>' +
+      '<div class="pie-disc" role="img" aria-label="' + H(title + '. Diagram donat. Rincian nominal dan persentase tersedia pada legenda di bawah.') + '" style="background:conic-gradient(' + stops.join(',') + ')"></div>' +
+      '<ul class="pie-legend">' + rows.map(function (r, i) {
+        return '<li><i aria-hidden="true" style="background:' + PIE_COLORS[i] + '"></i><span>' + H(r.name) + '</span><strong>' +
+          U.fmtRp(r.amount) + '<small>' + U.round1(r.amount / total * 100) + '%</small></strong></li>';
+      }).join('') + '</ul></figure>';
   }
 
-  function catBars(db, from, to) {
-    const rows = S.byCategory(db, from, to, 'out');
+  function dailyChartData(db, from, to) {
+    const rows = new Map(S.byDay(db, from, to).map(function (d) { return [d.date, d]; }));
+    const data = [];
+    for (let date = from; date <= to; date = U.addDays(date, 1)) {
+      const row = rows.get(date) || { income: 0, expense: 0 };
+      data.push({ label: U.fmtDate(date), axisLabel: String(U.strToDate(date).getDate()), income: row.income, expense: row.expense });
+    }
+    return data;
+  }
+
+  function periodChart(data, trend) {
+    const max = Math.max.apply(null, data.map(function (d) { return Math.max(d.income || 0, d.expense || 0); }).concat([0]));
+    if (!max) return emptyBox('chart', 'Belum ada pemasukan atau pengeluaran pada periode ini.');
+    const legend = '<div class="time-legend"><span class="series-in">━ Pemasukan</span><span class="series-out">┄ Pengeluaran</span></div>';
+    const table = '<details class="chart-data"><summary>Lihat nominal per periode</summary><div class="table-wrap"><table><thead><tr><th>Periode</th><th>Pemasukan</th><th>Pengeluaran</th></tr></thead><tbody>' + data.map(function (d) {
+      return '<tr><td>' + H(d.label) + '</td><td>' + U.fmtRp(d.income || 0) + '</td><td>' + U.fmtRp(d.expense || 0) + '</td></tr>';
+    }).join('') + '</tbody></table></div></details>';
+    if (trend === 'column') {
+      const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
+      const ceiling = Math.ceil(max / magnitude / 2) * magnitude * 2;
+      const tick = function (i, count) {
+        const step = Math.max(1, Math.ceil((data.length - 1) / (count - 1)));
+        return i === data.length - 1 || (i % step === 0 && (i === 0 || data.length - 1 - i >= step * 0.65));
+      };
+      return '<div class="time-chart column-chart"><div class="time-legend"><span class="series-in">Pemasukan</span><span class="series-out">Pengeluaran</span></div>' +
+        '<div class="column-frame"><div class="column-axis" aria-hidden="true">' + [1, 0.75, 0.5, 0.25, 0].map(function (v) {
+          return '<span>' + H(U.fmtRpShort(ceiling * v)) + '</span>';
+        }).join('') + '</div><div class="column-plot">' + data.map(function (d, i) {
+          return '<div class="column-group"><div class="column-pair">' + ['income', 'expense'].map(function (key) {
+            const amount = d[key] || 0;
+            return '<div role="img" aria-label="' + H(d.label + ' · ' + (key === 'income' ? 'Pemasukan ' : 'Pengeluaran ') + U.fmtRp(amount)) + '" class="column-bar column-' + key + '" style="height:' + (amount / ceiling * 100) + '%" title="' + H(d.label + ': ' + U.fmtRp(amount)) + '"></div>';
+          }).join('') + '</div><span class="column-label' + (tick(i, 7) ? ' tick-wide' : '') + (tick(i, 4) ? ' tick-small' : '') + '" title="' + H(d.label) + '">' + H(d.axisLabel || d.label) + '</span></div>';
+        }).join('') + '</div></div>' + table + '</div>';
+    }
+    if (trend && data.length) {
+      const x = function (i) { return data.length === 1 ? 385 : 90 + i / (data.length - 1) * 590; };
+      const y = function (value) { return 205 - value / max * 175; };
+      const grid = [0, 0.5, 1].map(function (fraction) {
+        const cy = y(max * fraction);
+        return '<line x1="90" y1="' + cy + '" x2="680" y2="' + cy + '" class="chart-grid"/><text x="80" y="' + (cy + 4) + '" text-anchor="end">' + H(U.fmtRpShort(max * fraction)) + '</text>';
+      }).join('');
+      const lines = ['income', 'expense'].map(function (key) {
+        return '<polyline class="trend-' + key + '" fill="none" stroke-width="3" points="' + data.map(function (d, i) { return x(i) + ',' + y(d[key] || 0); }).join(' ') + '"/>' + data.map(function (d, i) {
+          return '<circle class="trend-point point-' + key + '" cx="' + x(i) + '" cy="' + y(d[key] || 0) + '" r="3"><title>' + H(d.label + ' · ' + (key === 'income' ? 'Pemasukan ' : 'Pengeluaran ') + U.fmtRp(d[key] || 0)) + '</title></circle>';
+        }).join('');
+      }).join('');
+      const labels = data.map(function (d, i) {
+        if (i !== 0 && i !== data.length - 1 && i % Math.ceil(data.length / 5)) return '';
+        return '<text x="' + x(i) + '" y="232" text-anchor="middle">' + H(String(d.label).replace(/ \d{4}$/, '')) + '</text>';
+      }).join('');
+      return '<div class="time-chart line-chart">' + legend + '<svg viewBox="0 0 720 250" role="img" aria-label="Tren pemasukan garis utuh dan pengeluaran garis putus-putus. Nominal lengkap tersedia di tabel per periode.">' + grid + lines + labels + '</svg>' + table + '</div>';
+    }
+    return '<div class="time-chart grouped-chart">' + legend + '<p class="chart-scale">Skala bersama mulai Rp0 · maksimum ' + U.fmtRp(max) + '</p>' +
+      data.map(function (d) {
+        return '<div class="period-row"><strong>' + H(d.label) + '</strong><div class="period-values">' + ['income', 'expense'].map(function (key) {
+          return '<div class="period-value"><span class="period-track" aria-hidden="true"><i class="trend-' + key + '" style="width:' + ((d[key] || 0) / max * 100) + '%"></i></span><span><small>' + (key === 'income' ? 'Masuk' : 'Keluar') + '</small> ' + U.fmtRp(d[key] || 0) + '</span></div>';
+        }).join('') + '</div></div>';
+      }).join('') + table + '</div>';
+  }
+
+  function categoryBars(db, from, to) {
+    const rows = S.byCategory(db, from, to, 'out').filter(function (r) { return r.amount > 0; }).sort(function (a, b) { return b.amount - a.amount; });
     if (!rows.length) return emptyBox('chart', 'Belum ada pengeluaran pada periode ini.');
     const total = U.sum(rows, function (r) { return r.amount; });
-    const max = Math.max.apply(null, rows.map(function (r) { return r.amount; }).concat([1]));
-    return '<div class="bars">' + rows.slice(0, 12).map(function (r) {
-      return '<div class="bar-row">' +
-        '<div class="bar-cat" title="' + H(r.name) + '">' + emo(r.icon) + H(r.name) + '</div>' +
-        '<div class="bar-track"><div class="bar-fill out" style="width:' + U.pct(r.amount, max) + '%"></div></div>' +
-        '<div class="right num" style="font-size:12px">' + U.fmtRpShort(r.amount) +
-          '<span class="muted" style="font-size:11px"> · ' + U.round1(U.pct(r.amount, total)) + '%</span></div>' +
-      '</div>';
+    return '<div class="category-bars" aria-label="Peringkat pengeluaran kategori">' + rows.map(function (r) {
+      return '<div class="category-bar"><div><strong>' + emo(r.icon) + H(r.name) + '</strong><span>' + U.fmtRp(r.amount) + ' · ' + U.round1(r.amount / total * 100) + '%</span></div>' +
+        '<div class="category-track" aria-hidden="true"><i style="width:' + (r.amount / rows[0].amount * 100) + '%"></i></div></div>';
     }).join('') + '</div>';
   }
 
@@ -497,11 +550,14 @@
      FORM TRANSAKSI (tambah / ubah)
      ============================================================ */
   V.txForm = function (id, presetType, sumber, walletId) {
-    if (root.Buku && !id && !sumber && !presetType && ['dashboard', 'transaksi'].includes(root.App.view)) { Buku.catat(); return; }
-    const bersama = sumber === 'keluarga';
+    if (root.Buku && !Buku.bersama() && !id && !sumber && !presetType && ['dashboard', 'transaksi'].includes(root.App.view)) { Buku.catat(); return; }
+    const bersama = sumber === 'keluarga' || (root.Buku && Buku.bersama());
     if (bersama && (!root.Buku || !Buku.keluarga)) { V.toast('Muat catatan keluarga terlebih dahulu.', 'err'); return; }
+    if (bersama && !id && !Buku.keluarga.wallets.some(w => !w.archived)) { V.walletForm(); V.toast('Tambahkan dompet dan saldo awal dulu.'); return; }
     const revisi = bersama ? Buku.revisi : null;
     const db = bersama ? JSON.parse(JSON.stringify(Buku.keluarga)) : root.App.db;
+    // Buku keluarga yang baru direset belum memiliki kategori bawaan.
+    if (bersama && !db.categories.length) db.categories = S.seedDB().categories;
     const editing = id ? (db.transactions || []).filter(function (t) { return t.id === id; })[0] : null;
     let form = editing ? Object.assign({}, editing, { amount: editing.amount }) : {
       id: '', date: U.today(), type: presetType || 'out', amount: '',
@@ -683,6 +739,7 @@
   };
 
   V.txDelete = async function (id) {
+    if (root.Buku && Buku.bersama()) return Buku.hapus(id);
     const ok = await V.confirm('Hapus transaksi?', 'Transaksi ini akan dihapus permanen dan saldo dompet ikut menyesuaikan.', 'Hapus', true);
     if (!ok) return false;
     const db = root.App.db;
@@ -745,45 +802,28 @@
       });
       chartCaption = '12 bulan terakhir';
     } else {
-      const r = S.summaryDays(db, 30);
-      chartData = S.byDay(db, U.addDays(U.today(), -29), U.today()).map(function (d) {
-        return { label: U.fmtDate(d.date).replace(/ \d{4}$/, ''), income: d.income, expense: d.expense };
-      });
+      chartData = dailyChartData(db, U.addDays(U.today(), -29), U.today());
       chartCaption = '30 hari terakhir';
     }
 
     const recent = S.filterTx(db, {}).slice(0, 10);
 
     const categories = S.byCategory(db, U.monthStart(U.today()), U.monthEnd(U.today()), 'out');
-    const colors = ['#5955EF', '#FBBF24', '#FB7185', '#60A5FA', '#34D399', '#A78BFA'];
-    // Semua kategori tetap masuk hitungan; warna berulang memiliki label tersendiri.
-    const categoryTotal = U.sum(categories, function (r) { return r.amount; });
-    let cursor = 0;
-    const stops = categories.map(function (r, i) {
-      const from = cursor;
-      cursor += U.pct(r.amount, categoryTotal);
-      return colors[i % colors.length] + ' ' + from + '% ' + cursor + '%';
-    });
-    const donut = '<div class="planner-donut" role="img" aria-label="' +
-      H('Total pengeluaran bulan ini ' + U.fmtRp(categoryTotal)) + '" style="--donut:conic-gradient(' +
-      (stops.length ? stops.join(',') : '#E9EDF5 0% 100%') + ')"><div><strong>' +
-      U.fmtRpShort(categoryTotal) + '</strong><span>Pengeluaran</span></div></div>';
-
     return '<div class="planner-dashboard">' +
       '<header class="planner-welcome"><div>' +
-        '<h2>Rencana uangmu, lebih terarah.</h2><p>Pantau saldo dan wujudkan targetmu, sedikit demi sedikit.</p></div>' +
+        '<span class="planner-eyebrow">Ringkasan keuangan</span><h2>Uang tertata, rencana terjaga.</h2><p>Pantau saldo, pengeluaran, dan progres tabunganmu.</p></div>' +
         '<button class="btn primary" onclick="V.txForm()">' + wrapIco('plus') + 'Catat transaksi</button></header>' +
       (root.Buku ? Buku.kontrol() : '') +
       st4 +
       '<div class="planner-layout"><div class="planner-main">' +
         '<section class="card planner-wallets"><div class="card-head"><h2>Dompet &amp; tabungan</h2>' +
           '<button class="btn sm" onclick="App.go(\'dompet\')">Kelola</button></div>' +
-          (walletCards ? '<div class="grid cols-3">' + walletCards + '</div>' : emptyBox('wallet', 'Belum ada dompet. Tambahkan dulu di menu Dompet & Bank.')) +
+          (walletCards ? '<div class="grid cols-3">' + walletCards + '</div>' : '<div class="empty wallet-onboarding"><span class="e-ic">' + U.icon('wallet') + '</span><h3>Mulai dari satu dompet</h3><p>Tambahkan rekening atau uang tunai beserta saldo awalnya.</p><button class="btn primary" onclick="V.walletForm()">' + wrapIco('plus') + 'Tambah dompet</button></div>') +
         '</section>' +
         '<section class="card planner-chart"><div class="card-head"><h2>Statistik keuangan</h2>' +
           '<div class="seg" id="dash-chart">' + segBtn(st.chart, '6m', '6 Bulan') +
           segBtn(st.chart, '12m', '12 Bulan') + segBtn(st.chart, '30d', '30 Hari') + '</div></div>' +
-          '<p class="muted planner-caption">Pemasukan dan pengeluaran · ' + chartCaption + '</p>' + dualBars(chartData) +
+          '<p class="muted planner-caption">Pemasukan dan pengeluaran · ' + chartCaption + '</p>' + periodChart(chartData, st.chart === '30d') +
         '</section>' +
         '<section class="card"><div class="card-head"><h2>Catatan Terakhir</h2>' +
           '<button class="btn sm" onclick="App.go(\'transaksi\')">Lihat semua</button></div>' +
@@ -797,11 +837,7 @@
           }).join('') + '</div></section>' +
       '</div><aside class="planner-aside" aria-label="Target dan komposisi pengeluaran">' +
         '<section class="card planner-breakdown"><div class="card-head"><h2>Pengeluaran per Kategori</h2></div>' +
-          '<p class="muted planner-caption">' + U.fmtMonth(U.monthOf(U.today())) + '</p>' + donut +
-          (categories.length ? '<ul class="planner-legend">' + categories.map(function (r, i) {
-            return '<li><i aria-hidden="true" style="background:' + colors[i % colors.length] + '"></i><span>' + H(r.name) +
-              '</span><strong>' + U.fmtRpShort(r.amount) + '</strong></li>';
-          }).join('') + '</ul>' : '<p class="muted">Belum ada pengeluaran bulan ini.</p>') +
+          '<p class="muted planner-caption">' + U.fmtMonth(U.monthOf(U.today())) + '</p>' + pieChart(categories, 'Pengeluaran bulan ini') +
         '</section>' + V.dashTahap2(db) +
       '</aside></div></div>';
 
@@ -1104,14 +1140,15 @@
         table + (totalRow ? '<div class="mt" style="border-top:1px solid var(--line);padding-top:14px">' + totalRow + '</div>' : '') +
       '</div>' +
       '<div class="card mt"><div class="card-head"><h2>Grafik Rekap</h2>' +
-        '<button class="btn sm" onclick="V.exportCSV()">' + wrapIco('download') + 'Unduh CSV</button></div>' +
+        '<button class="btn sm" onclick="V.exportCSV(window.Buku &amp;&amp; Buku.data())">' + wrapIco('download') + 'Unduh CSV</button></div>' +
+        '<p class="chart-period">' + H('Periode: ' + caption) + '</p>' +
         (st.tab === 'tahun'
-          ? dualBars(S.byYear(db).map(function (d) { return { label: d.year, income: d.income, expense: d.expense }; }))
+          ? periodChart(S.byYear(db).map(function (d) { return { label: d.year, income: d.income, expense: d.expense }; }), 'column')
           : st.tab === 'bulan'
-            ? dualBars(S.byMonth(db, st.year + '-01', st.year + '-12').map(function (d) { return { label: U.fmtMonthShort(d.month), income: d.income, expense: d.expense }; }))
+            ? periodChart(S.byMonth(db, st.year + '-01', st.year + '-12').map(function (d) { return { label: U.fmtMonth(d.month), axisLabel: U.fmtMonthShort(d.month).replace(/ \d{2}$/, ''), income: d.income, expense: d.expense }; }), 'column')
             : st.tab === 'minggu'
-              ? dualBars(S.byWeek(db, st.ym + '-01', U.monthEnd(st.ym + '-01')).map(function (d) { return { label: U.fmtDate(d.week).replace(/ \d{4}$/, ''), income: d.income, expense: d.expense }; }))
-              : dualBars(S.byDay(db, st.ym + '-01', U.monthEnd(st.ym + '-01')).map(function (d) { return { label: String(U.strToDate(d.date).getDate()), income: d.income, expense: d.expense }; }))
+              ? periodChart(S.byWeek(db, st.ym + '-01', U.monthEnd(st.ym + '-01')).map(function (d) { return { label: U.fmtDate(d.week) + ' – ' + U.fmtDate(d.end), axisLabel: U.fmtDate(d.week).replace(/ \d{4}$/, ''), income: d.income, expense: d.expense }; }), 'column')
+              : periodChart(dailyChartData(db, st.ym + '-01', U.monthEnd(st.ym + '-01')), 'column')
         ) +
       '</div>';
   };
@@ -1126,9 +1163,12 @@
     const yr = el('rk-year'); if (yr) yr.onchange = function () { V.state.rekap.year = yr.value; root.App.render(); };
   };
 
-  V.exportCSV = function () {
-    const db = root.App.db;
-    root.App.download('savingduit-' + U.today() + '.csv', 'text/csv', S.toCSV(db));
+  /* CSV selalu mengikuti data yang sedang tampil: halaman Rekap mengirim db
+     yang dipakainya sendiri, jadi angka di layar dan isi berkas tidak pernah
+     berbeda (mis. buku pribadi + keluarga yang sedang digabung). */
+  V.exportCSV = function (db) {
+    const buku = db || root.App.db;
+    root.App.download('savingduit-' + U.today() + '.csv', 'text/csv', S.toCSV(buku));
     V.toast('CSV diunduh', 'ok');
   };
 
@@ -1184,7 +1224,7 @@
       '<nav class="menu-grid" aria-label="Daftar fitur">' + MENU_FITUR.map(kartu).join('') + '</nav>' +
     '</div>' +
     '<div class="card mt"><div class="card-head"><h2>Lainnya</h2></div>' +
-      '<nav class="menu-grid" aria-label="Menu lainnya">' + MENU_LAIN.map(kartu).join('') + '<a class="menu-link" href="/keluarga.html"><span class="menu-ic">' + U.icon('user') + '</span><span class="menu-txt"><strong>Keluarga</strong><span>Login dan buku transaksi bersama (versi awal).</span></span></a></nav>' +
+      '<nav class="menu-grid" aria-label="Menu lainnya">' + MENU_LAIN.map(kartu).join('') + '</nav>' +
     '</div>' + kartuAkun;
   };
 
@@ -1192,7 +1232,7 @@
      VIEW: DOMPET & BANK
      ============================================================ */
   V.dompet = function () {
-    const db = root.App.db;
+    const db = root.Buku && Buku.bersama() ? Buku.keluarga : root.App.db;
     const bal = S.walletBalances(db);
     const total = S.totalBalance(db);
     const list = (db.wallets || []).filter(function (w) { return !w.archived; });
@@ -1213,7 +1253,7 @@
 
     // pindah dana cepat
     const moves = S.filterTx(db, {}).filter(function (t) { return t.type === 'move'; }).slice(0, 8);
-    const adaKeluarga = !!(root.Buku && root.Buku.akun);
+    const adaKeluarga = !!(root.Buku && root.Buku.akun && !Buku.bersama());
     const tombolKeluarga = adaKeluarga
       ? '<button class="btn" onclick="Buku.dompet()">' + wrapIco('users') + 'Tambah Dompet Keluarga</button>'
       : '';
@@ -1222,7 +1262,7 @@
         '<span class="total-pill">Total: ' + U.fmtRp(total) + '</span>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
           tombolKeluarga +
-          '<button class="btn primary" onclick="V.walletForm()">' + wrapIco('plus') + 'Tambah Dompet Pribadi</button>' +
+          '<button class="btn primary" onclick="V.walletForm()">' + wrapIco('plus') + (root.Buku && Buku.bersama() ? 'Tambah Dompet</button>' : 'Tambah Dompet Pribadi</button>') +
         '</div></div>' +
       (adaKeluarga ? '<p class="hint" style="margin:4px 0 12px;">Dompet di bawah ini hanya ada di akunmu. Pakai “Tambah Dompet Keluarga” agar terlihat juga oleh pasangan.</p>' : '') +
       (cards ? '<div class="grid cols-3 wallet-grid">' + cards + '</div>'
@@ -1237,7 +1277,9 @@
   };
 
   V.walletForm = function (id) {
-    const db = root.App.db;
+    const ctx = root.Buku && Buku.bersama() ? Buku.konteks(id, 'keluarga') : null;
+    if (root.Buku && Buku.bersama() && !ctx) return;
+    const db = ctx ? ctx.db : root.App.db;
     const w = id ? db.wallets.filter(function (x) { return x.id === id; })[0] : null;
     const TYPES = [['cash', 'Tunai'], ['bank', 'Rekening Bank'], ['ewallet', 'E-Wallet'], ['credit', 'Kartu Kredit'], ['investment', 'Investasi'], ['other', 'Lainnya']];
     const f = w || { id: '', name: '', type: 'bank', icon: '🏦', color: '#3d7bff', initial: 0 };
@@ -1274,7 +1316,7 @@
       const v = U.parseAmount(initIn.value); initIn.value = v ? U.fmtNum(v) : '';
     });
 
-    el('w-save').onclick = function () {
+    el('w-save').onclick = async function () {
       const name = el('w-name').value.trim();
       if (!name) { V.toast('Nama dompet wajib diisi', 'err'); return; }
       const obj = {
@@ -1285,14 +1327,17 @@
       };
       if (w) { const i = db.wallets.findIndex(function (x) { return x.id === w.id; }); db.wallets[i] = obj; }
       else db.wallets.push(obj);
-      root.App.saveAndRender();
+      if (ctx && !db.categories.length) db.categories = S.seedDB().categories;
+      if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
       V.toast(w ? 'Dompet diperbarui' : 'Dompet ditambahkan', 'ok');
       V.modal.close();
     };
   };
 
   V.walletDelete = async function (id) {
-    const db = root.App.db;
+    const ctx = root.Buku && Buku.bersama() ? Buku.konteks(id, 'keluarga') : null;
+    if (root.Buku && Buku.bersama() && !ctx) return;
+    const db = ctx ? ctx.db : root.App.db;
     const w = db.wallets.filter(function (x) { return x.id === id; })[0];
     const n = S.txCountForWallet(db, id);
     const aktif = (db.wallets || []).filter(function (x) { return !x.archived; }).length;
@@ -1308,7 +1353,7 @@
     (db.goals || []).forEach(function (g) { if (g.walletId === id) g.walletId = ''; });
     (db.subscriptions || []).forEach(function (s) { if (s.walletId === id) s.walletId = ''; });
     db.wallets = db.wallets.filter(function (x) { return x.id !== id; });
-    root.App.saveAndRender();
+    if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
     V.toast('Dompet dihapus', 'ok');
   };
 
@@ -1316,7 +1361,7 @@
      VIEW: KATEGORI
      ============================================================ */
   V.kategori = function () {
-    const db = root.App.db;
+    const db = root.Buku && Buku.bersama() ? Buku.keluarga : root.App.db;
     const st = V.state.kategori;
     const from = U.monthStart(U.today()), to = U.monthEnd(U.today());
     const cats = (db.categories || []).filter(function (c) { return !c.archived && c.type === st.tab; });
@@ -1345,7 +1390,7 @@
             : emptyBox('tag', 'Belum ada kategori. Tambahkan dulu.')) +
     '</div>' +
     '<div class="card mt"><div class="card-head"><h2>Pemakaian Kategori Bulan Ini</h2></div>' +
-      catBars(db, from, to) + '</div>';
+      categoryBars(db, from, to) + '</div>';
   };
 
   V.kategoriBind = function () {
@@ -1357,7 +1402,9 @@
   };
 
   V.catForm = function (id, presetType) {
-    const db = root.App.db;
+    const ctx = root.Buku && Buku.bersama() ? Buku.konteks(id, 'keluarga') : null;
+    if (root.Buku && Buku.bersama() && !ctx) return;
+    const db = ctx ? ctx.db : root.App.db;
     const c = id ? db.categories.filter(function (x) { return x.id === id; })[0] : null;
     const f = c || { id: '', name: '', type: presetType || 'out', icon: '🏷️' };
     const EMOJI = ['🍽️','🚗','🛒','💡','🏠','💊','📚','🎬','📶','🏦','🤲','🐖','👕','✈️','🎁','💼','🏪','📈','➕','➖','🧾','☕','⛽','🅿️','🎮','💄','👶','🐶'];
@@ -1390,20 +1437,22 @@
       tandaiPilihan(el('c-icons'), b);
     });
 
-    el('c-save').onclick = function () {
+    el('c-save').onclick = async function () {
       const name = el('c-name').value.trim();
       if (!name) { V.toast('Nama kategori wajib diisi', 'err'); return; }
       const obj = { id: c ? c.id : U.uid('cat'), name: name, type: type, icon: icon || '🏷️', archived: c ? !!c.archived : false };
       if (c) { const i = db.categories.findIndex(function (x) { return x.id === c.id; }); db.categories[i] = obj; }
       else db.categories.push(obj);
-      root.App.saveAndRender();
+      if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
       V.toast(c ? 'Kategori diperbarui' : 'Kategori ditambahkan', 'ok');
       V.modal.close();
     };
   };
 
   V.catDelete = async function (id) {
-    const db = root.App.db;
+    const ctx = root.Buku && Buku.bersama() ? Buku.konteks(id, 'keluarga') : null;
+    if (root.Buku && Buku.bersama() && !ctx) return;
+    const db = ctx ? ctx.db : root.App.db;
     const c = db.categories.filter(function (x) { return x.id === id; })[0];
     const n = S.txCountForCategory(db, id);
     const nb = (db.budgets || []).filter(function (b) { return b.categoryId === id; });
@@ -1419,7 +1468,7 @@
     (db.subscriptions || []).forEach(function (s) { if (s.categoryId === id) s.categoryId = ''; });
     db.budgets = (db.budgets || []).filter(function (b) { return b.categoryId !== id; });
     db.categories = db.categories.filter(function (x) { return x.id !== id; });
-    root.App.saveAndRender();
+    if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
     V.toast('Kategori dihapus', 'ok');
   };
 
@@ -1543,6 +1592,10 @@
       let raw;
       try { raw = JSON.parse(fr.result); }
       catch (e) { V.toast('Berkas bukan JSON yang valid', 'err'); return; }
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        V.toast('Berkas itu bukan backup Money Planner', 'err');
+        return;
+      }
       const db = root.App.db;
       const n = (raw.transactions || []).length;
 
@@ -2242,7 +2295,7 @@
         '</div>'
       : '<div class="card"><div class="card-head"><h2>Akun login</h2></div>' +
           '<p class="muted">Belum masuk. Akun login berbeda dari profil lokal di perangkat ini.</p>' +
-          '<a class="btn" href="/keluarga?aksi=masuk">Masuk ke akun</a></div>';
+          '<a class="btn" href="/#/masuk">Masuk ke akun</a></div>';
 
     const keluargaAktif = !!(root.K && root.K.aktif && root.K.aktif());
     const kartuKeluarga = '<section class="card mt" aria-labelledby="profil-keluarga-title">' +
@@ -2250,13 +2303,13 @@
       '<p class="muted">Satu buku bersama, dua akun masing-masing. Bukan satu password untuk berdua.</p>' +
       (akun
         ? '<p>Gunakan tombol undangan untuk mengajak pasangan memakai catatan bersama. Hanya pemilik keluarga yang dapat mengundang, selama anggota belum berjumlah dua.</p>' +
-          '<div class="row">' + (root.Buku ? '<button class="btn primary" id="profil-tambah-keluarga" onclick="Buku.undang(this)">' + wrapIco('plus') + 'Undang pasangan</button>' : '<a class="btn primary" id="profil-tambah-keluarga" href="/keluarga#invite">' + wrapIco('plus') + 'Tambah anggota keluarga</a>') +
+          '<div class="row">' + (root.Buku ? '<button class="btn primary" id="profil-tambah-keluarga" onclick="Buku.undang(this)">' + wrapIco('plus') + 'Undang pasangan</button>' : '<a class="btn primary" id="profil-tambah-keluarga" href="/#/dashboard">' + wrapIco('plus') + 'Buka dashboard</a>') +
             (root.Buku ? '<button class="btn" onclick="App.go(\'dashboard\')">Lihat dashboard bersama</button></div>' : '<button class="btn" onclick="App.gantiMode(\'keluarga\')"' + (keluargaAktif ? ' disabled' : '') + '>' + (keluargaAktif ? 'Buku keluarga sedang aktif' : 'Buka buku keluarga') + '</button></div>')
         : '<p>Mulai dari salah satu langkah berikut:</p>' +
-          '<div class="row"><a class="btn primary" href="/keluarga?aksi=aktivasi">Buat akun pertama</a>' +
-            '<a class="btn" href="/keluarga?aksi=undangan">Gabung dengan kode undangan</a></div>') +
+          '<div class="row"><a class="btn primary" href="/#/masuk">Buat akun pertama</a>' +
+            '<a class="btn" href="/#/masuk">Masuk lalu gunakan kode pasangan</a></div>') +
       '<ol><li>Pemilik akun membuat undangan dan mengirim kodenya ke pasangan.</li>' +
-        '<li>Pasangan membuka <b>Punya kode undangan?</b> di perangkat sendiri, lalu membuat username dan password sendiri.</li>' +
+        '<li>Pasangan membuat akun atau masuk di perangkat sendiri, lalu memasukkan kode lewat <b>Undang pasangan</b> di dashboard.</li>' +
         '<li>Setelah bergabung, keduanya memakai buku keluarga yang sama.</li></ol>' +
       '<p class="hint">Maksimal 2 anggota. Kode berlaku 24 jam dan sekali pakai. Buku keluarga memerlukan internet.</p>' +
       '<p class="muted"><b>Data lama tidak otomatis digabung.</b> Catatan pribadi dan profil lokal tetap terpisah dari buku keluarga. Profil Baru di bawah bukan untuk mengundang pasangan.</p>' +

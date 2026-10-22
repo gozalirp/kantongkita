@@ -41,6 +41,13 @@ function setVal(el, v) {
   el.dispatchEvent(new window.Event('change', { bubbles: true }));
 }
 function nav(v) { App.go(v); window.dispatchEvent(new window.HashChangeEvent('hashchange')); }
+/* FileReader jsdom selesai kapan saja; menunggu syaratnya membuat uji impor
+   tidak lagi gagal palsu karena waktu tetap. */
+async function tunggu(cek, ms) {
+  const batas = ms || 1500;
+  const t0 = Date.now();
+  while (!cek() && Date.now() - t0 < batas) await new Promise(r => setTimeout(r, 10));
+}
 
 section('1. Bootstrap');
 ok('App termuat', !!App);
@@ -390,6 +397,8 @@ section('9. Konfirmasi hapus: batal lalu setuju');
   ok('rekap tahunan memuat tahun berjalan', $('content').innerHTML.indexOf(U.yearOf(U.today())) > -1);
 
   section('15. Ekspor CSV & JSON');
+  nav('rekap');
+  ok('CSV Rekap memakai buku yang sedang tampil', $('content').innerHTML.indexOf('Buku.data()') > -1);
   V.exportCSV();
   ok('CSV terunduh', !!window.__lastDownload && /\.csv$/.test(window.__lastDownload.name));
   const csvText = decodeURIComponent(window.__lastDownload.href.split(',')[1]);
@@ -427,12 +436,14 @@ section('9. Konfirmasi hapus: batal lalu setuju');
   ];
   const file = new window.File([new window.Blob([JSON.stringify(payload)], { type: 'application/json' })], 'backup.json', { type: 'application/json' });
   window.__setConfirm(true);
-  await new Promise(res => { V.importJSON(file); setTimeout(res, 150); });
+  V.importJSON(file);
+  await tunggu(() => App.db.transactions.filter(t => /^itx/.test(t.id)).length === 2);
   eq('2 transaksi impor masuk', App.db.transactions.filter(t => /^itx/.test(t.id)).length, 2);
   ok('dompet impor ditambahkan', App.db.wallets.some(w => w.name === 'Dompet Impor'));
   ok('kategori impor ditambahkan', App.db.categories.some(c => c.name === 'Kat Impor'));
 
-  await new Promise(res => { V.importJSON(file); setTimeout(res, 150); });
+  V.importJSON(file);
+  await tunggu(() => false, 250);
   eq('impor ulang tidak menduplikasi transaksi', App.db.transactions.filter(t => /^itx/.test(t.id)).length, 2);
   eq('impor ulang tidak menduplikasi dompet', App.db.wallets.filter(w => w.name === 'Dompet Impor').length, 1);
   eq('impor ulang tidak menduplikasi kategori', App.db.categories.filter(c => c.name === 'Kat Impor').length, 1);
@@ -446,15 +457,26 @@ section('9. Konfirmasi hapus: batal lalu setuju');
   ok('checkbox impor-mengganti ada', !!cb);
   cb.checked = true;
   window.__setConfirm(true);
-  await new Promise(res => { V.importJSON(file2); setTimeout(res, 150); });
+  V.importJSON(file2);
+  await tunggu(() => App.db.transactions.length === 1);
   eq('data diganti (1 transaksi)', App.db.transactions.length, 1);
   eq('transaksi pengganti benar', App.db.transactions[0].id, 'solo1');
 
   section('19. Impor JSON rusak');
   const badFile = new window.File([new window.Blob(['{ bukan json'])], 'rusak.json', { type: 'application/json' });
   const nKeep = App.db.transactions.length;
-  await new Promise(res => { V.importJSON(badFile); setTimeout(res, 100); });
+  await new Promise(res => { V.importJSON(badFile); setTimeout(res, 250); });
   eq('data tidak berubah saat impor rusak', App.db.transactions.length, nKeep);
+
+  section('19b. Impor JSON berbentuk salah');
+  const arrFile = new window.File([new window.Blob(['[1,2,3]'])], 'bukan-backup.json', { type: 'application/json' });
+  const nAwal = App.db.transactions.length;
+  const dompetAwal = App.db.wallets.length;
+  window.__setConfirm(true);
+  await new Promise(res => { V.importJSON(arrFile); setTimeout(res, 250); });
+  eq('data tidak berubah saat bentuk backup salah', App.db.transactions.length, nAwal);
+  eq('dompet tidak berubah saat bentuk backup salah', App.db.wallets.length, dompetAwal);
+  ok('ada pesan bentuk berkas salah', $('toasts').textContent.indexOf('bukan backup') > -1);
 
   section('20. Modal close via scrim & Escape');
   V.txForm();
@@ -552,12 +574,28 @@ section('9. Konfirmasi hapus: batal lalu setuju');
     { id: 'c2', date: U.today(), type: 'out', amount: 400000, walletId: App.db.wallets[0].id, categoryId: '', note: '' }
   ];
   App.save(); App.render();
-  ok('grafik tampil setelah ada data', $('content').innerHTML.indexOf('bar-fill') > -1);
+  ok('grafik tampil setelah ada data', $('content').innerHTML.indexOf('pie-disc') > -1);
+  ok('dashboard bulanan memakai grafik perbandingan', !!q('.planner-chart .grouped-chart'));
+  ok('grafik menampilkan data nominal aksesibel', !!q('.chart-data table'));
   click(q('#dash-chart [data-seg="12m"]'));
   eq('ganti rentang grafik ke 12m', V.state.dashboard.chart, '12m');
+  ok('dashboard 12 bulan memakai perbandingan', !!q('.planner-chart .grouped-chart'));
   click(q('#dash-chart [data-seg="30d"]'));
   eq('ganti ke 30 hari', V.state.dashboard.chart, '30d');
+  ok('dashboard harian memakai tren garis', !!q('.planner-chart .line-chart svg'));
+  ok('garis keluar berbeda pola', !!q('.trend-expense'));
+  ok('grafik tren punya label aksesibel', !!q('.line-chart svg[role="img"][aria-label]'));
   ok('dashboard 30 hari tergambar', $('content').innerHTML.indexOf('30 hari terakhir') > -1);
+
+  nav('rekap');
+  V.state.rekap.ym = U.monthOf(U.today()); V.state.rekap.year = U.today().slice(0, 4);
+  for (const tab of ['hari', 'minggu', 'bulan', 'tahun']) {
+    V.state.rekap.tab = tab; App.render();
+    ok('rekap ' + tab + ' memakai kolom vertikal', !!q('.column-chart .column-pair'));
+    ok('rekap ' + tab + ' tidak memakai batang', !q('.grouped-chart'));
+    ok('rekap ' + tab + ' memiliki dua seri kolom', !!q('.column-income') && !!q('.column-expense'));
+    ok('rekap ' + tab + ' koordinat valid', !!q('.column-chart') && !q('.column-chart').outerHTML.includes('NaN'));
+  }
 
   section('27. Pengaturan: tampilan statistik & Drive');
   nav('pengaturan');
@@ -783,13 +821,13 @@ section('9. Konfirmasi hapus: batal lalu setuju');
     try {
       window.K = { terbuka: false, aktif: () => false };
       let tampilan = V.profil();
-      ok('profil belum login menawarkan join', tampilan.includes('/keluarga?aksi=undangan'));
-      ok('profil belum login menawarkan akun pertama', tampilan.includes('/keluarga?aksi=aktivasi'));
+      ok('profil belum login menawarkan join', tampilan.includes('Masuk lalu gunakan kode pasangan'));
+      ok('profil belum login menawarkan akun pertama', tampilan.includes('Buat akun pertama'));
       window.K = { terbuka: true, nama: 'Anggota', aktif: () => false };
       tampilan = V.profil();
-      ok('profil login menawarkan tambah keluarga', tampilan.includes('Tambah anggota keluarga</a>') && tampilan.includes('href="/keluarga#invite"'));
+      ok('profil login menawarkan tambah keluarga', tampilan.includes('Buka dashboard</a>') && tampilan.includes('href="/#/dashboard"'));
       ok('profil login menawarkan buku bersama', tampilan.includes('Buka buku keluarga'));
-      ok('profil login tidak menawarkan akun baru', !tampilan.includes('/keluarga?aksi=aktivasi'));
+      ok('profil login tidak menawarkan akun baru', !tampilan.includes('Buat akun pertama'));
       window.K.aktif = () => true;
       tampilan = V.profil();
       ok('profil keluarga aktif ditandai', tampilan.includes('disabled>Buku keluarga sedang aktif'));

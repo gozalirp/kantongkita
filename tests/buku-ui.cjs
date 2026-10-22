@@ -116,8 +116,8 @@ w.fetch = async (url, options) => {
   assert(/keluarga-peran">Anggota</.test(kartuKeluarga));
   assert(/role="status" aria-atomic="true">2 anggota</.test(kartuKeluarga));
   assert(/aria-label="Anggota keluarga"/.test(kartuKeluarga));
-  assert(/href="\/keluarga"/.test(kartuKeluarga));
-  assert.equal(B.kontrol().includes('Halaman keluarga'), true);
+  assert(!/href="\/keluarga"/.test(kartuKeluarga));
+  assert.equal(B.kontrol().includes('Halaman keluarga'), false);
   const anggotaPenuh = B.anggota;
   B.anggota = [anggotaPenuh[0]];
   assert(/1 anggota/.test(B.anggotaKeluarga()));

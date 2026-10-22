@@ -1,4 +1,4 @@
-/* Tampilan gabungan saja: buku pribadi dan keluarga tidak pernah disimpan sebagai satu payload. */
+/* Akun yang sudah berpasangan memakai satu buku keluarga; arsip pribadi tetap terpisah. */
 (function (root) {
   'use strict';
   const B = root.Buku = { filter: 'semua', keluarga: null, akun: '', sibuk: false, memuat: false, pesan: '' };
@@ -34,12 +34,21 @@
     });
     return hasil;
   };
+  B.bersama = function () { return !!(B.jumlah >= 2 && root.K && K.terbuka && B.akun === K.nama); };
   B.data = function () {
+    if (B.bersama()) {
+      const db = B.gabung(null, B.keluarga, 'keluarga');
+      ['wallets', 'categories', 'goals', 'subscriptions'].forEach(key => db[key].forEach(x => { x.name = x.name.replace(/ · Keluarga$/, ''); }));
+      return db;
+    }
     const keluarga = root.K && K.terbuka && B.akun === K.nama ? B.keluarga : null;
     return B.gabung(B.pribadi(), keluarga, B.filter);
   };
+  /* Mengembalikan hasilnya supaya pemanggil tidak menebak-nebak:
+     'ok' | 'sibuk' (muat lain sedang jalan) | 'keluar' (belum masuk) | 'gagal'. */
   B.muat = async function () {
-    if (B.memuat || B.sibuk || !root.K || !K.terbuka) return;
+    if (B.memuat || B.sibuk) return 'sibuk';
+    if (!root.K || !K.terbuka) return 'keluar';
     B.memuat = true;
     B.pesan = '';
     try {
@@ -64,8 +73,9 @@
       B.pesan = e.message || 'Buku keluarga belum bisa dimuat.';
     } finally {
       B.memuat = false;
-      if (['dashboard', 'transaksi', 'rekap', 'anggaran', 'target', 'langganan'].includes(root.App.view)) root.App.render();
+      root.App.render();
     }
+    return B.pesan ? 'gagal' : 'ok';
   };
   B.simpan = async function (db, revisi) {
     if (koleksi.some(key => (db[key] || []).some(x => x._sumber || x._id))) throw Error('Tampilan gabungan tidak boleh disimpan sebagai buku keluarga.');
@@ -109,11 +119,17 @@
       '<ul class="keluarga-daftar" aria-label="Anggota keluarga">' + B.anggota.map(chip).join('') + '</ul>' +
       '<span class="keluarga-jumlah" role="status" aria-atomic="true">' + B.anggota.length + ' anggota</span>' +
       (B.anggota.length < 2 ? '<span class="keluarga-kosong">Anggota kedua belum ada — bagikan kode undangan di atas.</span>' : '') +
-      '<a class="btn sm" href="/keluarga">Halaman keluarga</a></div>';
+      '</div>';
   };
 
   B.kontrol = function () {
     const H = root.U.esc;
+    if (B.bersama()) return '<section class="card buku-kontrol buku-bersama" aria-label="Dashboard keluarga">' +
+      '<div class="buku-heading"><span class="buku-symbol" aria-hidden="true">' + root.U.icon('users') + '</span><div><h2>Dashboard bersama</h2><p>Satu saldo dan catatan untuk berdua.</p></div>' +
+      '<button class="btn sm" onclick="Buku.muat()"' + (B.memuat || B.sibuk ? ' disabled' : '') + '>' + root.U.icon('refresh') + (B.memuat ? 'Memuat…' : 'Muat ulang') + '</button></div>' +
+      '<details class="buku-detail"><summary>Anggota &amp; pengelolaan keluarga</summary><div class="buku-detail-body">' + B.anggotaKeluarga() +
+      '<p>Semua input baru terlihat oleh kedua anggota. Data pribadi lama hanya dibagikan jika kamu memilihnya.</p><button class="btn" onclick="Buku.imporLama()">Pilih data lama untuk digabung</button></div></details>' +
+      (B.pesan ? '<p class="buku-error" role="alert">' + H(B.pesan) + '</p>' : '') + '</section>';
     return '<section class="card buku-kontrol" aria-label="Catatan pribadi dan keluarga">' +
       '<div class="row"><div class="seg" role="group" aria-label="Tampilkan catatan">' +
       [['semua', 'Semua'], ['pribadi', 'Pribadi'], ['keluarga', 'Keluarga']].map(function (p) {
@@ -179,7 +195,7 @@
   B.catat = function () {
     const H = root.U.esc;
     const pribadi = B.pribadi();
-    const daftar = [['pribadi', pribadi], ['keluarga', root.K && K.terbuka && B.akun === K.nama ? B.keluarga : null]];
+    const daftar = [[ 'pribadi', B.bersama() ? null : pribadi ], ['keluarga', root.K && K.terbuka && B.akun === K.nama ? B.keluarga : null]];
     let opsi = '';
     daftar.forEach(function (p) {
       if (!p[1]) return;
@@ -202,17 +218,20 @@
       const pair = JSON.parse(decodeURIComponent(id));
       if (Array.isArray(pair) && ['pribadi', 'keluarga'].includes(pair[0])) { sumber = pair[0]; asli = pair[1]; }
     } catch (_) {}
-    sumber = sumber || 'pribadi';
+    sumber = B.bersama() ? 'keluarga' : (sumber || 'pribadi');
     if (sumber === 'keluarga' && (!B.keluarga || B.akun !== root.K.nama || !K.terbuka)) {
       root.V.toast('Muat ulang keluarga terlebih dahulu.', 'err'); return null;
     }
-    return { id: asli, sumber: sumber, revisi: B.revisi,
+    return { id: asli, sumber: sumber, revisi: B.revisi, akun: B.akun,
       profil: root.S.Profiles.activeId(), pribadiAwal: JSON.stringify(root.App.db),
       db: salin(sumber === 'keluarga' ? B.keluarga : root.App.db) };
   };
   B.simpanKonteks = async function (ctx) {
     try {
-      if (ctx.sumber === 'keluarga') await B.simpan(ctx.db, ctx.revisi);
+      if (ctx.sumber === 'keluarga') {
+        if (ctx.akun !== B.akun) throw Error('Akun berubah. Buka kembali formulir.');
+        await B.simpan(ctx.db, ctx.revisi);
+      }
       else {
         if (ctx.profil !== root.S.Profiles.activeId()) throw Error('Profil berubah. Buka kembali formulir.');
         if (JSON.stringify(root.App.db) !== ctx.pribadiAwal) throw Error('Catatan pribadi berubah. Buka kembali formulir.');
@@ -225,11 +244,65 @@
     }
   };
   B.pilihSumber = function (lanjut) {
+    if (B.bersama()) { lanjut('keluarga'); return; }
     root.V.modal.open({ title: 'Simpan ke catatan mana?',
       body: '<div class="field"><label for="buku-sumber">Pemilik catatan</label><select id="buku-sumber"><option value="pribadi">Pribadi — hanya kamu</option><option value="keluarga">Keluarga — terlihat oleh pasangan</option></select></div>',
       foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="buku-pilih">Lanjut</button>' });
     document.getElementById('buku-sumber').value = B.filter === 'keluarga' ? 'keluarga' : 'pribadi';
     document.getElementById('buku-pilih').onclick = function () { lanjut(document.getElementById('buku-sumber').value); };
+  };
+  /* Salin pilihan secara eksplisit; ID stabil membuat pengulangan tidak menggandakan saldo. */
+  B.salinLama = async function (asal, pilihan, profil) {
+    const ctx = B.konteks(null, 'keluarga');
+    if (!ctx || !B.bersama()) throw Error('Muat dashboard keluarga terlebih dahulu.');
+    const dipilih = new Set(pilihan);
+    if (!dipilih.size) throw Error('Pilih minimal satu dompet.');
+    const transaksi = asal.transactions.filter(t => dipilih.has(t.walletId) || dipilih.has(t.walletTo));
+    if (transaksi.some(t => !dipilih.has(t.walletId) || (t.walletTo && !dipilih.has(t.walletTo)))) {
+      throw Error('Ada transfer antar dompet. Pilih juga dompet pasangannya agar saldo tetap benar.');
+    }
+    const kategori = new Set(transaksi.map(t => t.categoryId).filter(Boolean));
+    const idBaru = async function (jenis, id) {
+      const bytes = new TextEncoder().encode(JSON.stringify([B.akun, profil, jenis, id]));
+      const hash = await root.crypto.subtle.digest('SHA-256', bytes);
+      return 'lama_' + Array.from(new Uint8Array(hash)).slice(0, 16).map(x => x.toString(16).padStart(2, '0')).join('');
+    };
+    const maps = { wallets: {}, categories: {} };
+    for (const key of ['wallets', 'categories', 'transactions']) {
+      const daftar = asal[key].filter(x => key === 'wallets' ? dipilih.has(x.id) : key === 'categories' ? kategori.has(x.id) : transaksi.includes(x));
+      for (const item of daftar) {
+        const x = salin(item), id = await idBaru(key, item.id);
+        if (maps[key]) maps[key][item.id] = id;
+        if (ctx.db[key].some(y => y.id === id)) continue;
+        x.id = id;
+        if (key === 'transactions') {
+          x.walletId = maps.wallets[x.walletId];
+          if (x.walletTo) x.walletTo = maps.wallets[x.walletTo];
+          if (x.categoryId) x.categoryId = maps.categories[x.categoryId];
+          delete x.receiptId;
+        }
+        ctx.db[key].push(x);
+      }
+    }
+    if (!await B.simpanKonteks(ctx)) throw Error('Data lama belum digabung. Coba lagi setelah muat ulang.');
+  };
+  B.imporLama = function () {
+    if (!B.bersama() || !B.keluarga) return;
+    const asal = salin(B.pribadi()), profil = root.S.Profiles.activeId(), akun = B.akun;
+    const H = root.U.esc;
+    root.V.modal.open({ title: 'Pilih data lama untuk dibagikan',
+      body: '<p>Pilih dompet dari profil perangkat ini. Saldo awal, transaksi, dan kategori terkait akan disalin ke dashboard bersama dan terlihat oleh pasangan. Data asli tetap disimpan.</p><p class="hint">Target, anggaran, langganan, dan gambar struk tidak ikut. Dompet dengan transfer harus dipilih bersama. Pilihan yang sudah pernah disalin tidak digandakan.</p>' +
+        asal.wallets.map((x, i) => '<div class="field"><label><input type="checkbox" data-lama="' + i + '"> ' + H(x.name) + ' — saldo ' + root.U.fmtRp(root.S.walletBalances(asal)[x.id] || 0) + '</label></div>').join(''),
+      foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="lama-simpan">Bagikan pilihan ke keluarga</button>' });
+    document.getElementById('lama-simpan').onclick = async function () {
+      const button = document.getElementById('lama-simpan'); button.disabled = true;
+      try {
+        if (akun !== B.akun || profil !== root.S.Profiles.activeId()) throw Error('Akun atau profil berubah. Buka kembali pilihan.');
+        const ids = Array.from(document.querySelectorAll('[data-lama]:checked')).map(x => asal.wallets[Number(x.dataset.lama)].id);
+        await B.salinLama(asal, ids, profil);
+        root.V.modal.close(); root.V.toast('Pilihan sudah masuk dashboard bersama. Data asli tidak dihapus.', 'ok');
+      } catch (e) { root.V.toast(e.message, 'err'); button.disabled = false; }
+    };
   };
   B.hapus = async function (id) {
     if (!B.keluarga) return;

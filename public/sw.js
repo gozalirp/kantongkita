@@ -1,8 +1,10 @@
 /* Service Worker untuk PWA SavingDuit (Offline-first & Installable) */
-const CACHE_NAME = 'savingduit-v33-antislop';
+const CACHE_NAME = 'savingduit-v35';
 const ASSETS = [
   './',
   './index.html',
+  './akun-email',
+  './akun-email.html',
   './manifest.json',
   './css/style.css',
   './js/util.js',
@@ -10,8 +12,10 @@ const ASSETS = [
   './js/gdrive.js',
   './js/keluarga-mode.js',
   './js/uiGerbang.js',
+  './js/buku-gabungan.js',
   './js/views.js',
   './js/app.js',
+  './js/akun-email.js',
   './icon-192.png',
   './icon-512.png'
 ];
