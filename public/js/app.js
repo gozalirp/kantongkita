@@ -417,6 +417,8 @@
 
     render: function () {
       const name = this.view;
+      const scrollHost = document.getElementById('content');
+      const posisiScroll = scrollHost.dataset.page === name ? scrollHost.scrollTop : 0;
       const mode = document.getElementById('mode-pill');
       if (mode && root.Buku) { mode.textContent = Buku.bersama() ? 'Bersama' : 'Semua catatan'; mode.title = Buku.bersama() ? 'Catatan yang terlihat oleh kedua anggota keluarga' : 'Lihat ringkasan catatan'; }
       this.catatTerakhir(name);
@@ -489,7 +491,11 @@
         a.classList.toggle('active', a.dataset.bview === name);
         if (a.dataset.bview === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
-      document.getElementById('content').scrollTop = 0;
+      // Render ulang filter/periode mempertahankan posisi; pindah menu mulai di atas.
+      const perilakuScroll = content.style.scrollBehavior;
+      content.style.scrollBehavior = 'auto';
+      content.scrollTop = posisiScroll;
+      content.style.scrollBehavior = perilakuScroll;
     },
 
     navigate: function () {

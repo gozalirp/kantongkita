@@ -50,6 +50,14 @@ window.addEventListener('load',()=>setTimeout(async()=>{
   w.V.state.dashboard.chart='30d';w.App.render();
   check(!!d.querySelector('.line-chart svg'),width+' daily trend rendered');
   check(d.getElementById('content').scrollWidth<=d.getElementById('content').clientWidth+1,width+' trend overflow');
+  const scrollHost=d.getElementById('content');
+  scrollHost.scrollTop=180;const posisi=scrollHost.scrollTop;
+  check(posisi>0,width+' dashboard can scroll for period test');
+  d.querySelector('#dash-chart [data-seg="12m"]').click();
+  check(Math.abs(scrollHost.scrollTop-posisi)<=1,width+' period switch preserves scroll');
+  w.App.view='transaksi';w.App.render();
+  check(scrollHost.scrollTop===0,width+' changing page resets scroll');
+  w.App.view='dashboard';w.App.render();
   const details=d.querySelector('.buku-detail');check(details&&!details.open,width+' family details collapsed');
   if(!details)throw Error('family detail missing at '+width+' view '+w.App.view+' shared '+w.Buku.bersama());details.open=true;await new Promise(r=>setTimeout(r,15));
   check(d.getElementById('content').scrollWidth<=d.getElementById('content').clientWidth+1,width+' expanded members overflow');
