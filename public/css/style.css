@@ -1104,3 +1104,124 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent-ink);width:18px
 .column-chart .series-in::before,.column-chart .series-out::before{content:'';display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:2px;background:currentColor}
 .chart-period{font-size:13px;color:var(--txt-dim);margin-bottom:8px}
 @media(max-width:600px){.column-frame{grid-template-columns:60px minmax(0,1fr);gap:8px}.column-label.tick-wide{visibility:hidden}.column-label.tick-small{visibility:visible}.column-pair{gap:1px;padding:0}.column-bar{border-radius:2px 2px 0 0}}
+
+/* Smart Savings — arah visual referensi Gm Shamim: oranye, tinta hitam,
+   kartu cerah dan bayangan cetak. Hanya presentasi; kontrak data tetap. */
+:root{
+ --bg:#F5F3EF;--panel-2:#FFF4E5;--txt:#171717;--txt-dim:#46413C;--txt-mute:#59534D;
+ --accent:#F5790B;--accent-ink:#9A3900;--accent-soft:#FFE4C5;
+ --accent-gradient:linear-gradient(135deg,#FFB968,#F5790B);
+ --line:#D7D1C8;--line-strong:#171717;
+ --surface-lilac:#E9D8FF;--surface-blue:#C5EEFF;--surface-rose:#FFD7DB;--surface-sand:#FFEDAD;
+ --surface-soft:#FFFAF2;--shadow:3px 5px 0 #171717;--shadow-sm:2px 3px 0 #171717;
+}
+.topbar{background:#FFF;border-bottom:2px solid var(--txt)}
+.topbar h1{font-weight:800}
+.total-pill{background:#FFF0D2;border:1px solid var(--txt);color:var(--txt);box-shadow:none}
+.card,.planner-dashboard .card{border:2px solid var(--txt);border-radius:24px;box-shadow:3px 5px 0 var(--txt)}
+.card-head h2{font-size:17px;font-weight:800}
+.btn,.btn.primary,.planner-dashboard .btn.primary{border:1.5px solid var(--txt);background:#FFF;color:var(--txt);box-shadow:2px 3px 0 var(--txt);font-weight:700}
+.btn.primary,.planner-dashboard .btn.primary{background:var(--accent)}
+.btn.primary:hover,.planner-dashboard .btn.primary:hover{background:#FF9A35;box-shadow:2px 3px 0 var(--txt);opacity:1}
+.btn:not(.primary):not(.danger):hover{background:#FFF0D2;border-color:var(--txt)}
+.btn.danger{background:#FFE3E6;color:#9F1239;border-color:#9F1239;box-shadow:none}
+.btn:disabled{box-shadow:none}
+button:active,.btn:active,.tx-row:active{transform:none;filter:brightness(.96)}
+.btn:focus-visible,a:focus-visible,button:focus-visible{outline-color:#165BC3}
+input:not([type]),input[type=text],input[type=search],input[type=number],input[type=date],input[type=month],input[type=password],input[type=email],select,textarea,.money-input{background:#FFFCF7;border-color:#79716A;border-radius:12px}
+.seg{background:#F5F1EA;border-color:#79716A}
+.seg button.on{background:var(--accent);color:var(--txt)}
+.stat,.planner-wallets .stat{border:1.5px solid var(--txt);border-radius:20px;box-shadow:2px 3px 0 var(--txt);background:#E9D8FF}
+.stat:nth-child(4n+2),.planner-wallets .stat:nth-child(3n+2){background:#BCEFE6}
+.stat:nth-child(4n+3),.planner-wallets .stat:nth-child(3n){background:#FFD5DD}
+.stat:nth-child(4n+4){background:#FFEDAD}
+.stat.in{background:#BCEFE6}.stat.out{background:#FFD5DD}
+.stat .val{font-weight:800;letter-spacing:-.7px}
+.planner-dashboard{--planner-purple:var(--accent-ink);--planner-lilac:#FFF4E5}
+.planner-welcome h2{font-weight:800}
+.planner-eyebrow{color:var(--accent-ink)}
+.planner-dashboard>.grid.cols-4{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.planner-dashboard>.grid>.stat{border:2px solid var(--txt);box-shadow:3px 5px 0 var(--txt);padding:20px}
+.planner-dashboard>.grid>.stat:first-child{grid-column:1/-1;background:var(--accent);padding:26px;position:relative;overflow:hidden}
+.planner-dashboard>.grid>.stat:first-child .val{font-size:clamp(30px,4vw,46px);line-height:1.4;margin:8px 0}
+.planner-dashboard>.grid>.stat:first-child .lbl,.planner-dashboard>.grid>.stat:first-child .sub{color:var(--txt)}
+.planner-dashboard>.grid>.stat:nth-child(2){background:#BCEFE6}
+.planner-dashboard>.grid>.stat:nth-child(3){background:#E9D8FF}
+.planner-dashboard>.grid>.stat:nth-child(4){background:#FFEDAD}
+.planner-dashboard .stat .lbl,.planner-dashboard .stat .sub{color:var(--txt-dim)}
+.planner-dashboard .list{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.planner-dashboard .item{padding:14px;border:1.5px solid var(--txt);border-radius:18px;box-shadow:2px 3px 0 var(--txt)}
+.item:hover{background:#FFFAF2}
+.item .ico,.ico-badge,.pc-ic,.menu-ic{border:1.5px solid var(--txt);background:#FFE4C5;color:var(--txt)}
+.wallet-card{background:#FFE4C5;border-top:2px solid var(--txt)}
+.wallet-card:nth-child(3n+2){background:#BCEFE6}.wallet-card:nth-child(3n){background:#E9D8FF}
+.wallet-heading .ico-badge{border-color:var(--txt);color:var(--txt)}
+.wallet-actions .btn{background:#FFF}
+.profil-card,.profil-card.on{background:#FFF4DA;border-color:var(--txt)}
+.profil-card .pc-ic{border-color:var(--txt)}
+.menu-link{background:#FFF;border:1.5px solid var(--txt);box-shadow:2px 3px 0 var(--txt)}
+.menu-link:hover,.menu-link:focus-visible{background:#FFF0D2;border-color:var(--txt)}
+.empty{background:#FFFAF2;border-color:#79716A}
+.modal{border:2px solid var(--txt);box-shadow:5px 7px 0 var(--txt)}
+.modal-head{background:#FFF0D2}.modal-foot{background:#FFFAF2}
+.prog{background:#EAE3DA}.prog-fill:not(.warn):not(.over):not(.in):not(.move){background:var(--accent)}
+th{background:#FFF0D2}
+[data-page=profil] .hint{background:#FFF4E5}
+.ikon-btn{background:#FFF4E5}.ikon-btn.on{border-color:var(--accent-ink)}
+@media(min-width:861px){
+ .sidebar{background:#FFEBAD;color:var(--txt);border-right:2px solid var(--txt)}
+ .sidebar .nav a,.sidebar .brand small,.sidebar .net-dot{color:var(--txt)}
+ .sidebar .nav a:hover{background:#FFDC89;color:var(--txt)}
+ .sidebar .nav a.active,.sidebar .nav a.active:hover{background:var(--accent);color:var(--txt);box-shadow:2px 3px 0 var(--txt);outline:1.5px solid var(--txt)}
+ .sidebar .brand-icon{background:#FFF;color:var(--txt);border:1.5px solid var(--txt)}
+ .sidebar .profil-btn{border:1.5px solid var(--txt);color:var(--txt);background:#FFF}
+ .sidebar .profil-btn:hover{background:#FFF4E5;border-color:var(--txt)}
+ .sidebar .pb-nama,.sidebar .pb-chev{color:var(--txt)}
+ .sidebar-foot{border-color:#A0874E}
+ .sidebar .net-dot span{background:#59534D}.sidebar .net-dot.on span{background:#047857}
+ .sidebar #btn-kunci,.sidebar #btn-keluar{color:var(--txt);border-color:var(--txt)}
+ .sidebar #btn-kunci:hover,.sidebar #btn-keluar:hover{background:#FFF;color:var(--txt);border-color:var(--txt)}
+}
+@media(max-width:860px){
+ #bottom-nav{background:#FFF;border-top:2px solid var(--txt);box-shadow:0 -3px 0 #1717170A}
+ .bnav-item,.bnav-item.active{color:var(--txt)}
+ .bnav-item.active .bnav-ic{background:var(--accent);outline:1px solid var(--txt);border-radius:999px}
+ .bnav-fab{background:var(--accent);color:var(--txt);border:1.5px solid var(--txt);box-shadow:2px 3px 0 var(--txt)}
+ .bnav-fab:active{transform:none;box-shadow:1px 2px 0 var(--txt)}
+ .planner-dashboard>.grid.cols-4{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .planner-dashboard>.grid>.stat:last-child{grid-column:1/-1}
+ .planner-dashboard>.grid>.stat:first-child{padding:22px}
+ .planner-dashboard>.grid>.stat{padding:14px}
+ .planner-dashboard .card,.card{border-radius:20px}
+}
+
+
+/* Ikon candy-duotone: ukuran/posisi tetap, warna bukan satu-satunya penanda. */
+:root{--icon-orange:#9A3900;--icon-teal:#006B5E;--icon-purple:#6635B5;--icon-blue:#165BC3;--icon-rose:#B01E4F}
+[data-view=dashboard],[data-bview=dashboard]{--icon-ink:var(--icon-orange);--icon-fill:#FFD095}
+[data-view=transaksi],[data-bview=transaksi]{--icon-ink:var(--icon-teal);--icon-fill:#9DEBDD}
+[data-view=rekap],[data-bview=rekap]{--icon-ink:var(--icon-blue);--icon-fill:#B6DEFF}
+[data-view=anggaran]{--icon-ink:var(--icon-rose);--icon-fill:#FFBCD2}
+[data-view=target]{--icon-ink:var(--icon-orange);--icon-fill:#FFE173}
+[data-view=langganan]{--icon-ink:var(--icon-purple);--icon-fill:#DEBEFF}
+[data-view=dompet]{--icon-ink:var(--icon-teal);--icon-fill:#9DEBDD}
+[data-view=kategori]{--icon-ink:var(--icon-rose);--icon-fill:#FFBCD2}
+[data-view=pengaturan],[data-bview=menu]{--icon-ink:var(--icon-blue);--icon-fill:#B6DEFF}
+[data-view=profil]{--icon-ink:var(--icon-purple);--icon-fill:#DEBEFF}
+.nav a .ic,.bnav-item .bnav-ic{color:var(--icon-ink,var(--icon-orange))}
+.nav .ic .ui-icon,.bnav-ic .ui-icon{fill:var(--icon-fill,#FFD095);stroke-width:1.9}
+.brand-icon .ui-icon,.menu-ic .ui-icon,.pc-ic .ui-icon,.e-ic .ui-icon{fill:#FFD095;color:var(--icon-orange)}
+.menu-link:nth-child(4n+2) .menu-ic .ui-icon{fill:#9DEBDD;color:var(--icon-teal)}
+.menu-link:nth-child(4n+3) .menu-ic .ui-icon{fill:#DEBEFF;color:var(--icon-purple)}
+.menu-link:nth-child(4n+4) .menu-ic .ui-icon{fill:#B6DEFF;color:var(--icon-blue)}
+.item .ico.in,.ico-badge.in{background:#9DEBDD;color:var(--icon-teal)}
+.item .ico.out,.ico-badge.out{background:#FFBCD2;color:var(--icon-rose)}
+.item .ico.move,.ico-badge.move{background:#DEBEFF;color:var(--icon-purple)}
+@media(min-width:861px){
+ .sidebar .nav a.active .ic{color:#171717}
+ .sidebar .nav a.active .ic .ui-icon{fill:#FFF0D2}
+}
+@media(max-width:860px){
+ .bnav-item.active .bnav-ic{color:#171717}
+ .bnav-item.active .bnav-ic .ui-icon{fill:#FFF0D2}
+}

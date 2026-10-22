@@ -43,6 +43,10 @@ window.addEventListener('load',()=>setTimeout(async()=>{
    if(tab==='hari')check(labels.map(e=>e.textContent).join(',')===Array.from({length:31},(_,i)=>String(i+1)).join(','),width+' daily dates ordered 1-31');
   }
   w.App.view='dashboard';w.App.render();
+  const hero=d.querySelector('.planner-dashboard>.grid>.stat');
+  check(w.getComputedStyle(hero).backgroundColor==='rgb(245, 121, 11)',width+' orange balance hero');
+  check(w.getComputedStyle(hero).borderTopWidth==='2px',width+' outlined balance hero');
+  check(w.getComputedStyle(d.querySelector('.planner-dashboard .card')).boxShadow!=='none',width+' printed card shadow');
   w.V.state.dashboard.chart='30d';w.App.render();
   check(!!d.querySelector('.line-chart svg'),width+' daily trend rendered');
   check(d.getElementById('content').scrollWidth<=d.getElementById('content').clientWidth+1,width+' trend overflow');

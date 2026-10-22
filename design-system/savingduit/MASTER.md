@@ -57,3 +57,23 @@ Tidak mengubah struktur penyimpanan, perhitungan keuangan, API, atau alur sinkro
 
 ## Grafik berdasarkan fungsi menu (2026-10-22)
 Permintaan terbaru menggantikan semua-pie: dashboard 6/12 bulan dan rekap agregat menggunakan batang berpasangan dengan skala nol bersama; tren 30 hari dan rekap harian menggunakan garis (masuk utuh, keluar putus-putus), hari kosong diisi nol pada presentasi tanpa mengubah model. Komposisi kategori dashboard memakai donat; peringkat halaman kategori memakai batang horizontal terurut. Nominal dan persentase komposisi tampil dalam legenda; grafik waktu menyediakan tabel nominal yang bisa dibuka, bukan tooltip-only. Anggaran/target tetap indikator progres, bukan pie. Tidak menambah dependensi.
+
+
+## Revisi visual aktif — Smart Savings (22 Oktober 2026)
+
+Bagian ini menggantikan arahan warna pastel-ungu sebelumnya. Referensi yang
+berhasil diakses: Gm Shamim, **Smart Kids Money Saving & Challenge App**,
+https://dribbble.com/shots/27782282-Smart-Kids-Money-Saving-Challenge-App.
+Adaptasi, bukan salinan aset/fitur: tidak memakai avatar, logo pembayaran,
+fitur Pro, streak, atau angka contoh dari karya tersebut.
+
+- Identitas: oranye `#F5790B`, tinta `#171717`, latar `#F5F3EF`, panel putih.
+- Sidebar desktop kuning lembut `#FFEBAD`, halaman aktif oranye.
+- Link/teks aksen `#9A3900`; tombol oranye memakai teks hitam, bukan putih.
+- Kartu pendamping: mint `#BCEFE6`, ungu `#E9D8FF`, kuning `#FFEDAD`.
+- Garis kartu 2px; bayangan cetak 3px 5px tanpa blur; radius 20–24px.
+- Dashboard: saldo oranye selebar grid, tiga ringkasan di desktop; di HP
+  pemasukan/pengeluaran berpasangan dan selisih selebar grid.
+- Pertahankan Plus Jakarta Sans, SVG, target sentuh, safe-area, fokus dan
+  reduced-motion. Struktur navigasi, alur keluarga dan semua kalkulasi tetap.
+- Jangan menambah gamifikasi atau fitur referensi yang belum benar-benar ada.
