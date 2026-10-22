@@ -1475,6 +1475,10 @@
   /* ============================================================
      VIEW: PENGATURAN
      ============================================================ */
+  /* Sinkronisasi Google Drive sedang dimatikan. Saklar sebenarnya ada di
+     js/gdrive.js (GDrive.terkunci); di sini hanya soal tampilan. */
+  V.driveTerkunci = function () { return !!(root.GDrive && root.GDrive.terkunci); };
+
   V.pengaturan = function () {
     const db = root.App.db;
     const st = db.settings;
@@ -1514,6 +1518,15 @@
       '</div>' +
     '</div>' +
 
+    (V.driveTerkunci() ?
+    '<div class="card mt"><div class="card-head"><h2>Sinkronisasi Google Drive</h2>' +
+      '<span class="net-dot"><span></span><em>Dinonaktifkan</em></span></div>' +
+      '<p class="dim" style="font-size:13px;margin-bottom:14px">' +
+        'Fitur ini dinonaktifkan sementara. Catatan tetap aman dan tersimpan di perangkat ini.</p>' +
+      '<div class="row">' +
+        '<button class="btn primary" id="st-drive-connect" disabled style="opacity:.5">' + wrapIco('cloud') + 'Sambungkan Drive</button>' +
+      '</div>' +
+    '</div>' :
     '<div class="card mt"><div class="card-head"><h2>Sinkronisasi Google Drive</h2>' +
       '<span class="net-dot' + (st.driveEnabled && st.driveFileId ? ' on' : '') + '"><span></span><em>' +
         (st.driveEnabled && st.driveFileId ? (st.lastSync ? 'Terhubung · ' + H(U.fmtDate(String(st.lastSync).slice(0, 10))) : 'Terhubung') : 'Belum tersambung') + '</em></span></div>' +
@@ -1531,7 +1544,7 @@
         '<button class="btn danger" id="st-drive-off" ' + (st.driveFileId ? '' : 'disabled style="opacity:.5"') + '>Putuskan</button>' +
       '</div>' +
       (st.lastSync ? '<div class="muted mt" style="font-size:12px">Sinkron terakhir: ' + H(new Date(st.lastSync).toLocaleString('id-ID')) + '</div>' : '') +
-    '</div>' +
+    '</div>') +
 
     '<div class="card mt"><div class="card-head"><h2>Tentang</h2></div>' +
       '<div class="tbl-wrap"><table><tbody>' +
@@ -1539,7 +1552,7 @@
         '<tr><td class="dim">Versi skema data</td><td>' + db.version + '</td></tr>' +
         '<tr><td class="dim">Dibuat</td><td>' + H(db.meta.created ? new Date(db.meta.created).toLocaleString('id-ID') : '-') + '</td></tr>' +
         '<tr><td class="dim">Terakhir diubah</td><td>' + H(db.meta.updated ? new Date(db.meta.updated).toLocaleString('id-ID') : '-') + '</td></tr>' +
-        '<tr><td class="dim">Penyimpanan</td><td>localStorage' + (st.driveEnabled && st.driveFileId ? ' + Google Drive' : '') + '</td></tr>' +
+        '<tr><td class="dim">Penyimpanan</td><td>localStorage' + (!V.driveTerkunci() && st.driveEnabled && st.driveFileId ? ' + Google Drive' : '') + '</td></tr>' +
       '</tbody></table></div>' +
       '<p class="dim mt" style="font-size:12.5px">Fitur tahap berikutnya: monitor langganan bulanan, target tabungan, anggaran per kategori, dan grafik lanjutan.</p>' +
     '</div>';
@@ -1638,6 +1651,7 @@
 
   /* ---------- Google Drive ---------- */
   V.driveConnect = function () {
+    if (V.driveTerkunci()) { V.toast('Sinkronisasi Google Drive sedang dinonaktifkan', 'info'); return; }
     const cl = el('st-client');
     if (cl && cl.value.trim()) {
       root.App.db.settings.driveClientId = cl.value.trim();
@@ -1661,6 +1675,7 @@
     });
   };
   V.drivePush = function () {
+    if (V.driveTerkunci()) { V.toast('Sinkronisasi Google Drive sedang dinonaktifkan', 'info'); return; }
     if (!root.GDrive) { V.toast('Modul Drive belum dimuat', 'err'); return; }
     root.GDrive.push(root.App.db).then(function () {
       root.App.db.settings.lastSync = new Date().toISOString();
@@ -1668,6 +1683,7 @@
     }).catch(function (e) { V.toast('Gagal kirim: ' + e.message, 'err'); });
   };
   V.drivePull = function () {
+    if (V.driveTerkunci()) { V.toast('Sinkronisasi Google Drive sedang dinonaktifkan', 'info'); return; }
     if (!root.GDrive) { V.toast('Modul Drive belum dimuat', 'err'); return; }
     root.GDrive.pull().then(async function (remote) {
       if (!remote) { V.toast('Belum ada file di Drive', 'err'); return; }
@@ -1680,6 +1696,7 @@
     }).catch(function (e) { V.toast('Gagal ambil: ' + e.message, 'err'); });
   };
   V.driveOff = async function () {
+    if (V.driveTerkunci()) { V.toast('Sinkronisasi Google Drive sedang dinonaktifkan', 'info'); return; }
     const ok = await V.confirm('Putuskan Drive?', 'Data lokal tetap ada, hanya sinkronisasi yang dimatikan.', 'Putuskan', true);
     if (!ok) return;
     const db = root.App.db;

@@ -598,23 +598,33 @@ section('9. Konfirmasi hapus: batal lalu setuju');
     ok('rekap ' + tab + ' koordinat valid', !!q('.column-chart') && !q('.column-chart').outerHTML.includes('NaN'));
   }
 
-  section('27. Pengaturan: tampilan statistik & Drive');
+  section('27. Pengaturan: tampilan statistik & Drive terkunci');
   nav('pengaturan');
   ok('bagian backup tampil', $('content').innerHTML.indexOf('Backup') > -1);
   ok('bagian Drive tampil', $('content').innerHTML.indexOf('Google Drive') > -1);
   ok('tombol unduh backup ada', $('content').innerHTML.indexOf('Unduh Backup') > -1);
-  ok('field client id ada', !!$('st-client'));
+  ok('Drive ditandai dinonaktifkan', $('content').innerHTML.indexOf('Dinonaktifkan') > -1);
+  ok('alasan penguncian tertulis', $('content').innerHTML.indexOf('dinonaktifkan sementara') > -1);
   ok('tombol sambung drive ada', !!$('st-drive-connect'));
-  ok('tombol drive nonaktif tanpa client id', $('st-drive-connect').disabled === true);
-  setVal($('st-client'), 'abc.apps.googleusercontent.com');
-  eq('client id tersimpan ke settings', App.db.settings.driveClientId, 'abc.apps.googleusercontent.com');
-  eq('tombol drive jadi aktif', $('st-drive-connect').disabled, false);
-  setVal($('st-client'), '');
-  App.db.settings.driveClientId = ''; App.save();
+  ok('tombol sambung drive tidak bisa diklik', $('st-drive-connect').disabled === true);
+  ok('field client id disembunyikan', !$('st-client'));
+  ok('tombol kirim/ambil/putus tidak tampil', !$('st-drive-push') && !$('st-drive-pull') && !$('st-drive-off'));
+  ok('penyimpanan tidak mengaku + Google Drive', $('content').innerHTML.indexOf('+ Google Drive') === -1);
+  eq('saklar tampilan terbaca terkunci', V.driveTerkunci(), true);
 
-  section('28. GDrive: tanpa client id harus menolak dengan pesan');
-  ok('connect tanpa client id menolak', await window.GDrive.connect('').then(() => false).catch(() => true));
+  section('28. GDrive terkunci: semua jalan masuk harus ditolak');
   ok('modul GDrive termuat', !!window.GDrive && typeof window.GDrive.push === 'function' && typeof window.GDrive.pull === 'function');
+  eq('saklar modul terbaca terkunci', window.GDrive.terkunci, true);
+  ok('connect ditolak walau client id diisi', await window.GDrive.connect('abc.apps.googleusercontent.com').then(() => false).catch(() => true));
+  ok('push ditolak', await window.GDrive.push(App.db).then(() => false).catch(() => true));
+  ok('pull ditolak', await window.GDrive.pull().then(() => false).catch(() => true));
+  ok('findFile ditolak', await window.GDrive.findFile().then(() => false).catch(() => true));
+  App.db.settings.driveEnabled = true; App.db.settings.driveFileId = 'x';
+  App._pushT = 'TIDAK-BOLEH-JALAN';
+  App.save();
+  eq('pemicu otomatis Drive mati saat terkunci', App._pushT, 'TIDAK-BOLEH-JALAN');
+  App._pushT = null;
+  App.db.settings.driveEnabled = false; App.db.settings.driveFileId = ''; App.save();
 
   section('29. Halaman Tahap 2: anggaran, target, langganan');
   App.db.budgets = []; App.db.goals = []; App.db.subscriptions = []; App.save();

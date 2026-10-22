@@ -9,7 +9,20 @@
   const FILE_NAME = 'savingduit.json';
   const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 
+  /* Saklar sinkronisasi Google Drive.
+     true  = dinonaktifkan sementara: kartu di Pengaturan tampil terkunci,
+             pemicu otomatis mati, dan tidak ada satu pun permintaan yang
+             sampai ke Google walau fungsinya dipanggil dari konsol.
+     false = fitur hidup lagi seperti semula. Tidak ada bagian lain yang
+             perlu diubah, dan berkas yang sudah ada di Drive tidak dihapus. */
+  const TERKUNCI = true;
+
+  function pesanTerkunci() {
+    return new Error('Sinkronisasi Google Drive sedang dinonaktifkan');
+  }
+
   const G = {
+    terkunci: TERKUNCI,
     token: null,
     exp: 0,
     clientId: '',
@@ -34,6 +47,7 @@
   }
 
   G.connect = function (clientId) {
+    if (G.terkunci) return Promise.reject(pesanTerkunci());
     G.clientId = clientId || G.clientId;
     if (!G.clientId) return Promise.reject(new Error('Client ID kosong'));
     if (location.protocol === 'file:') {
@@ -84,6 +98,7 @@
   };
 
   function auth() {
+    if (G.terkunci) return Promise.reject(pesanTerkunci());
     if (G.token && Date.now() < G.exp - 30000) return Promise.resolve(G.token);
     if (!G.clientId) return Promise.reject(new Error('Belum tersambung ke Drive'));
     return G.connect(G.clientId);

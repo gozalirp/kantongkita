@@ -161,7 +161,7 @@
          utama; server dipakai untuk membuka catatan di perangkat lain. */
       this.simpnPribadiTertunda();
 
-      if (root.GDrive && this.db.settings.driveEnabled && this.db.settings.driveFileId) {
+      if (root.GDrive && !root.GDrive.terkunci && this.db.settings.driveEnabled && this.db.settings.driveFileId) {
         clearTimeout(this._pushT);
         const self = this;
         this._pushT = setTimeout(function () {
@@ -670,7 +670,7 @@
         setTimeout(function () { V.toast('Sudah seminggu sejak backup terakhir, pertimbangkan unduh backup di Pengaturan'); }, 1500);
       }
 
-      if (root.GDrive && this.db.settings.driveClientId) root.GDrive.clientId = this.db.settings.driveClientId;
+      if (root.GDrive && !root.GDrive.terkunci && this.db.settings.driveClientId) root.GDrive.clientId = this.db.settings.driveClientId;
 
       this.navigate();
       V.updateProfilBtn && V.updateProfilBtn();
