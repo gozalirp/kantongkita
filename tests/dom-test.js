@@ -79,6 +79,30 @@ section('Regresi label tanggal pada daftar transaksi nyata');
   } finally {App.db=savedDb;Object.assign(V.state.transaksi,savedState);U.today=savedToday;}
 }
 
+section('Avatar profil lokal');
+{
+ const p=S.Profiles.active(), oldIcon=p.icon, originalBook=JSON.stringify(App.db);
+ V.profilForm(p.id);
+ eq('10 avatar tersedia',qa('#p-avatar [data-avatar]').length,10);
+ click(q('#p-avatar [data-avatar="avatar:alya"]'));
+ eq('avatar pilihan ditandai',q('#p-avatar [aria-pressed="true"]').dataset.avatar,'avatar:alya');
+ click($('p-save'));
+ eq('avatar tersimpan di profil',S.Profiles.get(p.id).icon,'avatar:alya');
+ ok('avatar tampil di sidebar',!!q('#pb-ic img[src="/avatars/alya.svg"]'));
+ const oldK=window.K; window.K={terbuka:true,nama:'Akun contoh'};
+ const akunHtml=V.profil();
+ ok('kartu akun login memakai avatar pilihan',akunHtml.indexOf('<div class="pc-ic"><img class="profile-avatar" src="/avatars/alya.svg"') !== -1);
+ V.updateProfilBtn();
+ ok('sidebar akun login memakai avatar pilihan',!!q('#pb-ic img[src="/avatars/alya.svg"]'));
+ window.K=oldK;
+ V.profilForm(p.id);
+ eq('avatar terpilih dipulihkan saat buka form',q('#p-avatar [aria-pressed="true"]').dataset.avatar,'avatar:alya');
+ click(q('#p-ikon [data-emoji]'));click($('p-save'));
+ ok('emoji lama masih didukung',!S.Profiles.get(p.id).icon.startsWith('avatar:'));
+ eq('buku tidak berubah karena ganti avatar',JSON.stringify(App.db),originalBook);
+ S.Profiles.update(p.id,{icon:oldIcon});V.updateProfilBtn();
+}
+
 section('2. Navigasi semua halaman');
 [['transaksi', 'Catatan Transaksi'], ['rekap', 'Rekap Transaksi'], ['dompet', 'Dompet & Bank'],
  ['kategori', 'Kategori'], ['pengaturan', 'Pengaturan']].forEach(([v, title]) => {

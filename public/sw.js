@@ -1,5 +1,5 @@
 /* Service Worker untuk PWA KantongKita (Offline-first & Installable) */
-const CACHE_NAME = 'kantongkita-v54';
+const CACHE_NAME = 'kantongkita-v55';
 const ASSETS = [
   './',
   './index.html',
@@ -18,7 +18,17 @@ const ASSETS = [
   './js/app.js',
   './js/akun-email.js',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './avatars/arga.svg',
+  './avatars/bima.svg',
+  './avatars/danu.svg',
+  './avatars/raka.svg',
+  './avatars/yoga.svg',
+  './avatars/alya.svg',
+  './avatars/citra.svg',
+  './avatars/dinda.svg',
+  './avatars/naya.svg',
+  './avatars/tara.svg'
 ];
 
 self.addEventListener('install', function (event) {

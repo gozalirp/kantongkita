@@ -344,7 +344,9 @@ function s21(){try{
   say('T pform-terbuka|'+(!d.getElementById('modal-wrap').hidden));
   say('T pform-overlay-display|'+w.getComputedStyle(d.getElementById('modal-wrap')).display);
   say('T pform-nama|'+hit('#p-nama'));
-  say('T pform-pin|'+hit('#p-pin'));
+  d.getElementById('p-pin').scrollIntoView({block:'center'});
+ say('T pform-pin|'+hit('#p-pin'));
+ d.getElementById('p-ikon').scrollIntoView({block:'center'});
   say('T pform-tombol-simpan|'+hit('#p-save'));
   say('T pform-ikon|'+d.querySelectorAll('#p-ikon .ikon-btn').length);
   say('T pform-warna|'+d.querySelectorAll('#p-warna .warna-btn').length);

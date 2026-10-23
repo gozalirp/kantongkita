@@ -323,6 +323,14 @@
   const IKON_DOMPET = ['🏦','💳','💵','🐖','👛','📱','🏧','💼','📈','🏠'];
   const IKON_TARGET = ['🎯','🏠','✈️','🚗','💻','📚','💍','🎓','🐖','🎁'];
   const IKON_LANGGANAN = ['🔁','📶','🎬','🎵','☁️','📱','💡','🛡️','📺','🎮'];
+  const AVATAR_PROFIL = ['Arga','Bima','Danu','Raka','Yoga','Alya','Citra','Dinda','Naya','Tara'];
+  function avatarNama(icon) {
+    return AVATAR_PROFIL.find(function (name) { return icon === 'avatar:' + name.toLowerCase(); });
+  }
+  function profilIcon(icon) {
+    const name = avatarNama(icon);
+    return name ? '<img class="profile-avatar" src="/avatars/' + name.toLowerCase() + '.svg" alt="Avatar ' + name + '" width="64" height="64">' : emo(icon);
+  }
   const IKON_PROFIL = ['🏠', '💼', '👦', '👧', '💰', '🎓', '🏢', '🧑', '👨‍👩‍👧', '🐷'];
   const WARNA_DOMPET = ['#22c55e', '#3d7bff', '#a78bfa', '#fbbf24', '#f4586c', '#06b6d4', '#ec4899', '#94a3b8'];
   const WARNA_PROFIL = ['#5b8def', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#14b8a6', '#ec4899', '#64748b'];
@@ -2524,7 +2532,7 @@
       ? '<div class="card"><div class="card-head"><h2>Akun login</h2><span class="spacer"></span>' +
           '<span class="tag ok">masuk</span></div>' +
           '<div class="profil-list"><div class="profil-card on">' +
-            '<div class="pc-ic">' + U.icon('user') + '</div>' +
+            '<div class="pc-ic">' + (avatarNama((P.active() || {}).icon) ? profilIcon(P.active().icon) : U.icon('user')) + '</div>' +
             '<div class="pc-main"><div class="pc-nama">' + H(akun) + '</div>' +
               '<div class="pc-info muted">Untuk masuk dan membuka buku keluarga. Pasangan memakai akun sendiri.</div>' +
             '</div>' +
@@ -2566,7 +2574,7 @@
       })();
 
       return '<div class="profil-card' + (ini ? ' on' : '') + '" style="--pc:' + H(p.color) + '">' +
-        '<div class="pc-ic">' + emo(p.icon) + '</div>' +
+        '<div class="pc-ic">' + profilIcon(p.icon) + '</div>' +
         '<div class="pc-main">' +
           '<div class="pc-nama">' + H(p.name) +
             (ini ? ' <span class="tag ok">aktif</span>' : '') +
@@ -2617,7 +2625,13 @@
       body:
         '<div class="field"><label>Nama profil</label>' +
           '<input type="text" id="p-nama" value="' + H(f.name) + '" placeholder="contoh: Pribadi, Usaha, Anak" maxlength="24"></div>' +
-        '<div class="field"><label>Ikon</label>' + pilihanEmoji('p-ikon', IKON_PROFIL, f.icon) + '</div>' +
+        '<div class="field"><label>Avatar profil</label><div class="profile-avatar-grid" id="p-avatar">' +
+          AVATAR_PROFIL.map(function (name) {
+            const key = 'avatar:' + name.toLowerCase();
+            return '<button type="button" class="profile-avatar-option' + (f.icon === key ? ' on' : '') + '" data-avatar="' + key + '" aria-label="Pilih avatar ' + name + '" aria-pressed="' + (f.icon === key) + '">' + profilIcon(key) + '</button>';
+          }).join('') + '</div><span class="hint">Disimpan untuk profil di perangkat ini, bukan foto akun cloud.</span>' +
+          '<small class="hint">Avatar Adventurer oleh <a href="https://www.dicebear.com/styles/adventurer/" target="_blank" rel="noopener noreferrer">Lisa Wischofsky / DiceBear</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Warna dan bingkai disesuaikan.</small></div>' +
+        '<div class="field"><label>Atau gunakan ikon lama</label>' + pilihanEmoji('p-ikon', IKON_PROFIL, f.icon) + '</div>' +
         '<div class="field"><label>Warna</label>' + pilihanSwatch('p-warna', WARNA_PROFIL, f.color, 'data-warna') + '</div>' +
         '<div class="field"><label>Sandi <span class="muted">(opsional)</span></label>' +
           '<input type="password" id="p-pin" inputmode="numeric" autocomplete="new-password" ' +
@@ -2634,6 +2648,13 @@
       const b = e.target.closest('[data-emoji]'); if (!b) return;
       ikon = b.dataset.emoji;
       tandaiPilihan(el('p-ikon'), b);
+      Array.from(el('p-avatar').querySelectorAll('button')).forEach(function (button) { button.classList.remove('on'); button.setAttribute('aria-pressed','false'); });
+    });
+    el('p-avatar').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-avatar]'); if (!b || !avatarNama(b.dataset.avatar)) return;
+      ikon = b.dataset.avatar;
+      Array.from(el('p-avatar').querySelectorAll('button')).forEach(function (button) { const selected = button === b; button.classList.toggle('on', selected); button.setAttribute('aria-pressed', String(selected)); });
+      Array.from(el('p-ikon').querySelectorAll('button')).forEach(function (button) { button.classList.remove('on'); button.setAttribute('aria-pressed','false'); });
     });
     el('p-warna').addEventListener('click', function (e) {
       const b = e.target.closest('[data-warna]'); if (!b) return;
@@ -2723,7 +2744,7 @@
     if (!p) { if (onOk) onOk(); return; }
 
     V.modal.open({
-      title: p.icon + '  ' + p.name,
+      title: (avatarNama(p.icon) ? '' : p.icon + '  ') + p.name,
       body: '<p class="muted">Profil ini dilindungi sandi. Masukkan sandi untuk melihat catatan.</p>' +
             '<div class="field" style="margin-top:14px"><label>Sandi</label>' +
             '<input type="password" id="pg-pin" inputmode="numeric" autocomplete="current-password" ' +
@@ -2765,8 +2786,8 @@
     /* Ikon sidebar: profil lokal memakai emoji pilihannya, akun login memakai
        ikon garis supaya tidak tertukar dengan emoji profil. */
     if (ic) {
-      if (akun) { ic.innerHTML = U.icon('user'); ic.querySelector('.ui-icon').setAttribute('aria-hidden', 'true'); }
-      else ic.innerHTML = emo(p ? p.icon : '👤');
+      if (akun && !avatarNama(p && p.icon)) { ic.innerHTML = U.icon('user'); ic.querySelector('.ui-icon').setAttribute('aria-hidden', 'true'); }
+      else ic.innerHTML = profilIcon(p ? p.icon : '👤');
     }
     if (nm) nm.textContent = akun || (p ? p.name : 'Profil');
     if (ket) ket.textContent = akun

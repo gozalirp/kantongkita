@@ -136,3 +136,10 @@ Tujuh formulir (transaksi, dompet, kategori, anggaran, target, langganan, profil
 ### Pemeriksaan akhir label tanggal v54
 
 Audit seluruh pemakai `diffDays` menunjukkan target tabungan, langganan, hari jatuh tempo dan pengingat backup memakai arah selisih sesuai tujuannya; tidak diubah. Tes integrasi DOM tambahan memastikan daftar transaksi menampilkan31Des2025 sebagai Kemarin,1Jan2026 Hari ini dan2Jan2026 Besok ketika hari ini1Jan2026, tanpa memutasi buku. Tes fixture awal memakai filter tipe kosong lalu diperbaiki menjadi `all` sesuai kontrak UI. Seluruh npm test dan browser lolos (DOM370, browser152, responsif3222). Smoke317 juga lolos pada Asia/Jakarta, Asia/Makassar, Asia/Jayapura, UTC, America/New_York dan Pacific/Auckland. Pada tahap QA tidak ada deploy/commit/push atau tulis buku produksi; deployment selanjutnya dicatat di [rilis v54](rilis-v54.md). Tidak ada verifikasi Safari fisik.
+
+
+## Avatar profil — lokal v55
+
+Sepuluh SVG Adventurer lokal (5 karakter cowok/5 cewek) tersedia pada Profil → Ubah/Profil Baru. Pilihan disimpan sebagai `avatar:nama` pada metadata profil perangkat; tidak mengubah buku, akun cloud atau profil perangkat lain. Emoji lama tetap dapat dipilih. Render hanya menerima10 ID allowlist; URL pengguna tidak dipakai. Sidebar menampilkan avatar profil terpilih juga ketika akun login, nama akun tetap tidak berubah. Tidak menyediakan unggah foto bebas.
+
+Aset disertakan dalam precache PWA; atribusi Lisa Wischofsky/DiceBear, CC BY4.0 tampil di pemilih dan `public/avatars/ATTRIBUTION.txt`. Modal memakai grid5 kolom/3 kolom HP kecil dengan body scroll dan footer tetap. npm test/browser152/responsif3222 lolos; tes DOM menutup simpan/pilih ulang/emoji lama/immutability buku. Browser375×812 berhasil memilih Bima dan menyimpannya. Preview localhost:8768 memakai data contoh dan API dimatikan oleh server sementara di luar public; tidak untuk produksi. Rilis v55 menyertakan avatar tanpa label nama visual, serta avatar pilihan pada kartu Akun login. Nama aksesibel tetap tersedia bagi pembaca layar. PDF v54 tetap snapshot sebelumnya; fitur ini tidak menyinkronkan foto akun antarperangkat.

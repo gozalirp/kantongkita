@@ -1,0 +1,15 @@
+Adventurer artwork by Lisa Wischofsky, via DiceBear.
+CC BY 4.0 https://creativecommons.org/licenses/by/4.0/
+Original: https://www.figma.com/community/file/1184595184137881796
+Sources: https://www.dicebear.com/styles/adventurer/
+Preview adds colorful square cards, dark borders and hard shadows.
+https://api.dicebear.com/9.x/adventurer/svg?seed=Arga&hair=short01&hairColor=0e0e0e&skinColor=f2d3b1&backgroundColor=ffd166&glassesProbability=0&earringsProbability=0&featuresProbability=0
+https://api.dicebear.com/9.x/adventurer/svg?seed=Bima&hair=short04&hairColor=562306&skinColor=ecad80&backgroundColor=b8eee2&glassesProbability=0&earringsProbability=0&featuresProbability=0
+https://api.dicebear.com/9.x/adventurer/svg?seed=Danu&hair=short09&hairColor=6a4e35&skinColor=9e5622&backgroundColor=dfc9ff&glassesProbability=100&earringsProbability=0&featuresProbability=0
+https://api.dicebear.com/9.x/adventurer/svg?seed=Raka&hair=short14&hairColor=0e0e0e&skinColor=f2d3b1&backgroundColor=ffad80&glassesProbability=0&earringsProbability=0&featuresProbability=0
+https://api.dicebear.com/9.x/adventurer/svg?seed=Yoga&hair=short16&hairColor=562306&skinColor=ecad80&backgroundColor=b9d8ff&glassesProbability=0&earringsProbability=0&featuresProbability=0
+https://api.dicebear.com/9.x/adventurer/svg?seed=Alya&hair=long01&hairColor=6a4e35&skinColor=9e5622&backgroundColor=ffc5d9&glassesProbability=0&earringsProbability=100&featuresProbability=0
+https://api.dicebear.com/9.x/adventurer/svg?seed=Citra&hair=long06&hairColor=0e0e0e&skinColor=f2d3b1&backgroundColor=dfc9ff&glassesProbability=0&earringsProbability=100&featuresProbability=0
+https://api.dicebear.com/9.x/adventurer/svg?seed=Dinda&hair=long09&hairColor=562306&skinColor=ecad80&backgroundColor=ffd166&glassesProbability=100&earringsProbability=100&featuresProbability=0
+https://api.dicebear.com/9.x/adventurer/svg?seed=Naya&hair=long16&hairColor=6a4e35&skinColor=9e5622&backgroundColor=b8eee2&glassesProbability=0&earringsProbability=100&featuresProbability=0
+https://api.dicebear.com/9.x/adventurer/svg?seed=Tara&hair=long20&hairColor=0e0e0e&skinColor=f2d3b1&backgroundColor=ffad80&glassesProbability=0&earringsProbability=100&featuresProbability=0
