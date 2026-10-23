@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 const source = await fs.readFile(new URL('../worker/worker.js', import.meta.url), 'utf8');
-const bundledSource = source.replace("import { family } from './family.mjs';", 'const family = () => { throw Error("Unexpected family route"); };');
+const bundledSource = source.replace("import { maintenance } from './maintenance.mjs';", 'const maintenance = () => { throw Error("Unexpected maintenance"); };').replace("import { family } from './family.mjs';", 'const family = () => { throw Error("Unexpected family route"); };');
 const { default: worker } = await import('data:text/javascript;base64,' + Buffer.from(bundledSource).toString('base64'));
 let touched = false;
 const env = { DB: { prepare() { touched = true; throw Error('Database must not be accessed'); } } };

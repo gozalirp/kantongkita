@@ -67,6 +67,12 @@ window.addEventListener('load',()=>setTimeout(async()=>{
   check(rect.right<=width+1,width+' wallet modal overflow');
   check(d.querySelector('label[for="w-name"]'),width+' wallet name accessible label');
   w.V.modal.close();
+ w.App.view='pengaturan';w.App.render();
+ w.V.exportJSON();
+ check(!!d.getElementById('ekspor-buku'),width+' backup asks for source book');
+ check(d.getElementById('ekspor-buku').options.length===2,width+' backup keeps books separate');
+ check(d.getElementById('ekspor-unduh').getBoundingClientRect().right<=width+1,width+' backup picker fits screen');
+ w.V.modal.close();
  // Halaman Profil: penjelasan panjang dilipat supaya halaman tetap pendek.
  w.App.view='profil';w.App.render();await new Promise(r=>setTimeout(r,20));
  const lipat=d.querySelector('.lipat'),ringkas=lipat&&lipat.querySelector('summary'),profil=d.getElementById('content');

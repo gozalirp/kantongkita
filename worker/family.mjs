@@ -192,6 +192,7 @@ export async function family(request, env) {
       return json({ ok: true, revision: row?.revision || 0, data: isi || { transactions: [] } });
     }
     if (path === 'save' && request.method === 'POST') {
+      if (!Number.isSafeInteger(body.revision) || body.revision < 0) return fail('Revisi tidak valid');
       const book = body.book;
       const valid = validBook(book);
       if (valid !== true) return fail(typeof valid === 'string' ? valid : 'Data buku tidak valid');
@@ -213,23 +214,17 @@ export async function family(request, env) {
       });
       const teks = JSON.stringify(book);
       const potong = pecah(teks);
-      const tulis = [q('DELETE FROM family_data_parts WHERE family_id=?', user.family_id)];
+      // Semua perubahan potongan dijaga revisi DI DALAM batch atomik.
+      // Penulis yang kalah tidak boleh menghapus/menulis potongan apa pun.
+      const tulis = [q('INSERT OR IGNORE INTO family_data VALUES(?,0,?,?,?)', user.family_id, '{}', user.id, now)];
+      const guard = 'EXISTS(SELECT 1 FROM family_data WHERE family_id=? AND revision=?)';
+      tulis.push(q('DELETE FROM family_data_parts WHERE family_id=? AND ' + guard, user.family_id, user.family_id, body.revision));
       potong.forEach(function (c, i) {
-        tulis.push(q('INSERT INTO family_data_parts VALUES(?,?,?)', user.family_id, i, c));
+        tulis.push(q('INSERT INTO family_data_parts SELECT ?,?,? WHERE ' + guard, user.family_id, i, c, user.family_id, body.revision));
       });
-      if (row) {
-        tulis.push(q('UPDATE family_data SET revision=revision+1,updated_by=?,updated_at=? WHERE family_id=? AND revision=?', user.id, now, user.family_id, body.revision));
-      } else {
-        tulis.push(q('INSERT OR IGNORE INTO family_data VALUES(?,0,?,?,?)', user.family_id, '{}', user.id, now));
-        tulis.push(q('UPDATE family_data SET revision=1,updated_by=?,updated_at=? WHERE family_id=?', user.id, now, user.family_id));
-      }
+      tulis.push(q('UPDATE family_data SET revision=revision+1,updated_by=?,updated_at=? WHERE family_id=? AND revision=?', user.id, now, user.family_id, body.revision));
       const hasil = await env.DB.batch(tulis);
-      const akhir = hasil[hasil.length - 1];
-      if (!akhir.meta.changes) {
-        // kalah cepat dengan anggota lain: jangan tinggalkan potongan setengah jadi
-        await q('DELETE FROM family_data_parts WHERE family_id=?', user.family_id).run();
-        return fail('Data berubah. Muat ulang sebelum mencoba lagi.', 409);
-      }
+      if (!hasil[hasil.length - 1].meta.changes) return fail('Data berubah. Muat ulang sebelum mencoba lagi.', 409);
       return json({ ok: true });
     }
     /* Buku PRIBADI per akun. Kuncinya user.id, bukan family_id: pasangan dalam
@@ -252,27 +247,19 @@ export async function family(request, env) {
       const row = await q('SELECT revision FROM personal_data WHERE user_id=?', user.id).first();
       if ((row?.revision || 0) !== body.revision) return fail('Data berubah. Muat ulang sebelum menyimpan lagi.', 409);
       const potong = pecah(JSON.stringify(book));
-      const tulis = [q('DELETE FROM personal_data_parts WHERE user_id=?', user.id)];
-      potong.forEach(function (c, i) { tulis.push(q('INSERT INTO personal_data_parts VALUES(?,?,?)', user.id, i, c)); });
-      tulis.push(q('INSERT OR IGNORE INTO personal_data VALUES(?,0,?)', user.id, now));
+      const tulis = [q('INSERT OR IGNORE INTO personal_data VALUES(?,0,?)', user.id, now)];
+      const guard = 'EXISTS(SELECT 1 FROM personal_data WHERE user_id=? AND revision=?)';
+      tulis.push(q('DELETE FROM personal_data_parts WHERE user_id=? AND ' + guard, user.id, user.id, body.revision));
+      potong.forEach(function (c, i) {
+        tulis.push(q('INSERT INTO personal_data_parts SELECT ?,?,? WHERE ' + guard, user.id, i, c, user.id, body.revision));
+      });
       tulis.push(q('UPDATE personal_data SET revision=revision+1,updated_at=? WHERE user_id=? AND revision=?', now, user.id, body.revision));
       const hasil = await env.DB.batch(tulis);
-      if (!hasil[hasil.length - 1].meta.changes) {
-        await q('DELETE FROM personal_data_parts WHERE user_id=?', user.id).run();
-        return fail('Data berubah. Muat ulang sebelum mencoba lagi.', 409);
-      }
+      if (!hasil[hasil.length - 1].meta.changes) return fail('Data berubah. Muat ulang sebelum mencoba lagi.', 409);
       return json({ ok: true, revision: body.revision + 1 });
     }
     if (path === 'transaction' && request.method === 'POST') {
-      const t = body.transaction;
-      if (!Number.isSafeInteger(body.revision) || !t || !['in','out'].includes(t.type) || !Number.isSafeInteger(t.amount) || t.amount<=0 || typeof t.note !== 'string' || t.note.length>500 || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) return fail('Transaksi tidak valid');
-      const row = await q('SELECT revision,data FROM family_data WHERE family_id=?', user.family_id).first();
-      if ((row?.revision || 0) !== body.revision) return fail('Data berubah. Muat ulang lalu periksa sebelum menyimpan lagi.', 409);
-      const data = row ? JSON.parse(row.data) : { transactions: [] };
-      data.transactions.push({ id: crypto.randomUUID(), type: t.type, amount: t.amount, note: t.note, date: t.date, by: user.username, createdAt: new Date().toISOString() });
-      const result = row ? await q('UPDATE family_data SET data=?,revision=revision+1,updated_by=?,updated_at=? WHERE family_id=? AND revision=?', JSON.stringify(data), user.id, now, user.family_id, body.revision).run() : await q('INSERT OR IGNORE INTO family_data VALUES(?,1,?,?,?)', user.family_id, JSON.stringify(data), user.id, now).run();
-      if (!result.meta.changes) return fail('Data berubah. Muat ulang sebelum mencoba lagi.', 409);
-      return json({ ok: true });
+      return fail('Jalur transaksi lama dinonaktifkan. Muat ulang aplikasi dan simpan lewat buku terbaru.', 410);
     }
     return fail('Endpoint tidak ditemukan', 404);
   } catch (error) {

@@ -22,3 +22,7 @@ EMAIL_FROM = "Money Planner <akun@mail.darmintompel.my.id>"
 binding = "DB"
 database_name = "savingduit-db"
 database_id = "5b96f65a-d387-4565-9d39-a2a17f3f8866"
+
+# Daily bounded cleanup of expired auth records; never financial data.
+[triggers]
+crons = ["17 20 * * *"]

@@ -1167,7 +1167,8 @@
         table + (totalRow ? '<div class="mt" style="border-top:1px solid var(--line);padding-top:14px">' + totalRow + '</div>' : '') +
       '</div>' +
       '<div class="card mt"><div class="card-head"><h2>Grafik Rekap</h2>' +
-        '<button class="btn sm" onclick="V.exportCSV(window.Buku &amp;&amp; Buku.data())">' + wrapIco('download') + 'Unduh CSV</button></div>' +
+        '<button class="btn sm" onclick="V.exportExcel()">' + wrapIco('download') + 'Unduh Excel</button>' +
+          '<button class="btn sm" onclick="V.exportCSV()">CSV</button></div>' +
         '<p class="chart-period">' + H('Periode: ' + caption) + '</p>' +
         (st.tab === 'tahun'
           ? periodChart(S.byYear(db).map(function (d) { return { label: d.year, income: d.income, expense: d.expense }; }), 'column')
@@ -1190,13 +1191,55 @@
     const yr = el('rk-year'); if (yr) yr.onchange = function () { V.state.rekap.year = yr.value; root.App.render(); };
   };
 
-  /* CSV selalu mengikuti data yang sedang tampil: halaman Rekap mengirim db
-     yang dipakainya sendiri, jadi angka di layar dan isi berkas tidak pernah
-     berbeda (mis. buku pribadi + keluarga yang sedang digabung). */
-  V.exportCSV = function (db) {
-    const buku = db || root.App.db;
-    root.App.download('savingduit-' + U.today() + '.csv', 'text/csv', S.toCSV(buku));
-    V.toast('CSV diunduh', 'ok');
+  /* Ekspor dari UI selalu meminta sumber buku; tidak memakai tampilan gabungan. */
+  V.bukuBackup = function (sumber) {
+    if (sumber === 'pribadi') {
+      if (root.K && K.aktif()) throw Error('Beralih dari mode keluarga lama sebelum mengakses buku pribadi.');
+      return root.Buku ? Buku.pribadi() : root.App.db;
+    }
+    if (sumber !== 'keluarga' || !root.Buku || !root.K || !K.terbuka ||
+        Buku.akun !== K.nama || !Buku.keluarga || Buku.memuat || Buku.sibuk) {
+      throw Error('Muat ulang buku keluarga dengan sesi yang aktif terlebih dahulu.');
+    }
+    return Buku.keluarga;
+  };
+
+  V.pilihEkspor = function (format) {
+    V.modal.open({
+      title: 'Ekspor ' + (format === 'json' ? 'backup JSON' : format === 'xlsx' ? 'Excel' : 'CSV'),
+      body: '<p>Pilih buku yang akan diunduh. Seluruh periode disertakan; data pribadi dan keluarga tidak dicampur.</p>' +
+        '<div class="field mt"><label for="ekspor-buku">Sumber data</label><select id="ekspor-buku"><option value="pribadi">Buku pribadi</option><option value="keluarga">Buku keluarga</option></select></div>' +
+        '<p class="hint">Excel: tabel transaksi terformat. JSON: backup lengkap buku. CSV: data teks tanpa format tabel. Backup keluarga tidak menyertakan gambar struk yang tidak disimpan di server.</p>',
+      foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="ekspor-unduh">Unduh</button>'
+    });
+    el('ekspor-unduh').onclick = function () {
+      const sumber = el('ekspor-buku').value;
+      try {
+        V.bukuBackup(sumber);
+        if (format === 'json') V.exportJSON(sumber);
+        else if (format === 'xlsx') V.exportExcel(sumber);
+        else V.exportCSV(null, sumber);
+        V.modal.close();
+      } catch (e) { V.toast(e.message, 'err'); }
+    };
+  };
+
+  V.exportExcel = function (sumber) {
+    if (!sumber) return V.pilihEkspor('xlsx');
+    const bytes = root.Excel.buat(V.bukuBackup(sumber), sumber, U.today());
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'savingduit-' + U.today() + '-' + sumber + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    V.toast('Excel buku ' + sumber + ' diunduh', 'ok');
+  };
+
+  V.exportCSV = function (db, sumber) {
+    if (!db && !sumber) return V.pilihEkspor('csv');
+    const buku = db || V.bukuBackup(sumber);
+    root.App.download('savingduit-' + U.today() + '-' + (sumber || 'rekap') + '.csv', 'text/csv', '﻿' + S.toCSV(buku));
+    V.toast('CSV seluruh transaksi buku diunduh', 'ok');
   };
 
   /* ============================================================
@@ -1515,7 +1558,7 @@
 
     return '' +
     '<div class="card"><div class="card-head"><h2>Backup &amp; Pemulihan</h2></div>' +
-      '<p class="dim" style="font-size:13px;margin-bottom:14px">Data disimpan di perangkat ini (localStorage). ' +
+      '<p class="dim" style="font-size:13px;margin-bottom:14px">Ringkasan di bawah adalah buku pribadi di perangkat ini. Buku keluarga disimpan di server. ' +
       'Rutin unduh backup supaya aman kalau browser dibersihkan atau ganti perangkat.</p>' +
       '<div class="grid cols-4" style="margin-bottom:16px">' +
         '<div class="stat"><div class="lbl">Transaksi</div><div class="val" style="font-size:18px">' + db.transactions.length + '</div></div>' +
@@ -1526,13 +1569,15 @@
       '</div>' +
       '<div class="row">' +
         '<button class="btn primary" onclick="V.exportJSON()">' + wrapIco('download') + 'Unduh Backup (JSON)</button>' +
-        '<button class="btn" onclick="V.exportCSV()">' + wrapIco('download') + 'Ekspor CSV</button>' +
+        '<button class="btn" onclick="V.exportExcel()">' + wrapIco('download') + 'Excel (.xlsx)</button>' +
+        '<button class="btn" onclick="V.exportCSV()">' + wrapIco('download') + 'CSV (data teks)</button>' +
+        '<label for="st-impor-buku">Tujuan pemulihan</label><select id="st-impor-buku" aria-label="Buku tujuan pemulihan"><option value="pribadi">Buku pribadi</option><option value="keluarga">Buku keluarga</option></select>' +
         '<label class="btn" style="cursor:pointer">' + wrapIco('folder') + 'Impor Backup<input type="file" id="st-import" accept=".json,application/json" hidden></label>' +
         '<span class="spacer"></span>' +
-        '<button class="btn danger" onclick="V.resetAll()">' + wrapIco('alert') + 'Reset Semua Data</button>' +
+        '<button class="btn danger" onclick="V.resetAll()">' + wrapIco('alert') + 'Reset Data Pribadi</button>' +
       '</div>' +
       '<div class="row mt" style="gap:10px"><label class="row" style="font-size:13px;gap:8px;cursor:pointer">' +
-        '<input type="checkbox" id="st-pw-import" style="width:auto"> Impor menggantikan seluruh data (bukan menggabung)</label></div>' +
+        '<input type="checkbox" id="st-pw-import" style="width:auto"> Impor menggantikan seluruh isi buku tujuan (bukan menggabung)</label></div>' +
     '</div>' +
 
     '<div class="card mt"><div class="card-head"><h2>Cloudflare D1 Cloud Sync (Otomatis)</h2>' +
@@ -1611,64 +1656,88 @@
     const dof = el('st-drive-off');    if (dof) dof.onclick = function () { V.driveOff(); };
   };
 
-  V.exportJSON = function () {
-    const db = root.App.db;
-    db.meta.updated = new Date().toISOString();
-    db.settings.lastBackup = db.meta.updated;
-    root.App.save();
-    const f = S.Persist.exportFile(db);
+  V.exportJSON = function (sumber) {
+    if (!sumber) return V.pilihEkspor('json');
+    const db = JSON.parse(JSON.stringify(V.bukuBackup(sumber)));
+    db.backup = { format: 'savingduit', version: 1, sumber: sumber, waktu: new Date().toISOString() };
+    const f = S.Persist.exportFile(db, sumber);
     root.App.download(f.name, 'application/json', f.text);
-    V.toast('Backup diunduh', 'ok');
-    root.App.render();
+    V.toast('Backup buku ' + sumber + ' diunduh', 'ok');
   };
 
   V.importJSON = function (file) {
     if (!file) return;
-    // dibaca SEKARANG, bukan di dalam onload: render ulang bisa mengembalikan
-    // state checkbox sebelum berkas selesai dibaca.
+    const sumber = el('st-impor-buku') ? el('st-impor-buku').value : 'pribadi';
     const replace = !!(el('st-pw-import') && el('st-pw-import').checked);
+    const akun = root.K && K.nama;
+    const profil = root.App.storageKey();
+    const revisi = root.Buku && Buku.revisi;
     const fr = new FileReader();
     fr.onload = async function () {
-      let raw;
-      try { raw = JSON.parse(fr.result); }
-      catch (e) { V.toast('Berkas bukan JSON yang valid', 'err'); return; }
-      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-        V.toast('Berkas itu bukan backup Money Planner', 'err');
-        return;
-      }
-      const db = root.App.db;
-      const n = (raw.transactions || []).length;
-
-      const ok = await V.confirm('Impor backup?',
-        replace
-          ? 'Seluruh data saat ini <b>diganti</b> dengan isi berkas (' + n + ' transaksi). Tindakan ini tidak bisa dibatalkan.'
-          : 'Digabung dengan data saat ini. Transaksi dari berkas akan ditambahkan (' + n + ' transaksi).',
-        'Impor', replace);
-      if (!ok) return;
-
-      if (replace) {
-        root.App.db = S.normalize(raw);
-      } else {
-        const inc = S.normalize(raw);
-        const haveIds = {};
-        db.transactions.forEach(function (t) { haveIds[t.id] = 1; });
-        inc.transactions.forEach(function (t) { if (!haveIds[t.id]) db.transactions.push(t); });
-        const haveW = {}; db.wallets.forEach(function (w) { haveW[w.name + '|' + w.type] = 1; });
-        inc.wallets.forEach(function (w) { if (!haveW[w.name + '|' + w.type]) db.wallets.push(w); });
-        const haveC = {}; db.categories.forEach(function (c) { haveC[c.name + '|' + c.type] = 1; });
-        inc.categories.forEach(function (c) { if (!haveC[c.name + '|' + c.type]) db.categories.push(c); });
-        Object.assign(db.receipts, inc.receipts);
-      }
-      root.App.db.meta.updated = new Date().toISOString();
-      root.App.saveAndRender();
-      V.toast('Impor selesai', 'ok');
+      try {
+        let raw;
+        try { raw = JSON.parse(fr.result); } catch (e) { throw Error('Berkas bukan JSON yang valid'); }
+        const keys = ['wallets', 'categories', 'transactions', 'budgets', 'goals', 'subscriptions'];
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw) ||
+            keys.some(k => !Array.isArray(raw[k])) ||
+            keys.some(k => raw[k].some(x => !x || typeof x !== 'object' || !x.id || x._sumber || x._id)) ||
+            !raw.receipts || typeof raw.receipts !== 'object' || Array.isArray(raw.receipts)) {
+          throw Error('Berkas itu bukan backup Money Planner yang lengkap');
+        }
+        if (raw.backup && (raw.backup.format !== 'savingduit' || raw.backup.version !== 1 || raw.backup.sumber !== sumber)) {
+          throw Error('Sumber backup berbeda. Pilih buku tujuan yang sesuai; data tidak diimpor.');
+        }
+        const cekSesi = function () {
+          if ((root.K && K.nama) !== akun || root.App.storageKey() !== profil) throw Error('Akun/profil berubah. Ulangi impor.');
+          if (sumber === 'keluarga' && Buku.revisi !== revisi) throw Error('Buku keluarga berubah. Muat ulang lalu ulangi impor.');
+          return V.bukuBackup(sumber);
+        };
+        cekSesi();
+        const ok = await V.confirm('Impor ke buku ' + sumber + '?',
+          (raw.backup ? '' : '<b>Backup lama: sumber buku tidak diketahui. Pastikan tujuan benar.</b><br>') +
+          (sumber === 'keluarga' ? 'Hasilnya terlihat oleh semua anggota keluarga.<br>' : 'Hanya buku pribadi yang diubah.<br>') +
+          (replace ? 'Seluruh isi buku tujuan diganti. ' : 'Data digabung berdasarkan ID. ID yang bertabrakan ditolak. ') +
+          raw.transactions.length + ' transaksi. Unduh backup buku tujuan terlebih dahulu.', 'Impor', replace);
+        if (!ok) return;
+        const current = cekSesi();
+        const hasil = S.normalize(JSON.parse(JSON.stringify(replace ? raw : current)));
+        if (!replace) {
+          keys.forEach(function (key) {
+            const have = new Map(hasil[key].map(x => [x.id, x]));
+            raw[key].forEach(function (x) {
+              if (have.has(x.id)) {
+                if (JSON.stringify(have.get(x.id)) !== JSON.stringify(x)) throw Error('ID bertabrakan pada ' + key + '. Tidak ada data yang diubah.');
+              } else { hasil[key].push(JSON.parse(JSON.stringify(x))); have.set(x.id, x); }
+            });
+          });
+          Object.keys(raw.receipts).forEach(function (id) {
+            if (hasil.receipts[id] && JSON.stringify(hasil.receipts[id]) !== JSON.stringify(raw.receipts[id])) throw Error('ID struk bertabrakan. Tidak ada data yang diubah.');
+            hasil.receipts[id] = raw.receipts[id];
+          });
+        }
+        keys.forEach(function (key) {
+          if (new Set(hasil[key].map(x => x.id)).size !== hasil[key].length) throw Error('ID duplikat dalam backup.');
+        });
+        const wallets = new Set(hasil.wallets.map(x => x.id)), cats = new Set(hasil.categories.map(x => x.id));
+        if (hasil.transactions.some(t => typeof t.amount !== 'number' || !Number.isFinite(t.amount) || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(t.date) || !wallets.has(t.walletId) || (t.walletTo && !wallets.has(t.walletTo)) || (t.categoryId && !cats.has(t.categoryId)) || Object.keys(S.validateTx(t)).length || !['in', 'out', 'move'].includes(t.type))) throw Error('Transaksi tidak valid atau referensi dompet/kategori tidak ditemukan.');
+        if (hasil.budgets.some(x => x.categoryId && !cats.has(x.categoryId))) throw Error('Kategori anggaran tidak ditemukan.');
+        hasil.meta.updated = new Date().toISOString();
+        if (sumber === 'keluarga') {
+          await Buku.simpan(hasil, revisi);
+          root.App.render();
+        } else {
+          root.App.db = hasil;
+          root.App.saveAndRender();
+        }
+        V.toast('Impor buku ' + sumber + ' selesai', 'ok');
+      } catch (e) { V.toast(e.message || 'Impor gagal. Data tidak diubah.', 'err'); }
     };
     fr.readAsText(file);
   };
 
   V.resetAll = async function () {
-    const ok = await V.confirm('Reset semua data?',
-      'Semua dompet, kategori, transaksi, dan struk akan <b>dihapus</b> dan diganti dengan contoh awal. ' +
+    const ok = await V.confirm('Reset data pribadi?',
+      'Semua dompet, kategori, transaksi, dan struk pribadi akan <b>dihapus</b> dan diganti dengan contoh awal. Buku keluarga tidak diubah. ' +
       'Pastikan kamu sudah mengunduh backup.', 'Ya, reset', true);
     if (!ok) return;
     root.App.db = S.seedDB();

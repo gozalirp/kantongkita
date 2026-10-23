@@ -412,16 +412,16 @@ section('9. Konfirmasi hapus: batal lalu setuju');
 
   section('15. Ekspor CSV & JSON');
   nav('rekap');
-  ok('CSV Rekap memakai buku yang sedang tampil', $('content').innerHTML.indexOf('Buku.data()') > -1);
-  V.exportCSV();
+  ok('CSV Rekap meminta pilihan buku', $('content').innerHTML.indexOf('V.exportCSV()') > -1);
+  V.exportCSV(null, 'pribadi');
   ok('CSV terunduh', !!window.__lastDownload && /\.csv$/.test(window.__lastDownload.name));
   const csvText = decodeURIComponent(window.__lastDownload.href.split(',')[1]);
   ok('CSV berisi nama dompet', csvText.indexOf('Dompet Lain') > -1);
   window.__lastDownload = null;
-  V.exportJSON();
+  V.exportJSON('pribadi');
   ok('backup JSON terunduh', !!window.__lastDownload && /\.json$/.test(window.__lastDownload.name));
-  ok('nama backup berpola tanggal', /savingduit-backup-\d{4}-\d{2}-\d{2}\.json/.test(window.__lastDownload.name));
-  ok('lastBackup tercatat', !!App.db.settings.lastBackup);
+  ok('nama backup berpola tanggal', /savingduit-backup-\d{4}-\d{2}-\d{2}-pribadi\.json/.test(window.__lastDownload.name));
+  ok('backup mencatat sumber pribadi', JSON.parse(decodeURIComponent(window.__lastDownload.href.split(',')[1])).backup.sumber === 'pribadi');
 
   section('16. Persistensi (simpan lalu muat ulang)');
   const before = App.db.transactions.length;
@@ -464,6 +464,7 @@ section('9. Konfirmasi hapus: batal lalu setuju');
 
   section('18b. Impor mode ganti (replace)');
   const onlyOne = S.emptyDB();
+  onlyOne.wallets = [{ id: 'x', name: 'Dompet', type: 'cash', initial: 0 }];
   onlyOne.transactions = [{ id: 'solo1', date: '2026-05-05', type: 'out', amount: 1000, walletId: 'x', categoryId: '', note: 'hanya ini' }];
   const file2 = new window.File([new window.Blob([JSON.stringify(onlyOne)])], 'r.json', { type: 'application/json' });
   nav('pengaturan');

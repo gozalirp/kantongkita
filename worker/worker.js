@@ -1,6 +1,10 @@
+import { maintenance } from './maintenance.mjs';
 import { family } from './family.mjs';
 // worker.js — Cloudflare Worker API + Asset Fetcher
 export default {
+  async scheduled(event, env) {
+    await maintenance(env);
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/api/family/')) {
