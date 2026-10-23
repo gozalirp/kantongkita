@@ -58,6 +58,27 @@ eq('judul halaman', $('page-title').textContent, 'Dashboard');
 ok('menu dashboard aktif', q('[data-view="dashboard"]').classList.contains('active'));
 eq('init idempotent', (App.init(), App._inited), true);
 
+section('Regresi label tanggal pada daftar transaksi nyata');
+{
+  const savedDb=App.db, savedState={...V.state.transaksi}, savedToday=U.today;
+  try {
+    U.today=()=> '2026-01-01';
+    App.db=S.normalize({wallets:[{id:'date-wallet',name:'Dompet tanggal',initial:0}],categories:[],transactions:[
+      {id:'yesterday',date:'2025-12-31',type:'in',amount:1000,walletId:'date-wallet',note:'uji kemarin'},
+      {id:'today',date:'2026-01-01',type:'in',amount:2000,walletId:'date-wallet',note:'uji hari ini'},
+      {id:'tomorrow',date:'2026-01-02',type:'in',amount:3000,walletId:'date-wallet',note:'uji besok'}
+    ]});
+    V.state.transaksi.preset='all';V.state.transaksi.q='';V.state.transaksi.type='all';V.state.transaksi.wallet='';
+    const before=JSON.stringify(App.db), output=V.transaksi();
+    const container=window.document.createElement('div');container.innerHTML=output;
+    for(const [date,label] of [['31 Des 2025','Kemarin'],['1 Jan 2026','Hari ini'],['2 Jan 2026','Besok']]){
+      const dateLabel=Array.from(container.querySelectorAll('span')).find(e=>e.textContent===date);
+      eq('tanggal '+date+' dikelompokkan sebagai '+label,dateLabel?.parentElement.querySelector('strong')?.textContent,label);
+    }
+    eq('render label tidak mengubah data transaksi',JSON.stringify(App.db),before);
+  } finally {App.db=savedDb;Object.assign(V.state.transaksi,savedState);U.today=savedToday;}
+}
+
 section('2. Navigasi semua halaman');
 [['transaksi', 'Catatan Transaksi'], ['rekap', 'Rekap Transaksi'], ['dompet', 'Dompet & Bank'],
  ['kategori', 'Kategori'], ['pengaturan', 'Pengaturan']].forEach(([v, title]) => {

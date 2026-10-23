@@ -123,9 +123,13 @@ Penerima menjalankan `npm install`, menyiapkan akun/binding/secret sendiri, lalu
 | Rilis | Bukti/status |
 |---|---|
 | Rebrand | Worker `03ef9e32-4824-4001-841b-73bde5799067`, SW v49; historis |
-| Ikon hijau | Commit `fe9eb7f`, dipush main; Worker `afa976b3-a9b1-4c8d-940f-5be11096672c`, SW v50 live |
+| Ikon hijau | Commit `fe9eb7f`, dipush main; Worker `afa976b3-a9b1-4c8d-940f-5be11096672c`, SW v50; historis |
 | QA ikon | npm test/DOM 366; browser 152; responsif 457 lolos saat perubahan |
 | Verifikasi deploy | Dua PNG, util.js, CSS dan SW identik byte; health 200 |
 | Dokumentasi ini | Perubahan docs dan paket E; bukan deploy atau tes ulang seluruh aplikasi |
 
 Build APK setelah push terakhir belum dicek hasilnya di pekerjaan dokumentasi ini. HP fisik, visual Excel, email nyata, production concurrency dan pemulihan DB tetap ruang validasi terpisah.
+
+## Rilis terbaru dan pembaruan cache
+
+Lihat [rilis v54](rilis-v54.md) untuk Worker aktif, hasil tes dan verifikasi aset. Tutup/buka ulang aplikasi atau reload agar service worker baru aktif; jangan hapus data situs. Bila perubahan belum tampil, pastikan versi cache yang dimuat sebelum menyimpulkan fix gagal. Rilis ini tidak memperbarui ZIP E atau memicu build APK melalui push.

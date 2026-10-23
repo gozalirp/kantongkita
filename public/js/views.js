@@ -216,6 +216,19 @@
   let modalOnClose = null;
   let modalLocked = false;
 
+  // iOS keyboard resizes the visual viewport, not always the layout viewport/dvh.
+  function fitModalViewport() {
+    const viewport = root.visualViewport;
+    const wrap = el('modal-wrap');
+    if (!viewport || !wrap) return;
+    wrap.style.setProperty('--modal-viewport-height', viewport.height + 'px');
+    wrap.style.setProperty('--modal-viewport-top', viewport.offsetTop + 'px');
+  }
+  if (root.visualViewport) {
+    root.visualViewport.addEventListener('resize', fitModalViewport);
+    root.visualViewport.addEventListener('scroll', fitModalViewport);
+  }
+
   V.modal = {
     open: function (opt) {
       opt = opt || {};
@@ -224,13 +237,18 @@
       el('modal-foot').innerHTML = opt.foot || '';
       U.polishIcons(el('modal'));
       U.ikatLabel(el('modal'));
+      fitModalViewport();
+      el('modal-body').scrollTop = 0;
       el('modal-wrap').hidden = false;
       el('modal-wrap').classList.add('show');
       el('modal-wrap').classList.toggle('locked', !!opt.lock);
       modalLocked = !!opt.lock;
       modalOnClose = opt.onClose || null;
       const first = el('modal-body').querySelector('input:not([type=hidden]),select,textarea');
-      if (first) setTimeout(function () { first.focus(); }, 40);
+      // Do not summon the phone keyboard before the user chooses a field.
+      if (first && !(root.matchMedia && root.matchMedia('(pointer: coarse)').matches)) setTimeout(function () {
+        if (first.isConnected && el('modal-wrap').classList.contains('show')) first.focus({ preventScroll: true });
+      }, 40);
     },
     close: function (force) {
       if (modalLocked && !force) return;      // modal terkunci hanya bisa ditutup dari dalam

@@ -27,6 +27,52 @@ window.addEventListener('load',()=>setTimeout(async()=>{
    check(content.scrollWidth<=content.clientWidth+1,width+' '+page+' content overflow');
    check(!!d.getElementById('page-title').textContent,width+' '+page+' title');
    check(content.getBoundingClientRect().width>0,width+' '+page+' visible');
+   // Use painted text bounds: an element box can fit while its text covers a sibling.
+   for(const head of content.querySelectorAll('.card-head,.page-intro,.planner-welcome,.buku-heading')){
+    const title=head.querySelector('h2,h3');if(!title)continue;
+    const range=d.createRange();range.selectNodeContents(title);
+    const textRects=Array.from(range.getClientRects()).filter(r=>r.width&&r.height);
+    for(const control of head.querySelectorAll('button,select,input')){
+     const r=control.getBoundingClientRect();if(!r.width||!r.height)continue;
+     check(!textRects.some(t=>Math.min(t.right,r.right)-Math.max(t.left,r.left)>1&&Math.min(t.bottom,r.bottom)-Math.max(t.top,r.top)>1),width+' '+page+' heading/control overlap: '+title.textContent+' / '+control.textContent);
+    }
+    check(title.scrollWidth<=title.clientWidth+1,width+' '+page+' heading text contained: '+title.textContent);
+   }
+   for(const control of content.querySelectorAll('.seg button,.card-head .btn')){
+    if(!control.getBoundingClientRect().width)continue;
+    check(control.scrollWidth<=control.clientWidth+1,width+' '+page+' control text contained: '+control.textContent);
+   }
+
+  }
+  // Larger text must reflow instead of covering neighboring actions.
+  for(const page of ['dashboard','transaksi','rekap','dompet','profil']){
+   w.App.view=page;w.App.render();
+   for(const head of d.querySelectorAll('#content .card-head')){
+    const title=head.querySelector('h2');if(!title)continue;
+    title.style.fontSize='24px';
+    const range=d.createRange();range.selectNodeContents(title);
+    const rects=Array.from(range.getClientRects());
+    for(const control of head.querySelectorAll('button')){
+     const r=control.getBoundingClientRect();if(!r.width)continue;
+     check(!rects.some(t=>Math.min(t.right,r.right)-Math.max(t.left,r.left)>1&&Math.min(t.bottom,r.bottom)-Math.max(t.top,r.top)>1),width+' '+page+' larger heading overlaps '+title.textContent);
+    }
+   }
+  }
+  // Exercise long forms, not only the compact wallet dialog.
+  for(const name of ['txForm','walletForm','catForm','budgetForm','goalForm','subForm','profilForm']){
+   w.V[name]();await new Promise(r=>setTimeout(r,10));
+   const modal=d.querySelector('.modal-wrap.show .modal');
+   check(!!modal,width+' '+name+' modal opens');if(!modal)continue;
+   const box=modal.getBoundingClientRect(),footer=d.getElementById('modal-foot').getBoundingClientRect();
+   check(box.left>=0&&box.right<=width+1,width+' '+name+' dialog contained');
+   check(footer.bottom<=850&&footer.top>=0,width+' '+name+' footer reachable');
+   const body=d.getElementById('modal-body');
+   check(body.scrollWidth<=body.clientWidth+1,width+' '+name+' body no horizontal overflow');
+   for(const control of d.querySelectorAll('#modal-foot .btn')){
+    check(control.scrollWidth<=control.clientWidth+1,width+' '+name+' action text contained');
+    check(control.getBoundingClientRect().height>=44,width+' '+name+' action touch height');
+   }
+   w.V.modal.close();
   }
   w.App.view='rekap';w.V.state.rekap.ym='2026-10';w.V.state.rekap.year='2026';
   for(const tab of ['hari','minggu','bulan','tahun']){
@@ -43,6 +89,11 @@ window.addEventListener('load',()=>setTimeout(async()=>{
    if(tab==='hari')check(labels.map(e=>e.textContent).join(',')===Array.from({length:31},(_,i)=>String(i+1)).join(','),width+' daily dates ordered 1-31');
   }
   w.App.view='dashboard';w.App.render();
+  if(width<=860){
+   const title=d.querySelector('.planner-chart .card-head h2').getBoundingClientRect(),tabs=d.querySelector('.planner-chart .card-head .seg').getBoundingClientRect();
+   check(title.bottom<=tabs.top,width+' statistics heading not covered by period tabs');
+   check(tabs.right<=d.querySelector('.planner-chart').getBoundingClientRect().right,width+' statistics period tabs fit card');
+  }
   const hero=d.querySelector('.planner-dashboard>.grid>.stat');
   check(w.getComputedStyle(hero).backgroundColor==='rgb(245, 121, 11)',width+' orange balance hero');
  check(w.getComputedStyle(d.querySelector('.brand-icon .ui-icon-money')).stroke==='rgb(22, 101, 52)',width+' green money logo');
@@ -112,6 +163,27 @@ window.addEventListener('load',()=>setTimeout(async()=>{
   check(save.getBoundingClientRect().height>=44,width+'x'+height+' save target');
   check(w.getComputedStyle(d.getElementById('w-name')).fontSize==='16px',width+'x'+height+' input avoids mobile zoom');
   check(d.documentElement.scrollWidth<=width+1,width+'x'+height+' no document overflow');
+  w.V.modal.close();
+ }
+ frame.style.height='850px';
+ // iPhone 11 Pro transaction form: footer stays visible even with a simulated keyboard.
+ frame.style.width='375px';frame.style.height='812px';await new Promise(r=>setTimeout(r,40));
+ for(const source of ['keluarga','pribadi']){
+  w.V.txForm(null,'out',source);await new Promise(r=>setTimeout(r,60));
+  const wrap=d.getElementById('modal-wrap'),viewport=w.visualViewport;
+  check(!!d.getElementById('f-save'),'iPhone '+source+' transaction submit exists');
+  for(const height of [724,420,300]){
+   Object.defineProperty(viewport,'height',{configurable:true,value:height});
+   Object.defineProperty(viewport,'offsetTop',{configurable:true,value:24});
+   viewport.dispatchEvent(new w.Event('resize'));await new Promise(r=>setTimeout(r,20));
+   const body=d.getElementById('modal-body'),save=d.getElementById('f-save').getBoundingClientRect();
+   check(wrap.style.getPropertyValue('--modal-viewport-height')===height+'px','iPhone viewport resize handled '+height);
+   check(save.bottom<=height+24&&save.top>=24,'iPhone '+source+' submit above keyboard '+height);
+   check(body.clientHeight>0&&body.scrollHeight>body.clientHeight,'iPhone '+source+' form body scrolls '+height);
+   body.scrollTop=body.scrollHeight;
+   check(d.getElementById('f-save').getBoundingClientRect().bottom<=height+24,'iPhone '+source+' submit stays visible after scroll '+height);
+  }
+  delete viewport.height;delete viewport.offsetTop;viewport.dispatchEvent(new w.Event('resize'));
   w.V.modal.close();
  }
  frame.style.height='850px';

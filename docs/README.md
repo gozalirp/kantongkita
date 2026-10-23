@@ -9,9 +9,11 @@
 - [Konfigurasi email](email-setup.md)
 - [Sistem desain](design-system.md)
 
-Status rilis terbaru dan hasil pengujian: [README proyek](../README.md#pembaruan-ikon-uang-hijau--23-oktober-2026).
+Status rilis terbaru dan hasil pengujian: [README proyek](rilis-v54.md).
 
 Salinan bersih tidak memuat dependensi, riwayat Git, rahasia, atau database pengguna. Jalankan `npm install` untuk memasang dependensi. Autentikasi Cloudflare dan secret email harus disiapkan terpisah; lihat panduan. ZIP source bukan backup data keuangan dan bukan salinan lengkap riwayat Git.
+
+- [Catatan rilis v54 dan bukti deployment](rilis-v54.md)
 
 ## Rebrand KantongKita
 
@@ -29,3 +31,7 @@ Perubahan domain, resource, atau application ID membutuhkan rencana migrasi ters
 ## Urutan baca untuk serah-terima
 
 Mulai dari infrastruktur → alur aplikasi → panduan lokal → database/email → runbook operasional. Diagram Mermaid dirender otomatis di GitHub; di pembaca Markdown tanpa Mermaid blok diagram tetap tersedia sebagai teks. Ketiga dokumen teknis baru mencakup kondisi aktual dan batas validasi, bukan klaim semua rekomendasi sudah diterapkan.
+
+## Versi PDF
+
+[Dokumentasi lengkap v54 (PDF)](KantongKita-Dokumentasi-v54.pdf) menggabungkan README dan10 dokumen inti di indeks ini (termasuk indeks dan rilis). Lima diagram Mermaid dirender. PDF snapshot23Oktober2026; Markdown adalah sumber utama untuk pembaruan berikutnya. Tidak berisi data pengguna.

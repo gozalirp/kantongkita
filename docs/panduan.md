@@ -206,3 +206,7 @@ Rahasia Resend disimpan melalui Wrangler secret, bukan `wrangler.toml` atau Git.
 | Email pemulihan tidak masuk | Periksa spam, status verifikasi, konfigurasi/kuota provider; gunakan kode pemulihan bila sesuai |
 
 Jangan membersihkan localStorage sebelum backup: arsip pribadi lokal dan gambar struk dapat hilang.
+
+## Pembaruan penggunaan v54
+
+Label Kemarin/Hari ini/Besok pada transaksi mengikuti tanggal lokal perangkat. Transaksi lama tidak diubah. Pada HP, pilihan periode statistik berada di bawah judul; form transaksi menyesuaikan area layar saat keyboard terbuka. Tutup/buka ulang atau reload untuk pembaruan PWA, jangan hapus data situs. Font masih Plus Jakarta Sans. Status rilis dan batas pengujian ada di [catatan rilis v54](rilis-v54.md).

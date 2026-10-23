@@ -73,8 +73,24 @@ Alamat aplikasi, identifier penyimpanan/database, dan Android application ID lam
 - [Alur aplikasi](docs/alur-aplikasi.md): diagram login, transaksi, simpan revision-safe, pasangan, pemulihan dan ekspor/impor.
 - [Operasional](docs/operasional.md): checklist rilis, backup/migrasi, rollback, gangguan dan batas pemulihan.
 
-Dokumen tersedia pula di paket bersih `E:\KantongKita`. Dokumentasi baru belum otomatis commit/push; manifest paket mencatat commit basis dan perubahan lokal.
+Dokumen tersedia pula di paket bersih `E:\KantongKita`. Paket E masih snapshot v50 dan tidak otomatis mengikuti source terbaru; manifest paket mencatat commit basis dan perubahan lokal.
 
-## Responsif HP/tablet — lokal v51
+## Responsif HP/tablet — riwayat v51
 
-Kartu tablet 601–860px memakai dua kolom; modal menyesuaikan tinggi layar landscape dan input mobile 16px. QA lokal: npm test lolos, browser 152 dan responsif 1356 lolos pada 12 lebar serta 9 pasangan ukuran portrait/landscape. Detail dan batas verifikasi ada di [sistem desain](docs/design-system.md). **Belum deploy**, produksi masih SW v50.
+Kartu tablet 601–860px memakai dua kolom; modal menyesuaikan tinggi layar landscape dan input mobile 16px. QA lokal: npm test lolos, browser 152 dan responsif 1356 lolos pada 12 lebar serta 9 pasangan ukuran portrait/landscape. Detail dan batas verifikasi ada di [sistem desain](docs/design-system.md). Diterbitkan bersama v52; kini tercakup dalam v54.
+
+
+## Rilis v54 — 23 Oktober 2026
+
+**Sudah deploy**, Worker `51b18ad2-bcd4-4377-a08f-55c6075ff704`, SW `kantongkita-v54`. Enam aset identik byte; health200. Bukti dan batas verifikasi: [catatan rilis](docs/rilis-v54.md).
+
+- Responsif HP/tablet dan modal transaksi mengikuti VisualViewport agar footer tetap terjangkau ketika keyboard muncul (v51–v52).
+- Judul Statistik keuangan dan kontrol periode ditata dua baris sampai860px, mencegah teks tertimpa (v53).
+- Label transaksi Kemarin/Hari ini/Besok dikoreksi tanpa mengubah data tanggal atau nominal (v54).
+- npm test lolos: smoke317, DOM370; browser152 dan responsif3222 lolos. Smoke juga diuji6 zona waktu.
+- Font produksi tetap Plus Jakarta Sans; Space Grotesk baru preview. Safari/iPhone fisik belum diverifikasi.
+- Tidak ada migrasi DB, reset atau refresh paket E dalam rilis ini. Paket E tetap v50. Setelah deploy, source/tes/docs/PDF disiapkan dalam commit lokal; belum push.
+
+## Dokumentasi PDF
+
+Unduh [Dokumentasi lengkap KantongKita v54](docs/KantongKita-Dokumentasi-v54.pdf): gabungan README dan seluruh panduan inti, dengan diagram infrastruktur/alur yang dirender. PDF adalah snapshot 23 Oktober 2026; Markdown tetap sumber utama. Tidak memuat data buku atau rahasia.

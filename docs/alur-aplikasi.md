@@ -153,3 +153,7 @@ Semua path berikut berawalan `/api/family/`.
 | transaction | POST | Legacy ditutup 410 |
 
 Lihat handler aktual sebelum membangun klien lain. Tabel ini bukan kontrak OpenAPI lengkap dan tidak mencantumkan semua field payload.
+
+## Presentasi tanggal dan modal — v54
+
+Tanggal transaksi tersimpan sebagai YYYY-MM-DD, tidak diganti ketika label relatif diperbaiki. `U.relativeDate` menghitung tanggal transaksi minus hari ini: -1 Kemarin,0 Hari ini,+1 Besok,-2 sampai -6 N hari lalu; lainnya tanggal lengkap. Hari ini mengikuti tanggal lokal perangkat, bukan pemaksaan zona waktu server. Modal mengikuti tinggi/offset VisualViewport; hanya body form yang scroll, head/footer tetap terlihat. Lihat [catatan rilis](rilis-v54.md) dan [sistem desain](design-system.md).

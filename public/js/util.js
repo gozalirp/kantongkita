@@ -133,7 +133,7 @@
     return BLN3[Number(p[1]) - 1] + ' ' + String(p[0]).slice(2);
   };
   U.relativeDate = function (ds) {
-    const d = U.diffDays(U.today(), ds);
+    const d = U.diffDays(ds, U.today());
     if (d === 0) return 'Hari ini';
     if (d === -1) return 'Kemarin';
     if (d === 1) return 'Besok';

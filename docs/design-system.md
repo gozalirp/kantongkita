@@ -85,7 +85,7 @@ fitur Pro, streak, atau angka contoh dari karya tersebut.
 - Sidebar: menu aktif oranye ber-outline, ikon SVG duotone lama dipertahankan dalam wadah persegi kecil. Navigasi HP memakai penanda aktif kotak membulat, bukan tambahan menu baru.
 - Menu fitur: outline 2px, ikon berbingkai, jarak kartu 12–14px. Tabs/filter memakai selected border + shadow, tidak hanya warna. Badge dan toast mengikuti outline yang konsisten.
 - Donut, batang/area statistik, kalender transaksi, struktur kartu yang disetujui dan emoji data pengguna tidak diganti. Nilai/ID kontrol, alur navigasi, privasi, API dan hitungan keuangan tetap.
-- Semua perubahan masih preview lokal sampai ada izin deploy terpisah. Tidak mengadopsi seluruh 64 komponen untuk fitur yang tidak diperlukan.
+- Bagian ini mencatat tahap preview historis; perubahan UI tersebut telah diterbitkan. Tidak mengadopsi seluruh 64 komponen untuk fitur yang tidak diperlukan.
 
 
 ## Pembaruan 30 Hari — 23 Oktober 2026
@@ -100,11 +100,39 @@ Semua SVG bawaan bertipe `wallet` memakai outline hijau tua `#166534` dan isi hi
 Status: perubahan ikon hijau sudah deploy dengan SW `kantongkita-v50`, Worker `afa976b3-a9b1-4c8d-940f-5be11096672c`. Tes DOM 366, browser 152, dan responsif 457 lolos; cache/ikon PWA pada HP fisik belum diverifikasi.
 
 
-## Responsif HP dan tablet — pembaruan lokal v51
+## Responsif HP dan tablet — v51
 
 - Tablet portrait 601–860px memakai dua kolom kartu ringkasan/dashboard dan grid umum, bukan empat kartu sempit atau satu kolom panjang. HP sampai 600px mempertahankan aturan kartu yang ada.
 - Sidebar tetap mulai 861px; bottom navigation hanya sampai 860px. Warna oranye/hijau, chart solid dan pemisahan buku tidak diubah.
 - Modal menggunakan tinggi viewport dinamis (`dvh`), body dapat scroll dan kepala/tombol tidak menyusut. Landscape tinggi sampai 500px memakai padding vertikal ringkas supaya tombol tetap terjangkau.
 - Input/select/textarea memakai 16px sampai lebar 1180px untuk menghindari zoom fokus otomatis pada perangkat mobile yang menerapkannya.
 - QA Chrome lokal: 12 lebar 320, 360, 375, 414, 600, 768, 820, 860, 861, 1024, 1180, 1440px; 11 halaman, chart dan modal. Tambahan 9 pasangan ukuran portrait/landscape (termasuk 844×390) memeriksa batas navigasi, modal/footer, target 44px dan ukuran input. Total responsif 1356, browser 152, serta npm test lolos.
-- Status: SW lokal `kantongkita-v51`, belum deploy. Produksi masih v50. Ini emulasi layout Chrome/iframe, bukan pengujian perangkat fisik, keyboard virtual iOS/Android, safe-area notch nyata atau Safari.
+- Status: v51 diterbitkan bersama v52; lihat status terbaru pada catatan rilis v54. Ini emulasi layout Chrome/iframe, bukan pengujian perangkat fisik, keyboard virtual iOS/Android, safe-area notch nyata atau Safari.
+
+
+## Modal transaksi iPhone — v52
+
+Footer simpan tetap di luar area scroll form. Wrapper mengikuti `visualViewport.height` dan `offsetTop` melalui event resize/scroll untuk keyboard iOS yang tidak selalu mengubah `dvh`. HP memakai padding modal lebih ringkas; perangkat pointer coarse tidak otomatis memfokuskan input saat modal dibuka sehingga keyboard tidak muncul tanpa pilihan pengguna. Desktop tetap mendapat fokus awal. Listener hanya membaca ukuran viewport, tidak membaca isi input atau mengubah payload buku.
+
+Tes regresi memakai form transaksi keluarga dan pribadi pada lebar iPhone 11 Pro 375px, tinggi viewport simulasi 724/420/300px dan offset 24px; tombol simpan tetap terlihat saat body discroll. npm test lolos, browser 152 dan responsif 1382 lolos. Ini simulasi Chrome, belum verifikasi Safari/keyboard iPhone fisik. v52 telah deploy dengan Worker `83526cce-4dfa-4dfc-b776-d3eafeb6bfb4`; commit/push perubahan v52 belum dilakukan.
+
+## Judul statistik HP — v53
+
+Reproduksi browser live emulasi 375×812 mengonfirmasi kontrol periode menimpa judul Statistik keuangan. Pada lebar sampai860px kepala kartu chart kini vertikal: judul penuh di atas, pilihan periode lebar penuh di bawah, target tombol tetap44px. Preview CSS di browser terverifikasi visual; tidak menyimpan atau mengubah buku. Tes menambahkan pemeriksaan geometri judul tidak bertumpuk dengan kontrol di8 lebar mobile/tablet. Browser152/responsif1398 lolos. Termasuk rilis v54; belum Safari fisik.
+
+
+## Audit regresi tabrakan layout — 23 Oktober 2026
+
+Tes responsif diperluas dari sekadar scrollWidth ke batas teks yang benar-benar digambar (`Range.getClientRects`) terhadap tombol/select/input di kepala kartu, intro, welcome dan kepala buku. Label kontrol diuji agar tidak melampaui box. Sebelas halaman diuji pada 12 lebar 320–1440px; judul 24px juga diuji pada lima halaman sebagai stress test (bukan emulasi penuh Dynamic Type iOS).
+
+Tujuh formulir (transaksi, dompet, kategori, anggaran, target, langganan, profil) diperiksa di setiap lebar: buka, batas horizontal dialog/body, footer terlihat, label aksi tidak meluber dan target tinggi44px. Tes viewport keyboard transaksi tetap dipertahankan. Tidak ada tabrakan tambahan ditemukan pada fixture yang diuji setelah perbaikan judul statistik v53. npm test lolos, browser152/responsif3222 lolos. Ini tidak membuktikan semua kombinasi data atau Safari/perangkat fisik bebas masalah. V53 tercakup dalam rilis v54.
+
+
+## Koreksi label tanggal transaksi — v54
+
+`U.relativeDate` sebelumnya menghitung hari ini minus tanggal transaksi, sedangkan cabang label mengharapkan tanggal transaksi minus hari ini. Arah selisih dikoreksi di helper bersama; tanggal tersimpan/nominal/pengurutan tidak diubah. Hari -1 Kemarin, 0 Hari ini, +1 Besok, -2 sampai -6 “N hari lalu”; tanggal lain tetap format tanggal lengkap (termasuk masa depan selain besok). Ditambah48 kasus regresi yang gagal sebelum fix dan lolos sesudahnya: pergantian bulan/tahun, kabisat, dan sekitar DST; smoke juga lolos pada TZ America/New_York. npm test lolos, smoke317/browser152/responsif3222. Status deployment terbaru di [catatan rilis v54](rilis-v54.md); perubahan belum commit/push. Font Space Grotesk tetap preview saja, belum diubah di source.
+
+
+### Pemeriksaan akhir label tanggal v54
+
+Audit seluruh pemakai `diffDays` menunjukkan target tabungan, langganan, hari jatuh tempo dan pengingat backup memakai arah selisih sesuai tujuannya; tidak diubah. Tes integrasi DOM tambahan memastikan daftar transaksi menampilkan31Des2025 sebagai Kemarin,1Jan2026 Hari ini dan2Jan2026 Besok ketika hari ini1Jan2026, tanpa memutasi buku. Tes fixture awal memakai filter tipe kosong lalu diperbaiki menjadi `all` sesuai kontrak UI. Seluruh npm test dan browser lolos (DOM370, browser152, responsif3222). Smoke317 juga lolos pada Asia/Jakarta, Asia/Makassar, Asia/Jayapura, UTC, America/New_York dan Pacific/Auckland. Pada tahap QA tidak ada deploy/commit/push atau tulis buku produksi; deployment selanjutnya dicatat di [rilis v54](rilis-v54.md). Tidak ada verifikasi Safari fisik.

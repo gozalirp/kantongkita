@@ -44,7 +44,7 @@ Diagram menggambarkan hubungan logis, bukan bukti letak fisik data atau routing 
 | `EMAIL_FROM` | `KantongKita <akun@mail.darmintompel.my.id>` | Sender Resend; verifikasi DNS/provider lihat panduan email |
 | Secret | `RESEND_API_KEY` | Disimpan di Wrangler secret, jangan di Git/arsip |
 | Cron | `17 20 * * *` UTC | 03:17 WIB hari berikutnya |
-| SW source terkini | `kantongkita-v50` | Nama versi cache, bukan versi database |
+| SW source terkini | `kantongkita-v54` | Nama versi cache, bukan versi database |
 
 Identifier D1 tersedia di `wrangler.toml`; tidak perlu menyalin credential, cookie, recovery code, token email atau dump ke dokumen. Pengelola memerlukan akses Cloudflare (Worker/D1/secrets), GitHub, DNS/domain, dan Resend sesuai kewenangannya. Hak akses paling minimal dan MFA harus dikelola di masing-masing layanan; tidak diverifikasi oleh dokumen ini.
 
@@ -95,6 +95,8 @@ Brand baru tidak mengubah resource Cloudflare, storage key `savingduit.*`, cooki
 
 ## 7. Status dan kapasitas yang belum dipastikan
 
-Rilis ikon hijau live: Worker `afa976b3-a9b1-4c8d-940f-5be11096672c`, SW v50, commit fitur `fe9eb7f`. Kelima aset berubah terverifikasi identik dengan lokal dan health 200 saat rollout. Angka tersebut adalah bukti point-in-time, bukan pemantauan berkelanjutan.
+Riwayat rilis ikon hijau: Worker `afa976b3-a9b1-4c8d-940f-5be11096672c`, SW v50, commit fitur `fe9eb7f`. Kelima aset berubah terverifikasi identik dengan lokal dan health 200 saat rollout. Angka tersebut adalah bukti point-in-time, bukan pemantauan berkelanjutan.
 
 Belum ada SLO/SLA aplikasi yang ditetapkan, uji beban produksi, verifikasi lokasi residensi data, jadwal backup eksternal otomatis, atau pemantauan alarm end-to-end yang dibuktikan dalam repo. Tarif/kuota mengikuti akun Cloudflare/Resend/GitHub, bukan angka tetap di dokumen. Pemeriksaan HP fisik, visual Excel, pengiriman email nyata, produksi dua akun/concurrency dan eksekusi cron pertama belum dibuktikan di sesi ini.
+
+Status deployment terkini: [rilis v54](rilis-v54.md). Resource/domain/D1/cron tidak berubah pada rilis frontend ini.

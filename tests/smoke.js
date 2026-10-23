@@ -41,6 +41,17 @@ eq('yearOf', U.yearOf('2026-03-15'), '2026');
 eq('addDays lewat bulan', U.addDays('2026-01-31', 1), '2026-02-01');
 eq('addDays minus', U.addDays('2026-03-01', -1), '2026-02-28');
 eq('diffDays', U.diffDays('2026-03-10', '2026-03-01'), 9);
+const actualToday = U.today;
+try {
+  for (const base of ['2026-10-23','2026-01-01','2026-03-01','2024-03-01','2026-03-09','2026-11-02']) {
+    U.today = () => base;
+    for (const [offset,label] of [[-7,null],[-6,'6 hari lalu'],[-2,'2 hari lalu'],[-1,'Kemarin'],[0,'Hari ini'],[1,'Besok'],[2,null],[7,null]]) {
+      const date=U.addDays(base,offset);
+      eq('relativeDate '+base+' offset '+offset,U.relativeDate(date),label || U.fmtDate(date));
+    }
+  }
+} finally { U.today=actualToday; }
+
 // 2026-06-15 adalah hari Senin
 eq('weekStart hari Senin', U.weekStart('2026-06-15'), '2026-06-15');
 eq('weekStart hari Rabu', U.weekStart('2026-06-17'), '2026-06-15');
