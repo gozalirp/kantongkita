@@ -63,6 +63,18 @@ Alamat aplikasi, identifier penyimpanan/database, dan Android application ID lam
 
 - Logo dan semua ikon SVG uang/dompet bawaan memakai hijau tua `#166534` dan hijau muda `#86EFAC`; ikon koin PWA juga hijau.
 - Warna utama oranye, chart, dan emoji kategori/dompet pilihan pengguna tidak berubah. Tidak ada perubahan data, API, atau migrasi database.
-- Service worker lokal: `kantongkita-v50`. **Belum deploy**; produksi terakhir tetap versi rebrand `03ef9e32-4824-4001-841b-73bde5799067` / SW v49.
+- Service worker lokal: `kantongkita-v50`. **Sudah deploy**, Worker `afa976b3-a9b1-4c8d-940f-5be11096672c` / SW v50. Kelima aset berubah identik byte dengan source; health 200.
 - Validasi: `npm test` lolos (DOM 366); browser 152 dan responsif 457 lolos, termasuk warna stroke/fill logo. Ikon PWA pada HP terpasang belum diperiksa.
-- Detail visual: [sistem desain](docs/design-system.md#ikon-uang-hijau--23-oktober-2026). Salinan/ZIP drive E dan upload Google Drive tidak otomatis mengikuti commit; arsip E terakhir masih v49, upload Drive masih terblokir konflik ekstensi browser.
+- Detail visual: [sistem desain](docs/design-system.md#ikon-uang-hijau--23-oktober-2026). Salinan/ZIP drive E diperbarui ke v50 beserta dokumentasi infrastruktur/alur/operasional; upload Drive masih terblokir konflik ekstensi browser.
+
+## Dokumentasi teknis dan serah-terima
+
+- [Infrastruktur](docs/infrastruktur.md): hosting, domain, Worker/D1, Resend, cron, APK, trust boundary dan konfigurasi.
+- [Alur aplikasi](docs/alur-aplikasi.md): diagram login, transaksi, simpan revision-safe, pasangan, pemulihan dan ekspor/impor.
+- [Operasional](docs/operasional.md): checklist rilis, backup/migrasi, rollback, gangguan dan batas pemulihan.
+
+Dokumen tersedia pula di paket bersih `E:\KantongKita`. Dokumentasi baru belum otomatis commit/push; manifest paket mencatat commit basis dan perubahan lokal.
+
+## Responsif HP/tablet — lokal v51
+
+Kartu tablet 601–860px memakai dua kolom; modal menyesuaikan tinggi layar landscape dan input mobile 16px. QA lokal: npm test lolos, browser 152 dan responsif 1356 lolos pada 12 lebar serta 9 pasangan ukuran portrait/landscape. Detail dan batas verifikasi ada di [sistem desain](docs/design-system.md). **Belum deploy**, produksi masih SW v50.

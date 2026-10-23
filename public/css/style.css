@@ -1366,3 +1366,23 @@ th{background:#FFF0D2}
 
 /* Ikon uang bawaan hijau; emoji/data pilihan pengguna tidak disentuh. */
 .ui-icon.ui-icon-money{color:#166534!important;stroke:#166534!important;fill:#86EFAC!important}
+
+/* HP/tablet: dynamic viewport keeps modal actions inside short landscape screens. */
+.modal{max-height:calc(100dvh - 36px - var(--sat) - var(--sab));min-height:0}
+.modal-head,.modal-foot{flex-shrink:0}
+.modal-body{min-height:0;overscroll-behavior:contain}
+.modal-head h2{min-width:0;overflow-wrap:anywhere}
+@media (max-width:1180px){
+ input,select,textarea{font-size:16px}
+}
+/* Tablet portrait: two comfortable columns instead of four narrow summary cards. */
+@media (min-width:601px) and (max-width:860px){
+ .planner-dashboard>.grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-height:500px){
+ .modal-wrap{padding-block:calc(8px + var(--sat)) calc(8px + var(--sab))}
+ .modal{max-height:calc(100dvh - 16px - var(--sat) - var(--sab))}
+ .modal-head,.modal-foot{padding-block:8px}
+ .modal-body{padding-block:12px}
+}

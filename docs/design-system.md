@@ -97,4 +97,14 @@ Bagian ini menggantikan aturan area chart harian sebelumnya. Statistik dashboard
 
 Semua SVG bawaan bertipe `wallet` memakai outline hijau tua `#166534` dan isi hijau muda `#86EFAC`, termasuk logo, navigasi, dan kontrol. Ikon PWA koin memakai latar hijau tua, lingkaran hijau muda dan koin hijau `#22C55E`. Warna utama oranye, warna seri chart, dan emoji kategori/dompet pilihan pengguna tetap. Perubahan ini tidak menyentuh data.
 
-Status: perubahan ikon hijau ada di source lokal dengan SW `kantongkita-v50`, belum deploy. Tes DOM 366, browser 152, dan responsif 457 lolos; cache/ikon PWA pada HP fisik belum diverifikasi.
+Status: perubahan ikon hijau sudah deploy dengan SW `kantongkita-v50`, Worker `afa976b3-a9b1-4c8d-940f-5be11096672c`. Tes DOM 366, browser 152, dan responsif 457 lolos; cache/ikon PWA pada HP fisik belum diverifikasi.
+
+
+## Responsif HP dan tablet — pembaruan lokal v51
+
+- Tablet portrait 601–860px memakai dua kolom kartu ringkasan/dashboard dan grid umum, bukan empat kartu sempit atau satu kolom panjang. HP sampai 600px mempertahankan aturan kartu yang ada.
+- Sidebar tetap mulai 861px; bottom navigation hanya sampai 860px. Warna oranye/hijau, chart solid dan pemisahan buku tidak diubah.
+- Modal menggunakan tinggi viewport dinamis (`dvh`), body dapat scroll dan kepala/tombol tidak menyusut. Landscape tinggi sampai 500px memakai padding vertikal ringkas supaya tombol tetap terjangkau.
+- Input/select/textarea memakai 16px sampai lebar 1180px untuk menghindari zoom fokus otomatis pada perangkat mobile yang menerapkannya.
+- QA Chrome lokal: 12 lebar 320, 360, 375, 414, 600, 768, 820, 860, 861, 1024, 1180, 1440px; 11 halaman, chart dan modal. Tambahan 9 pasangan ukuran portrait/landscape (termasuk 844×390) memeriksa batas navigasi, modal/footer, target 44px dan ukuran input. Total responsif 1356, browser 152, serta npm test lolos.
+- Status: SW lokal `kantongkita-v51`, belum deploy. Produksi masih v50. Ini emulasi layout Chrome/iframe, bukan pengujian perangkat fisik, keyboard virtual iOS/Android, safe-area notch nyata atau Safari.

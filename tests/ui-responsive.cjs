@@ -18,7 +18,7 @@ window.addEventListener('load',()=>setTimeout(async()=>{
  w.Buku.anggota=[{username:'dummy',role:'owner'},{username:'dummy2',role:'partner'}];
  w.Buku.keluarga=w.S.normalize({wallets:[{id:'shared',name:'Tabungan keluarga dengan nama yang panjang sekali',initial:123456789012,icon:'🏦',type:'bank'}],categories:[{id:'food',name:'Makanan',type:'out',icon:'🍽️'}]});
  w.Buku.keluarga.transactions=[{id:'out',date:w.U.today(),type:'out',amount:50000,walletId:'shared',categoryId:'food',note:''},{id:'in',date:w.U.today(),type:'in',amount:100000,walletId:'shared',categoryId:'',note:''}];
- for(const width of [375,768,1024,1440]){
+ for(const width of [320,360,375,414,600,768,820,860,861,1024,1180,1440]){
   frame.style.width=width+'px';await new Promise(r=>setTimeout(r,40));
   for(const page of ['dashboard','transaksi','rekap','anggaran','target','langganan','dompet','kategori','pengaturan','profil','menu']){
    w.App.view=page;w.App.render();await new Promise(r=>setTimeout(r,15));
@@ -89,12 +89,32 @@ window.addEventListener('load',()=>setTimeout(async()=>{
  check(!!ringkas.querySelector('svg.ui-icon'),width+' folded heading shows an indicator');
  check(profil.textContent.includes('bukan akun pasangan'),width+' profil keeps the local-profile warning');
  check(d.querySelectorAll('#content .card, #content section.card').length===4,width+' profil stays four cards');
- check(profil.scrollHeight<=(width<=500?1750:1300),width+' profil page stays short '+profil.scrollHeight);
+ check(profil.scrollHeight<=(width<=600?1750:1300),width+' profil page stays short '+profil.scrollHeight);
  lipat.open=true;await new Promise(r=>setTimeout(r,20));
  check(w.getComputedStyle(lipat.querySelector('.ui-icon-wrap')).transform!=='none',width+' folded heading marks its open state');
  check(profil.scrollWidth<=profil.clientWidth+1,width+' folded profil has no overflow');
  lipat.open=false;
  }
+ // Tablet portrait uses space without shrinking phone cards; short screens keep modal actions reachable.
+ for(const [width,height] of [[320,568],[600,960],[768,1024],[820,1180],[860,600],[861,600],[1024,600],[844,390],[1180,820]]){
+  frame.style.width=width+'px';frame.style.height=height+'px';await new Promise(r=>setTimeout(r,40));
+  w.App.view='dashboard';w.App.render();
+  const side=d.getElementById('sidebar'),bottom=d.getElementById('bottom-nav');
+  check((w.getComputedStyle(side).display!=='none')===(width>=861),width+'x'+height+' sidebar breakpoint');
+  check((w.getComputedStyle(bottom).display!=='none')===(width<=860),width+'x'+height+' bottom navigation breakpoint');
+  if(width>=601&&width<=860){
+   check(w.getComputedStyle(d.querySelector('.planner-dashboard>.grid')).gridTemplateColumns.split(' ').length===2,width+' tablet two-column summary');
+  }
+  w.V.walletForm();await new Promise(r=>setTimeout(r,15));
+  const modal=d.querySelector('.modal-wrap.show .modal'),foot=modal.querySelector('.modal-foot'),save=d.getElementById('w-save');
+  check(modal.getBoundingClientRect().top>=0,width+'x'+height+' modal top reachable');
+  check(foot.getBoundingClientRect().bottom<=height,width+'x'+height+' modal footer visible');
+  check(save.getBoundingClientRect().height>=44,width+'x'+height+' save target');
+  check(w.getComputedStyle(d.getElementById('w-name')).fontSize==='16px',width+'x'+height+' input avoids mobile zoom');
+  check(d.documentElement.scrollWidth<=width+1,width+'x'+height+' no document overflow');
+  w.V.modal.close();
+ }
+ frame.style.height='850px';
  // Empty shared state must offer a useful action and retain data boundary.
  w.Buku.keluarga=w.S.normalize({});w.App.view='dashboard';w.App.render();
  check(!!d.querySelector('.wallet-onboarding .btn'),'empty wallet CTA');

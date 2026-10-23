@@ -1,6 +1,9 @@
 # Dokumentasi KantongKita
 
 - [Panduan aplikasi, arsitektur, pengembangan, dan deployment](panduan.md)
+- [Infrastruktur: komponen, hosting, konfigurasi dan batas keamanan](infrastruktur.md)
+- [Alur aplikasi: akun, transaksi, sinkronisasi dan backup](alur-aplikasi.md)
+- [Runbook operasional: deploy, rollback, pemulihan dan gangguan](operasional.md)
 - [Database dan akun](database.md)
 - [Keamanan database, backup, migrasi, dan retensi](database-safety.md)
 - [Konfigurasi email](email-setup.md)
@@ -22,3 +25,7 @@ Identifier teknis berikut sengaja dipertahankan agar data, sesi, instalasi, dan 
 - Riwayat commit/versi rilis lama tetap asli; tidak rewrite history.
 
 Perubahan domain, resource, atau application ID membutuhkan rencana migrasi tersendiri; bukan penggantian teks biasa.
+
+## Urutan baca untuk serah-terima
+
+Mulai dari infrastruktur → alur aplikasi → panduan lokal → database/email → runbook operasional. Diagram Mermaid dirender otomatis di GitHub; di pembaca Markdown tanpa Mermaid blok diagram tetap tersedia sebagai teks. Ketiga dokumen teknis baru mencakup kondisi aktual dan batas validasi, bukan klaim semua rekomendasi sudah diterapkan.
