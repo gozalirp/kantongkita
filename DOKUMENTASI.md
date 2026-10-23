@@ -1,197 +1,208 @@
-# 📚 Dokumentasi Lengkap Aplikasi SavingDuit
+# Panduan SavingDuit
 
-Selamat datang di dokumentasi resmi **SavingDuit**, aplikasi pencatat keuangan pribadi modern, cepat, dan aman dengan arsitektur **Hybrid Offline-First + Auto-Sync Cloudflare D1 Database**.
+Panduan penggunaan dan pemeliharaan aplikasi pencatat keuangan pribadi dan keluarga.
 
----
+**Web:** https://moneyplanner.darmintompel.my.id
+**Worker:** https://savingduit.gozalirp.workers.dev
 
-## 📱 Unduh & Pasang APK Android (Standalone Native App)
+## Daftar isi
 
-Aplikasi SavingDuit telah berhasil di-compile secara otomatis melalui GitHub Actions CI/CD dan siap dipasang di smartphone Android:
+1. [Penggunaan aplikasi](#penggunaan-aplikasi)
+2. [Backup dan ekspor](#backup-dan-ekspor)
+3. [Pemasangan di HP](#pemasangan-di-hp)
+4. [Arsitektur dan batas data](#arsitektur-dan-batas-data)
+5. [Struktur proyek](#struktur-proyek)
+6. [Pengembangan lokal](#pengembangan-lokal)
+7. [Pengujian](#pengujian)
+8. [Deployment dan migrasi](#deployment-dan-migrasi)
+9. [Pemecahan masalah](#pemecahan-masalah)
 
-- **File APK Lokal**: `C:/Users/gozali.rahman/Project/savingduit/apk/app-debug.apk` (Ukuran: ~4.1 MB)
-- **Unduh dari GitHub**: [GitHub Actions Run #25 (Artifact: SavingDuit-App)](https://github.com/gozalirp/savingduit/actions/runs/39196344948)
-- **Versi Web / PWA Langsung**: [https://savingduit.gozalirp.workers.dev](https://savingduit.gozalirp.workers.dev)
+## Penggunaan aplikasi
 
----
+### Akun dan profil
 
-## 📌 Daftar Isi
-1. [Ikhtisar Arsitektur](#-ikhtisar-arsitektur)
-2. [Fitur-Fitur Utama](#-fitur-fitur-utama)
-3. [Panduan Pemasangan di HP (Android PWA)](#-panduan-pemasangan-di-hp-android-pwa)
-4. [Mekanisme Sinkronisasi Data (Cloudflare D1)](#-mekanisme-sinkronisasi-data-cloudflare-d1)
-5. [Cadangan Tambahan (Google Drive & JSON)](#-cadangan-tambahan-google-drive--json)
-6. [Struktur Proyek](#-struktur-proyek)
-7. [Panduan Pengembang (Development & Deployment)](#-panduan-pengembang-development--deployment)
+- Akun server digunakan untuk login, sinkronisasi pribadi, dan keanggotaan keluarga.
+- Profil lokal memisahkan catatan pada perangkat. PIN profil bukan password server, bukan enkripsi seluruh database, dan tidak menggantikan autentikasi akun.
+- Pemulihan memakai kode pemulihan atau email terverifikasi, sesuai kondisi akun. Simpan kode pemulihan di tempat privat.
+- Detail konfigurasi email: [EMAIL_SETUP.md](EMAIL_SETUP.md).
 
----
+### Buku pribadi dan keluarga
 
-## 🏗️ Ikhtisar Arsitektur
+- Buku pribadi terikat pada pemilik akun; pasangan tidak mendapat akses melalui API buku pribadi.
+- Dua anggota yang bergabung memakai satu buku keluarga. Perubahan buku bersama terlihat oleh kedua anggota setelah pemuatan/sinkronisasi berhasil.
+- Riwayat pribadi tidak otomatis dipindahkan ke keluarga. Gunakan pilihan impor data lama secara eksplisit.
+- Jangan menyamakan tampilan gabungan dengan satu buku asli. Tampilan gabungan dapat memiliki ID sementara berawalan sumber.
+- Buku keluarga yang gagal dimuat tidak boleh digantikan diam-diam dengan buku pribadi.
 
-SavingDuit dirancang dengan pendekatan **Hybrid Offline-First**:
-```text
-  [ Perangkat Pengguna: HP / Laptop ]
-       │
-       ▼ (Menulis instan < 1ms)
-  [ localStorage (Memori Lokal HP/Browser) ]
-       │
-       ▼ (Auto-Sync Latar Belakang / Tombol Sync)
-  [ Cloudflare Workers API (/api/sync) ]
-       │
-       ▼ (Simpan ke Edge Database Terdistribusi)
-  [ Cloudflare D1 (Serverless SQLite Database) ]
-```
+### Pencatatan dan laporan
 
-- **Kecepatan Lokal:** Setiap transaksi langsung dicatat ke memori lokal tanpa menunggu respons jaringan internet. Pengguna tidak akan merasakan lag/loading.
-- **Ketahanan Cloud:** Data otomatis disalin ke database Cloudflare D1 sehingga catatan keuangan tidak akan hilang meskipun cache browser dihapus atau berganti HP baru.
+Aplikasi menyediakan pemasukan, pengeluaran, transfer, dompet, kategori, anggaran, target tabungan, langganan, grafik, dan Rekap. Transfer antar dompet bukan pemasukan atau pengeluaran baru.
 
----
+Filter Transaksi mencakup pencarian, periode, dompet/kategori, pencatat, dan sumber buku ketika relevan. Filter tampilan tidak menentukan periode file ekspor: ekspor saat ini mencakup seluruh transaksi buku yang dipilih.
 
-## 🌟 Fitur-Fitur Utama
+## Backup dan ekspor
 
-### 1. Multi-Profil & Keamanan PIN
-- Mendukung beberapa profil mandiri (misal: **Pribadi**, **Usaha / Freelance**, **Keluarga**).
-- Setiap profil dapat dikunci secara terpisah menggunakan kode PIN 6 digit dengan hashing SHA-256.
+Tersedia di Pengaturan; Excel dan CSV juga dapat diakses dari Rekap. Sebelum mengunduh, pilih **Buku pribadi** atau **Buku keluarga**.
 
-### 2. Manajemen Transaksi Komprehensif
-- Tiga tipe mutasi: **Pemasukan**, **Pengeluaran**, dan **Transfer Antar Rekening**.
-- Pemilihan dompet/rekening sumber dan rekening tujuan.
-- Kategorisasi fleksibel lengkap dengan ikon emoji.
-- Dukungan lampiran foto struk/nota belanja (disimpan efisien dalam format kompresi).
+| Format | Kegunaan | Isi dan batasan |
+|---|---|---|
+| Excel `.xlsx` | Laporan yang nyaman dibaca | Tabel bergaris, warna baris, filter, header beku, angka Rupiah, tanggal, pencatat, catatan |
+| CSV `.csv` | Pengolahan data | Teks UTF-8; tidak menyimpan desain tabel; pemisah kolom dapat perlu disetel saat impor ke spreadsheet |
+| JSON `.json` | Backup dan pemulihan | Koleksi buku beserta penanda sumber; bukan laporan untuk dibaca sebagai tabel |
 
-### 3. Anggaran & Monitoring Keuangan
-- **Anggaran per Kategori:** Tetapkan batas belanja bulanan dan pantau persentase realisasinya (indikator warna hijau/kuning/merah).
-- **Target Tabungan:** Pasang tujuan dana impian dengan visualisasi progress bar.
-- **Monitor Langganan Rutin:** Rekap pengeluaran berulang (Netflix, Spotify, Internet, Gym, dll) untuk mencegah kebocoran kas.
+- Ekspor mencakup **seluruh periode**, bukan hanya filter layar.
+- Nama file mencantumkan sumber buku. Ekspor keluarga memerlukan sesi yang sesuai dan buku keluarga sudah termuat.
+- Gambar struk yang hanya ada di perangkat tidak ikut tersimpan pada buku server. Backup JSON bukan cadangan seluruh akun: tidak memuat password, sesi, keanggotaan, atau seluruh profil perangkat.
+- Sinkronisasi bukan pengganti backup. Jangan menganggap data aman di cloud sebelum penyimpanan berhasil.
+- Google Drive sementara **dikunci**; gunakan unduhan manual.
 
-### 4. Rekapitulasi & Visualisasi Data
-- Rekap bulanan, per kategori, dan per dompet.
-- Grafik visual bar chart dan rincian transaksi bersih.
+### Pemulihan JSON
 
----
+1. Unduh backup buku tujuan sebelum melakukan pemulihan.
+2. Pilih tujuan **pribadi/keluarga**, lalu pilih file JSON.
+3. Untuk backup baru, sumber file harus cocok dengan tujuan. Backup lama tanpa sumber memerlukan pemeriksaan manual dan diberi peringatan.
+4. Mode gabung menambahkan entri berdasarkan ID; benturan isi untuk ID sama ditolak. Mode ganti menggantikan seluruh isi buku tujuan, bukan seluruh akun.
+5. Periksa dialog konfirmasi. Pemulihan keluarga memengaruhi seluruh anggota keluarga.
 
-## 📱 Panduan Pemasangan di HP (Android PWA)
+Referensi transaksi rusak dan perubahan revisi keluarga selama konfirmasi ditolak. Excel/CSV tidak digunakan untuk pemulihan JSON. Tombol **Reset Data Pribadi** terpisah dari pemulihan dan tidak dimaksudkan untuk mereset buku keluarga.
 
-SavingDuit sudah dilengkapi standar **Progressive Web App (PWA)** sehingga dapat langsung di-install sebagai aplikasi asli di Android tanpa perlu download dari Google Play Store:
+## Pemasangan di HP
 
-1. Buka browser **Google Chrome** di HP Android Anda.
-2. Akses tautan resmi:
-   ```text
-   https://savingduit.gozalirp.workers.dev
-   ```
-3. Ketuk menu **titik tiga (⋮)** di sudut kanan atas Chrome.
-4. Pilih opsi **"Install App"** atau **"Tambahkan ke Layar Utama" (Add to Home screen)**.
-5. Ketuk **Install**.
-6. **Selesai!** Aplikasi SavingDuit akan muncul di menu aplikasi HP dengan ikon resmi dan berjalan layar penuh (*full screen*) seperti aplikasi native.
+### PWA — jalur yang direkomendasikan
 
----
+1. Buka alamat web utama di Chrome Android.
+2. Pilih menu browser → **Install app / Tambahkan ke layar utama**.
+3. Jalankan dari ikon aplikasi.
 
-## 🔄 Mekanisme Sinkronisasi Data (Cloudflare D1)
+Cache PWA membantu memuat aset aplikasi; ini tidak berarti login dan buku keluarga dapat dipakai sepenuhnya tanpa internet.
 
-### 1. Sinkronisasi Otomatis (Background Auto-Sync)
-- **Saat Menambah/Mengubah Data:** 1,5 detik setelah transaksi disimpan, sistem di latar belakang otomatis mengirim data terbaru ke database Cloudflare D1.
-- **Saat Membuka Aplikasi:** Aplikasi secara otomatis membandingkan timestamp data lokal dengan data di cloud. Jika data di cloud lebih baru (misal baru dicatat lewat laptop), data di HP akan otomatis diperbarui.
+### APK
 
-### 2. Tombol Manual Sync `[🔄 Sync]`
-- Terletak di bar atas (topbar) di samping saldo serta pada menu **Pengaturan**.
-- Berfungsi untuk memaksa pertukaran data seketika antara perangkat Anda dan server Cloudflare.
+Build tersedia melalui [GitHub Actions](https://github.com/gozalirp/savingduit/actions), apabila workflow berhasil. Jangan merujuk APK lokal lama sebagai rilis terbaru.
 
----
+Workflow saat ini membungkus aset `public/` dengan Capacitor dan tidak menetapkan `server.url` produksi. Karena API memakai path relatif, konektivitas APK ke backend produksi belum boleh dianggap siap. PWA dan APK memiliki konteks penyimpanan berbeda. Pengujian HP fisik tetap diperlukan.
 
-## 🛡️ Cadangan Tambahan (Google Drive & JSON)
-
-Untuk keamanan data berlapis, tersedia dua opsi cadangan manual:
-
-1. **Ekspor File JSON:** Di menu *Pengaturan* -> *Unduh Backup (JSON)*. File ini bisa disimpan di laptop, flashdisk, atau email.
-2. **Sinkronisasi Google Drive:**
-   - Masukkan **Google OAuth Client ID** di halaman Pengaturan.
-   - Klik **Sambungkan Drive** untuk menyimpan salinan cadangan langsung ke Google Drive pribadi (`appDataFolder/savingduit.json`).
-
----
-
-## 📁 Struktur Proyek
-
-Proyek ini dipisah menjadi dua bagian yang jelas: **frontend** (tampilan, ada di `public/`) dan **backend** (API, ada di `worker/`). Keduanya tetap dalam satu proyek dan di-deploy bersamaan sebagai satu Worker.
+## Arsitektur dan batas data
 
 ```text
-savingduit/
-│
-├── public/                     # 🎨 FRONTEND — semua yang dilihat pengguna
-│   ├── index.html              # Halaman antarmuka Single Page Application
-│   ├── manifest.json           # Metadata aplikasi mobile (PWA)
-│   ├── sw.js                   # Service Worker untuk offline support & caching
-│   ├── icon-192.png            # Asset logo aplikasi 192x192
-│   ├── icon-512.png            # Asset logo aplikasi 512x512
-│   ├── css/
-│   │   └── style.css           # Seluruh stylesheet antarmuka responsif
-│   └── js/
-│       ├── app.js              # Inisialisasi, routing, dan auto-sync Cloudflare
-│       ├── store.js            # Logika database lokal, validasi, dan profil
-│       ├── views.js            # Komponen template antarmuka
-│       ├── util.js             # Utilitas pemformatan mata uang, tanggal, kalkulasi
-│       └── gdrive.js           # Integrasi cadangan Google Drive API
-│
-├── worker/                     # ⚙️ BACKEND — API & database
-│   ├── worker.js               # Cloudflare Worker API + REST D1 (PRODUKSI)
-│   └── server.js               # Server Node.js untuk pengujian lokal (DEV)
-│
-├── tests/                      # 🧪 Uji otomatis (smoke, profil, DOM, browser)
-├── .github/workflows/          # 🤖 CI: build otomatis Android APK
-│
-├── wrangler.toml               # Konfigurasi: main = worker/worker.js, assets = public/
-├── package.json                # Perintah npm (start, dev, deploy, test)
-├── buka.bat                    # Script pembuka server lokal (klik dua kali)
-├── DOKUMENTASI.md              # Panduan komprehensif ini
-└── README.md                   # Ringkasan cepat proyek
+Browser / PWA
+  ├─ localStorage: profil dan arsip pribadi perangkat
+  └─ HTTPS /api/family/*: autentikasi dan sinkronisasi
+       └─ Cloudflare Worker
+            └─ D1
+               ├─ akun, sesi, undangan, email
+               ├─ buku pribadi per user_id
+               └─ buku keluarga per family_id
 ```
 
-### Batas Frontend ↔ Backend
+Isi buku keuangan disimpan sebagai JSON yang dipecah menjadi potongan teks; belum ada tabel SQL terpisah untuk tiap transaksi, dompet, atau kategori. Kolom revisi mengendalikan konflik penulisan. Lihat [struktur database](docs/database.md).
 
-Hanya ada **satu** titik sambung antara keduanya, yaitu HTTP API:
+| Endpoint | Metode | Tujuan |
+|---|---|---|
+| `/api/health` | GET | Status dasar Worker, bukan pemeriksaan lengkap DB |
+| `/api/family/me` | GET | Akun dan anggota keluarga sesi aktif |
+| `/api/family/data` | GET | Buku keluarga dan revisi |
+| `/api/family/save` | POST | Simpan buku keluarga lengkap dengan revisi |
+| `/api/family/personal/data` | GET | Buku pribadi milik akun aktif |
+| `/api/family/personal/save` | POST | Simpan buku pribadi dengan revisi |
+| `/api/family/link` | POST | Gabungkan keanggotaan lewat undangan dengan pemeriksaan terkait |
+| `/api/sync` | GET/POST | Jalur lama diblokir; bukan API sinkronisasi aktif |
+| `/api/family/transaction` | POST | Ditutup pada kode terbaru dengan 410; jangan dipakai klien baru |
 
-| Endpoint | Method | Fungsi |
-| --- | --- | --- |
-| `/api/health` | GET | Cek status server |
-| `/api/sync` | GET | Ambil data dari cloud |
-| `/api/sync` | POST | Simpan data ke cloud |
+Endpoint akun dan pemulihan lainnya berada di `worker/family.mjs` dan `worker/account-email.mjs`. POST memerlukan origin yang sesuai; operasi terautentikasi menggunakan cookie sesi. Jangan menyalin cookie/token ke dokumentasi atau log publik.
 
-Frontend memanggilnya lewat **path relatif** (`fetch('/api/sync')`), sehingga tidak perlu konfigurasi URL apa pun selama keduanya satu domain. `wrangler.toml` mengarahkan `/api/*` ke `worker/worker.js`, dan sisanya dilayani sebagai file statis dari `public/`.
+## Struktur proyek
 
----
-
-## 💻 Panduan Pengembang (Development & Deployment)
-
-### Menjalankan di Komputer Lokal
-Jika ingin menjalankan dan mengembangkan secara lokal:
-```bash
-npm start
-# atau klik dua kali berkas 'buka.bat'
+```text
+public/
+  index.html, akun-email.html     Halaman aplikasi dan pemulihan
+  css/style.css                  Antarmuka responsif
+  js/app.js                      Bootstrap, navigasi, persistensi/sinkronisasi
+  js/store.js, util.js            Model, kalkulasi, normalisasi, utilitas
+  js/views.js                    Tampilan dan formulir
+  js/buku-gabungan.js             Batas buku pribadi/keluarga dan tampilan
+  js/keluarga-mode.js             Integrasi akun/cloud dan mode lama
+  js/uiGerbang.js                 Gerbang autentikasi
+  js/excel.js                     Pembuatan berkas XLSX tanpa CDN
+  js/gdrive.js                    Integrasi Drive yang sedang dikunci
+  manifest.json, sw.js            PWA dan cache aset
+worker/
+  worker.js                      Routing API, aset, jadwal pemeliharaan
+  family.mjs, family-security.mjs Akun, otorisasi, dan buku
+  account-email.mjs              Verifikasi dan pemulihan email
+  maintenance.mjs                Retensi autentikasi terbatas
+  migrations/                    Skema dan indeks D1
+  server.js                      Server pengembangan Node lama
+ tests/                          Tes otomatis dan skrip integrasi lokal
+ docs/                           Panduan database dan operasional
+ design-system/savingduit/       Pedoman desain
+ wrangler.toml                   Konfigurasi Worker, D1, aset, cron
 ```
-Aplikasi akan aktif di `http://localhost:8765`. Perintah ini menjalankan `worker/server.js`, yang melayani API sekaligus file statis dari `public/`.
 
-### Mengubah Frontend
-Semua berkas tampilan ada di `public/`. Cukup edit, lalu muat ulang browser (Ctrl+F5). Tidak perlu langkah build, tidak perlu menyentuh backend.
+## Pengembangan lokal
 
-### Mengubah Backend
-Semua logika API ada di `worker/worker.js`. Untuk menguji perubahan secara lokal dengan lingkungan Cloudflare sungguhan (termasuk database D1):
+### Worker dan D1 lokal
+
+Gunakan `npm run dev` untuk pengujian backend yang sesuai arsitektur produksi. Terapkan berkas SQL ke **database lokal**, berurutan:
+
 ```bash
+npx wrangler d1 execute savingduit-db --local --file worker/migrations/0001_family.sql
+npx wrangler d1 execute savingduit-db --local --file worker/migrations/0002_family_book.sql
+npx wrangler d1 execute savingduit-db --local --file worker/migrations/0003_personal_book.sql
+npx wrangler d1 execute savingduit-db --local --file worker/migrations/0004_account_email.sql
+npx wrangler d1 execute savingduit-db --local --file worker/migrations/0005_database_indexes.sql
 npm run dev
 ```
 
-### Menjalankan Uji Otomatis
+`--local` penting: jangan menggantinya menjadi `--remote` untuk fixture uji. Gunakan akun uji khusus. Konfigurasi pengiriman email lokal tidak boleh mengirim pesan ke pemilik alamat tanpa izin.
+
+### Server Node lama
+
+`npm start` melayani `http://localhost:8765`, tetapi tidak menyediakan seluruh API autentikasi Worker terbaru. Cocok untuk kebutuhan statis/legacy, bukan bukti bahwa login produksi bekerja.
+
+Jangan menambahkan bypass login ke berkas publik. Server preview sementara dengan fixture bukan konfigurasi produksi.
+
+## Pengujian
+
 ```bash
-npm test                 # uji logika & DOM (cepat)
-npm run test:browser     # uji di Chrome sungguhan (perlu Chrome terpasang)
+npm test
+npm run test:browser
+node tests/database-safety.mjs
+node tests/excel.cjs
 ```
 
-### Deployment ke Cloudflare Workers
-Pastikan tool Wrangler sudah login:
-```bash
-wrangler whoami
-```
-Untuk mengunggah versi terbaru ke internet (frontend + backend sekaligus):
-```bash
-npm run deploy
-```
+- `npm test`: logika, profil, DOM, keamanan, SQLite lokal, ekspor dan batas buku.
+- `npm run test:browser`: tes browser dan responsif; membutuhkan lingkungan browser yang sesuai.
+- `database-safety.mjs`: konflik terkontrol, first-save race, rollback, indeks, dan retensi di SQLite memory.
+- `excel.cjs`: struktur XML/ZIP XLSX, angka/tanggal, teks aman, tabel/filter, dan buku kosong.
+- Skrip `tests/family-*.mjs` tertentu membutuhkan Worker lokal pada port yang tertulis di masing-masing skrip; tidak semuanya dijalankan oleh `npm test`.
 
----
-*Dokumentasi ini dibuat untuk memudahkan penggunaan, pemeliharaan, dan pengembangan aplikasi SavingDuit di masa mendatang.*
+Tes lokal bukan bukti konkurensi runtime D1, pengiriman email nyata, kualitas visual Microsoft Excel, atau perilaku HP fisik.
+
+## Deployment dan migrasi
+
+**Status saat pembaruan dokumen:** ekspor Excel dan pilihan buku sudah diterbitkan. Perbaikan DB, indeks `0005`, serta cron retensi baru ada di kode dan belum diterapkan ke produksi.
+
+1. Periksa perubahan dan jalankan tes.
+2. Untuk perubahan DB, simpan backup privat di luar repo dan catat titik pemulihan Time Travel.
+3. Periksa skema produksi sebelum menerapkan SQL. Deploy Worker tidak otomatis menjalankan migrasi.
+4. Terapkan hanya migrasi yang diperlukan setelah diizinkan.
+5. Deploy frontend dan Worker dengan `npm run deploy`.
+6. Periksa health, aset, dan skema secara baca-saja. Jangan memakai data nyata untuk tes tulis.
+
+Instruksi khusus perbaikan DB tersedia di [database-safety.md](docs/database-safety.md). Commit, push, migrasi dan deploy terpisah. Push ke branch utama dapat memicu build APK; keberhasilan push tidak menjamin build APK berhasil.
+
+Rahasia Resend disimpan melalui Wrangler secret, bukan `wrangler.toml` atau Git. Jangan commit dump DB, token, cookie, hash autentikasi, dan backup pengguna.
+
+## Pemecahan masalah
+
+| Gejala | Langkah aman |
+|---|---|
+| Tampilan/tombol masih versi lama | Refresh paksa atau tutup-buka PWA; jangan langsung hapus penyimpanan |
+| Buku keluarga gagal dimuat | Periksa internet dan sesi, kemudian muat ulang; jangan menyalin buku pribadi sebagai pengganti |
+| Konflik revisi saat menyimpan | Muat data terbaru, periksa perubahan anggota lain, ulangi perubahan dengan sadar |
+| CSV menumpuk satu kolom | Gunakan impor CSV dengan delimiter koma, atau pilih Excel `.xlsx` |
+| File ekspor bukan buku yang diinginkan | Periksa sumber yang dipilih dan nama file; ekspor ulang dari sumber yang benar |
+| Email pemulihan tidak masuk | Periksa spam, status verifikasi, konfigurasi/kuota provider; gunakan kode pemulihan bila sesuai |
+
+Jangan membersihkan localStorage sebelum backup: arsip pribadi lokal dan gambar struk dapat hilang.

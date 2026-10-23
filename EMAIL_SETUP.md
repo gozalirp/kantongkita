@@ -1,9 +1,15 @@
-# Pemulihan email Money Planner
+# Email dan pemulihan akun SavingDuit
+
+[← Panduan aplikasi](DOKUMENTASI.md) · [Struktur database](docs/database.md)
 
 Provider: Resend (Free). Pengirim: `Money Planner <akun@mail.darmintompel.my.id>`.
 Origin tautan selalu `https://moneyplanner.darmintompel.my.id`.
 
-## Aktivasi produksi
+## Konfigurasi produksi
+
+Langkah ini untuk penyiapan atau pemeriksaan konfigurasi, bukan perintah yang harus diulang pada sistem yang sudah aktif. Periksa skema dan konfigurasi lebih dahulu; buat backup privat sebelum menerapkan migrasi. Jangan merotasi secret atau mengirim email uji tanpa izin.
+
+### Langkah penyiapan
 1. Verifikasi domain `mail.darmintompel.my.id` di Resend; DNS DKIM dan kedua CNAME harus verified / DNS only. Receiving tidak diperlukan.
 2. Buat API key Resend dengan Sending access terbatas domain tersebut. Jangan tempel key ke chat atau source code.
 3. Dari folder proyek: `npx wrangler secret put RESEND_API_KEY`, tempel key di prompt rahasia.

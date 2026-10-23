@@ -1225,3 +1225,125 @@ th{background:#FFF0D2}
  .bnav-item.active .bnav-ic{color:#171717}
  .bnav-item.active .bnav-ic .ui-icon{fill:#FFF0D2}
 }
+
+/* Donut neobrutal: SVG lokal, bukan dependensi React/Recharts. */
+.donut-chart .pie-disc{max-width:280px;isolation:isolate;background:none}
+.donut-chart .pie-disc::after{display:none}
+.donut-chart .pie-disc svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(3px 4px 0 #171717)}
+.donut-slice{stroke:#171717;stroke-width:2.5;stroke-linejoin:round;transition:filter .15s ease}
+.donut-slice:hover,.donut-slice:focus{filter:brightness(1.08);stroke-width:4;outline:none}
+.donut-slice:focus-visible{stroke-dasharray:5 3}
+.donut-total{position:absolute;inset:27%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;pointer-events:none;filter:none}
+.donut-total>span,.donut-total>small{font-size:11px;color:var(--txt-dim);line-height:1.4}
+.donut-total>strong{font-size:clamp(13px,1.5vw,18px);font-weight:800;line-height:1.3;overflow-wrap:anywhere;max-width:100%;font-variant-numeric:tabular-nums}
+.donut-chart .pie-legend li{padding:12px 0;font-size:13px;gap:10px}
+.donut-chart .pie-legend i{width:16px;height:16px;border:2px solid #171717;border-radius:4px}
+@media(prefers-reduced-motion:reduce){.donut-slice{transition:none}}
+
+/* Ringkasan dan legenda tetap terbaca tanpa bergantung pada warna irisan. */
+.donut-total{inset:29%;gap:6px}
+.donut-total>span{font-size:11px;font-weight:650;max-width:95px}
+.donut-total>strong{font-size:clamp(14px,1.5vw,18px);letter-spacing:-.5px;text-shadow:none}
+.donut-total>strong.donut-value-long{font-size:12px;letter-spacing:-.25px}
+.donut-total>small{font-size:11px}
+.donut-insight{margin:0 0 16px;padding:12px 14px;background:#FFF4DF;border:1px solid var(--line);border-radius:12px;display:grid;gap:4px;text-align:center;overflow-wrap:anywhere}
+.donut-insight>span{font-size:11px;font-weight:650;color:var(--txt-dim)}
+.donut-insight>strong{font-size:14px;line-height:1.4}
+.donut-insight>small{font-size:12px;color:var(--txt-dim);font-variant-numeric:tabular-nums}
+.donut-chart .pie-legend{margin-top:0}
+.donut-chart .pie-legend li{min-height:52px}
+.donut-chart .pie-legend strong{font-size:13px;flex-shrink:0;max-width:56%}
+.donut-chart .pie-legend small{font-size:12px;margin-top:3px}
+
+/* Statistik: pemasukan/pengeluaran berdampingan pada skala nol bersama. */
+.planner-chart .column-frame{margin-top:24px;margin-bottom:42px;grid-template-columns:64px minmax(0,1fr);gap:10px}
+.planner-chart .column-plot{border-bottom:2px solid #171717}
+.planner-chart .column-pair{gap:5px;padding:0 3px}
+.planner-chart .column-bar{box-sizing:border-box;max-width:32px;border:2px solid #171717;border-bottom:0;border-radius:5px 5px 0 0;min-height:3px}
+.planner-chart .column-zero{border:0;min-height:0}
+.planner-chart .column-income{background:#5DD4BD}
+.planner-chart .column-expense{background:#F5790B}
+.planner-chart .column-bar:hover{filter:brightness(1.08)}
+.planner-chart .column-bar:focus-visible{outline:3px solid #171717;outline-offset:3px}
+.planner-chart .column-chart .series-in,.planner-chart .line-chart .series-in{color:var(--txt)}
+.planner-chart .column-chart .series-out,.planner-chart .line-chart .series-out{color:var(--txt)}
+.planner-chart .column-chart .series-in::before{background:#5DD4BD;border:2px solid #171717;width:13px;height:13px;vertical-align:middle}
+.planner-chart .column-chart .series-out::before{background:#F5790B;border:2px solid #171717;width:13px;height:13px;vertical-align:middle}
+.planner-chart .line-chart .trend-income{stroke:#157765}
+.planner-chart .line-chart .trend-expense{stroke:#9A3900}
+.planner-chart .line-chart .point-income{fill:#5DD4BD;stroke:#171717}
+.planner-chart .line-chart .point-expense{fill:#F5790B;stroke:#171717}
+@media(max-width:600px){.planner-chart .column-frame{grid-template-columns:50px minmax(0,1fr);gap:6px}.planner-chart .column-pair{gap:2px;padding:0 1px}.planner-chart .column-bar{border-width:1px;border-radius:3px 3px 0 0}.planner-chart .column-axis{font-size:11px}}
+
+/* Area tidak ditumpuk: kedua seri tetap diukur dari nol. */
+.planner-chart .area-chart .area-income{fill:#5DD4BD;fill-opacity:.32}
+.planner-chart .area-chart .area-expense{fill:#F5790B;fill-opacity:.24}
+.planner-chart .area-chart .trend-area{stroke:none;pointer-events:none}
+
+/* Kalender transaksi lokal: nilai ISO tetap pada f-date. */
+.calendar-toggle{width:100%;justify-content:space-between;text-align:left;min-height:48px}
+.calendar-toggle::after{content:'▦';font-size:23px;margin-left:12px}
+.transaction-calendar{margin-top:12px;padding:12px;background:var(--panel);border:2px solid #171717;border-radius:14px;box-shadow:3px 3px 0 #171717}
+.transaction-calendar[hidden]{display:none}
+.calendar-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.calendar-nav strong{font-size:14px;text-transform:capitalize;text-align:center}
+.calendar-nav .btn{width:44px;min-width:44px;min-height:44px;padding:0;font-size:24px;justify-content:center}
+.calendar-week,.calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.calendar-week span{text-align:center;font-size:11px;font-weight:700;color:var(--txt-dim);padding:8px 0}
+.calendar-days button{min-width:0;min-height:44px;border:2px solid transparent;border-radius:8px;background:transparent;color:var(--txt);font:inherit;font-size:14px;cursor:pointer;padding:0}
+.calendar-days button:hover{background:#FFF0D2;border-color:#171717}
+.calendar-days button[aria-current="date"]{border-color:#171717;font-weight:800}
+.calendar-days button[aria-pressed="true"]{background:#F5790B;color:#171717;border-color:#171717;box-shadow:2px 2px 0 #171717;font-weight:800}
+.calendar-days button:focus-visible{outline:3px solid #171717;outline-offset:1px}
+.calendar-today{margin-top:12px;width:100%;min-height:44px;justify-content:center}
+
+/* Neobrutalism.dev: navigasi, tombol, tabs, badge; grafik/kalender tetap. */
+:root{--control-ink:#171717;--control-shadow:2px 3px 0 var(--control-ink)}
+.btn:not(.calendar-toggle):not(.calendar-today):not(.calendar-nav .btn){border-width:2px;border-radius:10px;transition:background-color .12s ease,box-shadow .12s ease,transform .12s ease}
+.btn:not(:disabled):not(.calendar-toggle):not(.calendar-today):not(.calendar-nav .btn):active{transform:translate(2px,3px);box-shadow:none;filter:none}
+.btn:disabled{transform:none;box-shadow:none;cursor:not-allowed}
+.btn .ui-icon{stroke-width:2;fill:none}
+.btn.danger{border-color:#9F1239;background:#FFF0F2;color:#9F1239}
+.btn.danger:hover{background:#FFE0E6}
+.seg{padding:4px;gap:4px;background:#FFF;border:2px solid var(--control-ink);border-radius:12px}
+.seg button{min-height:44px;border:2px solid transparent;border-radius:7px;font-weight:650}
+.seg button.on{border-color:var(--control-ink);background:#F5790B;color:var(--control-ink);box-shadow:1px 2px 0 var(--control-ink)}
+.seg button.on.in{background:#BCEFE6;color:#075E50}
+.seg button.on.out{background:#FFD7DB;color:#9F1239}
+.seg button.on.move{background:#E9D8FF;color:#6635B5}
+.seg button:not(.on):hover{background:#FFF0D2}
+.mode-pill,.mode-pill.keluarga{border:2px solid var(--control-ink);border-radius:10px;background:#FFF4DF;color:var(--control-ink);box-shadow:none}
+.mode-pill.keluarga{background:#BCEFE6}
+.mode-pill:hover{background:#FFE4C5}
+.menu-grid{gap:14px;padding-right:3px;padding-bottom:4px}
+.menu-link{border:2px solid var(--control-ink);border-radius:12px;box-shadow:var(--control-shadow);min-height:76px}
+.menu-link:hover,.menu-link:focus-visible{background:#FFF4DF;border-color:var(--control-ink)}
+.menu-link:active{transform:translate(2px,3px);box-shadow:none}
+.menu-ic{border:2px solid var(--control-ink);border-radius:9px;background:#FFF0D2}
+.menu-go{color:var(--control-ink);font-weight:800}
+.menu-terakhir{background:#FFF4DF;border-color:var(--control-ink)}
+.tag{border:1px solid currentColor;border-radius:6px;font-weight:700}
+.tx-by{background:#FFF0D2;color:#793000;border:1px solid #AA6D3B;border-radius:6px}
+.toast{background:#FFF;border:2px solid var(--control-ink);border-left-width:6px;border-radius:10px;box-shadow:3px 4px 0 var(--control-ink);color:var(--txt)}
+.toast.ok{border-left-color:#047857}.toast.err{border-left-color:#BE123C}
+@media(min-width:861px){
+ .sidebar .nav{gap:2px;padding-bottom:5px}
+ .sidebar .nav a{border:2px solid transparent;border-radius:10px;min-height:44px;padding:5px 10px;gap:12px}
+ .sidebar .nav a.active,.sidebar .nav a.active:hover{border-color:var(--control-ink);outline:none;box-shadow:var(--control-shadow)}
+ .sidebar .nav a:not(.active):hover{border-color:var(--control-ink);background:#FFF4DF}
+ .sidebar .nav a .ic{width:28px;height:28px;flex-basis:28px;border:1px solid #171717;border-radius:6px;background:#FFF8E9}
+ .sidebar .nav a .ic .ui-icon{width:19px;height:19px;stroke-width:2}
+ .sidebar .profil-btn{border-width:2px;border-radius:10px;box-shadow:var(--control-shadow);padding:0 10px}
+ .sidebar .profil-btn .pb-ic{width:28px;flex:0 0 28px;display:grid;place-items:center}
+}
+@media(max-width:860px){
+ .bnav-item .bnav-ic{border:2px solid transparent;border-radius:9px;transition:background-color .12s ease}
+ .bnav-item.active .bnav-ic{border-color:var(--control-ink);outline:none;border-radius:9px;box-shadow:2px 2px 0 var(--control-ink)}
+ .bnav-item.active .bnav-lbl{font-weight:800}
+ .bnav-fab{border:2px solid var(--control-ink);border-radius:14px}
+ .menu-grid{gap:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ .btn,.bnav-item .bnav-ic{transition:none!important}
+ .btn:not(:disabled):active,.menu-link:active{transform:none!important}
+}

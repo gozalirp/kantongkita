@@ -77,3 +77,12 @@ fitur Pro, streak, atau angka contoh dari karya tersebut.
 - Pertahankan Plus Jakarta Sans, SVG, target sentuh, safe-area, fokus dan
   reduced-motion. Struktur navigasi, alur keluarga dan semua kalkulasi tetap.
 - Jangan menambah gamifikasi atau fitur referensi yang belum benar-benar ada.
+
+
+## Penyempurnaan kontrol — referensi Neobrutalism.dev (23 Oktober 2026)
+- Referensi langsung: https://www.neobrutalism.dev/docs/button dan registry button/tabs/badge. Adaptasi CSS lokal, bukan menyalin komponen React/Base UI atau memasang dependensi.
+- Tombol: outline 2px, radius 10px, bayangan keras 2px/3px, feedback tekan bergeser ke bayangan. Disabled tidak bergerak; reduced-motion tetap dihormati.
+- Sidebar: menu aktif oranye ber-outline, ikon SVG duotone lama dipertahankan dalam wadah persegi kecil. Navigasi HP memakai penanda aktif kotak membulat, bukan tambahan menu baru.
+- Menu fitur: outline 2px, ikon berbingkai, jarak kartu 12–14px. Tabs/filter memakai selected border + shadow, tidak hanya warna. Badge dan toast mengikuti outline yang konsisten.
+- Donut, batang/area statistik, kalender transaksi, struktur kartu yang disetujui dan emoji data pengguna tidak diganti. Nilai/ID kontrol, alur navigasi, privasi, API dan hitungan keuangan tetap.
+- Semua perubahan masih preview lokal sampai ada izin deploy terpisah. Tidak mengadopsi seluruh 64 komponen untuk fitur yang tidak diperlukan.

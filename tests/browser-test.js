@@ -118,7 +118,7 @@ function s1(){try{
   var b=d.querySelector(manageSelector);
   if(b) b.scrollIntoView({block:'center',behavior:'instant'});
   say('T tombol-konten|'+(b?b.textContent.trim()+'|'+hit(manageSelector):'TIDAK ADA'));
-  say('T planner-donut|'+(!!d.querySelector('.pie-disc[role="img"][aria-label]')||d.querySelector('.planner-breakdown').textContent.indexOf('Belum ada data')>-1));
+  say('T planner-donut|'+(!!d.querySelector('.pie-disc[role="group"][aria-label]')||d.querySelector('.planner-breakdown').textContent.indexOf('Belum ada data')>-1));
   say('T planner-chart|'+!!d.querySelector('#dash-chart'));
   say('T content-svg|'+(d.querySelectorAll('#content .ui-icon').length > 0));
   var probe=d.createElement('div');

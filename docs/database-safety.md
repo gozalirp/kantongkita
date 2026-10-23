@@ -1,5 +1,9 @@
 # Perbaikan keamanan database
 
+[← Struktur database](database.md) · [Panduan aplikasi](../DOKUMENTASI.md)
+
+**Status saat dokumen diperbarui:** kode sudah di-commit; migrasi `0005` dan deploy Worker perbaikan DB belum dijalankan pada produksi.
+
 ## Perubahan
 - Simpan buku pribadi/keluarga: setiap DELETE/INSERT potongan memakai syarat revisi di dalam batch atomik yang sama. Penulis kalah menghasilkan 409 tanpa mengubah potongan. Tidak ada DELETE susulan setelah konflik.
 - Endpoint `/api/family/transaction` lama mengembalikan 410; gunakan `/save` dengan buku lengkap dan revisi. UI saat ini sudah memakai jalur ini.
@@ -9,6 +13,12 @@
 ## Penerapan produksi (belum dijalankan oleh perubahan kode)
 1. Simpan backup D1 di lokasi privat di luar repo dan catat titik pemulihan Time Travel. Backup berisi hash autentikasi dan data keuangan; jangan commit atau bagikan.
 2. Jalankan migrasi indeks `0005_database_indexes.sql` pada D1 produksi setelah memeriksa daftar migrasi. Jangan mengulang migrasi destruktif atau mereset database.
+   Perintah khusus indeks (hanya setelah backup dan persetujuan produksi):
+
+   ```bash
+   npx wrangler d1 execute savingduit-db --remote --file worker/migrations/0005_database_indexes.sql
+   ```
+
 3. Deploy Worker (cron ikut diaktifkan); cek health dan sesi tanpa menulis data pengguna.
 4. Verifikasi indeks dengan EXPLAIN QUERY PLAN dan foreign_key_check. Pengujian tulis hanya memakai akun/DB uji khusus.
 
@@ -17,3 +27,13 @@ Sengaja dipertahankan. Ini bukan pelanggaran foreign key. Bisa menyimpan riwayat
 
 ## Pengujian
 `node tests/database-safety.mjs`: SQLite in-memory dengan batch transaction dan interleaving terkontrol. Menguji konflik sesudah pembacaan revisi, first-save race, rollback, endpoint lama, indeks, retensi, dan preservasi buku. Ini bukan benchmark atau pembuktian konkurensi runtime D1 produksi.
+
+## Verifikasi baca-saja setelah penerapan
+
+```sql
+PRAGMA foreign_key_check;
+EXPLAIN QUERY PLAN SELECT token_hash FROM family_sessions WHERE user_id = 'audit-no-user';
+SELECT name FROM sqlite_schema WHERE type = 'index' AND name LIKE 'idx_%';
+```
+
+Pastikan pencarian sesi menggunakan `idx_family_sessions_user`. Jangan menguji konflik dengan mengubah buku pengguna produksi. Pemulihan Worker lama tidak otomatis memulihkan data; pemulihan D1 harus diputuskan terpisah dan mempertimbangkan penulisan setelah titik backup.

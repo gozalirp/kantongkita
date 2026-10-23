@@ -406,24 +406,92 @@
     return '<div class="empty"><span class="e-ic">' + U.icon(icon) + '</span><p>' + text + '</p></div>';
   }
 
-  const PIE_COLORS = ['#5955EF', '#D97706', '#E11D48', '#0284C7', '#059669', '#9333EA', '#B45309', '#0E7490'];
+  function transactionCalendar() {
+    const input = el('f-date');
+    const host = el('f-calendar');
+    const toggle = el('f-calendar-toggle');
+    let month = U.strToDate(input.value || U.today());
+    month.setDate(1);
+    function draw(focusDate) {
+      toggle.textContent = U.fmtDate(input.value || U.today());
+      const year = month.getFullYear(), m = month.getMonth();
+      const first = new Date(year, m, 1);
+      const offset = (first.getDay() + 6) % 7;
+      const count = new Date(year, m + 1, 0).getDate();
+      const iso = function (day) { return year + '-' + String(m + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0'); };
+      host.innerHTML = '<div class="calendar-nav"><button type="button" class="btn" data-month="-1" aria-label="Bulan sebelumnya">‹</button><strong aria-live="polite">' +
+        H(first.toLocaleDateString('id-ID', {month:'long',year:'numeric'})) + '</strong><button type="button" class="btn" data-month="1" aria-label="Bulan berikutnya">›</button></div>' +
+        '<div class="calendar-week" aria-hidden="true">' + ['Sen','Sel','Rab','Kam','Jum','Sab','Min'].map(function (d) { return '<span>' + d + '</span>'; }).join('') + '</div>' +
+        '<div class="calendar-days">' + Array(offset).fill('<span></span>').join('') + Array.from({length:count}, function (_, i) {
+          const date = iso(i + 1);
+          return '<button type="button" data-date="' + date + '" aria-label="' + H(U.fmtDate(date)) + '" aria-pressed="' + (date === input.value) + '"' + (date === U.today() ? ' aria-current="date"' : '') + '>' + (i + 1) + '</button>';
+        }).join('') + '</div><button type="button" class="btn calendar-today">Hari ini</button>';
+      if (focusDate) { const target = host.querySelector('[data-date="' + focusDate + '"]'); if (target) target.focus(); }
+    }
+    function select(date) {
+      input.value = date;
+      input.dispatchEvent(new Event('change', {bubbles:true}));
+      host.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      draw(); toggle.focus();
+    }
+    toggle.onclick = function () {
+      host.hidden = !host.hidden;
+      toggle.setAttribute('aria-expanded', String(!host.hidden));
+      if (!host.hidden) { month = U.strToDate(input.value || U.today()); month.setDate(1); draw(input.value); }
+    };
+    host.onclick = function (event) {
+      const button = event.target.closest('button'); if (!button) return;
+      if (button.dataset.month) { month.setMonth(month.getMonth() + Number(button.dataset.month)); draw(); host.querySelector('[data-month="' + button.dataset.month + '"]').focus(); }
+      else if (button.dataset.date) select(button.dataset.date);
+      else if (button.classList.contains('calendar-today')) select(U.today());
+    };
+    host.onkeydown = function (event) {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); host.hidden = true; toggle.setAttribute('aria-expanded','false'); toggle.focus(); return; }
+      const date = event.target.dataset.date;
+      const steps = {ArrowLeft:-1,ArrowRight:1,ArrowUp:-7,ArrowDown:7};
+      if (date && steps[event.key]) {
+        event.preventDefault();
+        const next = U.addDays(date, steps[event.key]);
+        month = U.strToDate(next); month.setDate(1); draw(next);
+      }
+    };
+    draw();
+  }
+
+  const PIE_COLORS = ['#F5790B', '#A78BFA', '#5DD4BD', '#F7CE54', '#70B7F5', '#F58DA8', '#C1D96C', '#D7B6F5'];
 
   function pieChart(rows, title) {
     rows = rows.filter(function (r) { return Number.isFinite(r.amount) && r.amount > 0; });
+    rows = rows.slice().sort(function (a, b) { return b.amount - a.amount; });
+    const categoryCount = rows.length;
     const total = U.sum(rows, function (r) { return r.amount; });
     if (!total) return emptyBox('chart', 'Belum ada data ' + title.toLowerCase() + ' pada periode ini.');
     // Irisan kecil tetap dihitung utuh melalui kelompok Lainnya.
     if (rows.length > 8) {
-      rows = rows.slice().sort(function (a, b) { return b.amount - a.amount; });
       rows = rows.slice(0, 7).concat([{ name: 'Lainnya (' + (rows.length - 7) + ')', amount: U.sum(rows.slice(7), function (r) { return r.amount; }) }]);
     }
-    let cursor = 0;
-    const stops = rows.map(function (r, i) {
-      const start = cursor; cursor += r.amount / total * 100;
-      return PIE_COLORS[i] + ' ' + start + '% ' + (i === rows.length - 1 ? 100 : cursor) + '%';
+    let cursor = -90;
+    const point = function (radius, angle) {
+      const rad = angle * Math.PI / 180;
+      return (140 + radius * Math.cos(rad)).toFixed(4) + ' ' + (140 + radius * Math.sin(rad)).toFixed(4);
+    };
+    const slices = rows.map(function (r, i) {
+      const start = cursor;
+      cursor += r.amount / total * 360;
+      const label = r.name + ': ' + U.fmtRp(r.amount) + ' (' + U.round1(r.amount / total * 100) + '%)';
+      // Dua busur per sisi juga menangani satu kategori (lingkaran penuh).
+      const mid = (start + cursor) / 2;
+      const d = 'M ' + point(122, start) + ' A 122 122 0 0 1 ' + point(122, mid) +
+        ' A 122 122 0 0 1 ' + point(122, cursor) + ' L ' + point(80, cursor) +
+        ' A 80 80 0 0 0 ' + point(80, mid) + ' A 80 80 0 0 0 ' + point(80, start) + ' Z';
+      return '<path class="donut-slice" d="' + d + '" fill="' + PIE_COLORS[i] + '" tabindex="0" role="img" aria-label="' + H(label) + '"><title>' + H(label) + '</title></path>';
     });
-    return '<figure class="pie-chart donut-chart"><figcaption><strong>' + H(title) + '</strong><span>Total ' + U.fmtRp(total) + '</span></figcaption>' +
-      '<div class="pie-disc" role="img" aria-label="' + H(title + '. Diagram donat. Rincian nominal dan persentase tersedia pada legenda di bawah.') + '" style="background:conic-gradient(' + stops.join(',') + ')"></div>' +
+    return '<figure class="pie-chart donut-chart"><figcaption><strong>' + H(title) + '</strong><span>Komposisi per kategori · transfer tidak disertakan</span></figcaption>' +
+      '<div class="pie-disc" role="group" aria-label="' + H(title + '. Diagram donat. Rincian nominal dan persentase tersedia pada legenda di bawah.') + '">' +
+        '<svg viewBox="0 0 280 280" aria-label="Irisan pengeluaran per kategori">' + slices.join('') + '</svg>' +
+        '<div class="donut-total"><span>Total pengeluaran</span><strong class="' + (U.fmtRp(total).length > 17 ? 'donut-value-long' : '') + '">' + U.fmtRp(total) + '</strong><small>' + categoryCount + ' kategori</small></div></div>' +
+      '<p class="donut-insight"><span>Pengeluaran terbesar</span><strong>' + H(rows[0].name) + '</strong><small>' + U.round1(rows[0].amount / total * 100) + '% dari total</small></p>' +
       '<ul class="pie-legend">' + rows.map(function (r, i) {
         return '<li><i aria-hidden="true" style="background:' + PIE_COLORS[i] + '"></i><span>' + H(r.name) + '</span><strong>' +
           U.fmtRp(r.amount) + '<small>' + U.round1(r.amount / total * 100) + '%</small></strong></li>';
@@ -460,7 +528,7 @@
         }).join('') + '</div><div class="column-plot">' + data.map(function (d, i) {
           return '<div class="column-group"><div class="column-pair">' + ['income', 'expense'].map(function (key) {
             const amount = d[key] || 0;
-            return '<div role="img" aria-label="' + H(d.label + ' · ' + (key === 'income' ? 'Pemasukan ' : 'Pengeluaran ') + U.fmtRp(amount)) + '" class="column-bar column-' + key + '" style="height:' + (amount / ceiling * 100) + '%" title="' + H(d.label + ': ' + U.fmtRp(amount)) + '"></div>';
+            return '<div role="img" tabindex="0" aria-label="' + H(d.label + ' · ' + (key === 'income' ? 'Pemasukan ' : 'Pengeluaran ') + U.fmtRp(amount)) + '" class="column-bar column-' + key + (amount ? '' : ' column-zero') + '" style="height:' + (amount / ceiling * 100) + '%" title="' + H(d.label + ' · ' + (key === 'income' ? 'Pemasukan: ' : 'Pengeluaran: ') + U.fmtRp(amount) + ' · Selisih: ' + U.fmtRp((d.income || 0) - (d.expense || 0))) + '"></div>';
           }).join('') + '</div><span class="column-label' + (tick(i, 7) ? ' tick-wide' : '') + (tick(i, 4) ? ' tick-small' : '') + '" title="' + H(d.label) + '">' + H(d.axisLabel || d.label) + '</span></div>';
         }).join('') + '</div></div>' + table + '</div>';
     }
@@ -471,6 +539,10 @@
         const cy = y(max * fraction);
         return '<line x1="90" y1="' + cy + '" x2="680" y2="' + cy + '" class="chart-grid"/><text x="80" y="' + (cy + 4) + '" text-anchor="end">' + H(U.fmtRpShort(max * fraction)) + '</text>';
       }).join('');
+      const areas = trend === 'area' ? ['income', 'expense'].map(function (key) {
+        const points = x(0) + ',205 ' + data.map(function (d, i) { return x(i) + ',' + y(d[key] || 0); }).join(' ') + ' ' + x(data.length - 1) + ',205';
+        return '<polygon class="trend-area area-' + key + '" points="' + points + '" aria-hidden="true"/>';
+      }).join('') : '';
       const lines = ['income', 'expense'].map(function (key) {
         return '<polyline class="trend-' + key + '" fill="none" stroke-width="3" points="' + data.map(function (d, i) { return x(i) + ',' + y(d[key] || 0); }).join(' ') + '"/>' + data.map(function (d, i) {
           return '<circle class="trend-point point-' + key + '" cx="' + x(i) + '" cy="' + y(d[key] || 0) + '" r="3"><title>' + H(d.label + ' · ' + (key === 'income' ? 'Pemasukan ' : 'Pengeluaran ') + U.fmtRp(d[key] || 0)) + '</title></circle>';
@@ -480,7 +552,7 @@
         if (i !== 0 && i !== data.length - 1 && i % Math.ceil(data.length / 5)) return '';
         return '<text x="' + x(i) + '" y="232" text-anchor="middle">' + H(String(d.label).replace(/ \d{4}$/, '')) + '</text>';
       }).join('');
-      return '<div class="time-chart line-chart">' + legend + '<svg viewBox="0 0 720 250" role="img" aria-label="Tren pemasukan garis utuh dan pengeluaran garis putus-putus. Nominal lengkap tersedia di tabel per periode.">' + grid + lines + labels + '</svg>' + table + '</div>';
+      return '<div class="time-chart line-chart' + (trend === 'area' ? ' area-chart' : '') + '">' + legend + '<svg viewBox="0 0 720 250" role="img" aria-label="Tren pemasukan garis utuh dan pengeluaran garis putus-putus. Nominal lengkap tersedia di tabel per periode.">' + grid + areas + lines + labels + '</svg>' + table + '</div>';
     }
     return '<div class="time-chart grouped-chart">' + legend + '<p class="chart-scale">Skala bersama mulai Rp0 · maksimum ' + U.fmtRp(max) + '</p>' +
       data.map(function (d) {
@@ -589,8 +661,10 @@
           segBtn(form.type, 'move', ARAH.move + 'Pindah Dana', 'move') +
         '</div>' +
 
-        '<div class="field"><label>Tanggal</label>' +
-          '<input type="date" id="f-date" value="' + H(form.date) + '"></div>' +
+        '<div class="field"><label for="f-calendar-toggle">Tanggal</label>' +
+          '<input type="date" id="f-date" value="' + H(form.date) + '" hidden>' +
+          '<button type="button" class="btn calendar-toggle" id="f-calendar-toggle" aria-expanded="false" aria-controls="f-calendar"></button>' +
+          '<div id="f-calendar" class="transaction-calendar" hidden></div></div>' +
 
         '<div class="field"><label>Nominal</label>' +
           '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="f-amount" ' +
@@ -625,6 +699,7 @@
       });
 
       /* --- bind --- */
+      transactionCalendar();
       el('f-type').addEventListener('click', function (e) {
         const b = e.target.closest('[data-seg]'); if (!b) return;
         syncForm();
@@ -823,7 +898,7 @@
         '<section class="card planner-chart"><div class="card-head"><h2>Statistik keuangan</h2>' +
           '<div class="seg" id="dash-chart">' + segBtn(st.chart, '6m', '6 Bulan') +
           segBtn(st.chart, '12m', '12 Bulan') + segBtn(st.chart, '30d', '30 Hari') + '</div></div>' +
-          '<p class="muted planner-caption">Pemasukan dan pengeluaran · ' + chartCaption + '</p>' + periodChart(chartData, st.chart === '30d') +
+          '<p class="muted planner-caption">Pemasukan dan pengeluaran · ' + chartCaption + '</p>' + periodChart(chartData, st.chart === '30d' ? 'area' : 'column') +
         '</section>' +
         '<section class="card"><div class="card-head"><h2>Catatan Terakhir</h2>' +
           '<button class="btn sm" onclick="App.go(\'transaksi\')">Lihat semua</button></div>' +
