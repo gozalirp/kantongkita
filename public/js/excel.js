@@ -49,7 +49,7 @@
       const categories = new Map((db.categories || []).map(x => [x.id, x.name]));
       const headers = ['Tanggal', 'Jenis', 'Nominal (Rp)', 'Dompet', 'Ke Dompet', 'Kategori', 'Pencatat', 'Catatan'];
       const last = Math.max(5, tx.length + 4);
-      let rows = '<row r="1" ht="32" customHeight="1">' + cell('A1', 'SavingDuit · Buku ' + sumber, 1) + '</row>' +
+      let rows = '<row r="1" ht="32" customHeight="1">' + cell('A1', 'KantongKita · Buku ' + sumber, 1) + '</row>' +
         '<row r="2" ht="24" customHeight="1">' + cell('A2', 'Ekspor: ' + tanggal + ' | Seluruh periode | ' + tx.length + ' transaksi | Transfer bukan pemasukan/pengeluaran', 2) + '</row>' +
         '<row r="4" ht="26" customHeight="1">' + headers.map((x, i) => cell(String.fromCharCode(65 + i) + '4', x, 3)).join('') + '</row>';
       tx.forEach((t, i) => {

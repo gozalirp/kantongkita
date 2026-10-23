@@ -255,7 +255,7 @@ section('12. Seed, normalize, ekspor');
 
   ok('toJSON valid', typeof JSON.parse(S.toJSON(db)) === 'object');
   const f = S.Persist.exportFile(db);
-  ok('nama berkas backup berpola benar', /^savingduit-backup-\d{4}-\d{2}-\d{2}\.json$/.test(f.name));
+  ok('nama berkas backup berpola benar', /^kantongkita-backup-\d{4}-\d{2}-\d{2}\.json$/.test(f.name));
 }
 
 section('13. Ketahanan data rusak');

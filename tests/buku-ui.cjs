@@ -165,6 +165,8 @@ w.fetch = async (url, options) => {
   $('ekspor-buku').value = 'keluarga'; $('ekspor-unduh').onclick();
   const backup = JSON.parse(unduhan.text);
   assert.equal(backup.backup.sumber, 'keluarga');
+  assert.equal(backup.backup.format, 'kantongkita');
+  assert(unduhan.name.startsWith('kantongkita-backup-'));
   assert.equal(JSON.stringify(backup.wallets), JSON.stringify(B.keluarga.wallets));
   assert(!backup.wallets.some(x => x._sumber), 'ID asli bukan ID tampilan gabungan');
   assert(unduhan.name.endsWith('-keluarga.json'));
@@ -182,12 +184,13 @@ w.fetch = async (url, options) => {
   App.view='pengaturan'; App.render();
   assert($('st-impor-buku'));
   V.confirm = async () => true;
-  const impor = async data => {
+  const impor = async (data, sumber = 'keluarga') => {
+    $('st-impor-buku').value=sumber;
     V.importJSON(new w.File([JSON.stringify(data)], 'backup.json', {type:'application/json'}));
     await new Promise(r => setTimeout(r, 80));
   };
   $('st-impor-buku').value='pribadi';
-  await impor(backup);
+  await impor(backup, 'pribadi');
   assert.equal(JSON.stringify(App.db), sebelumPribadi, 'backup keluarga ditolak di pribadi');
   $('st-impor-buku').value='keluarga';
   let tersimpan=0; const simpanAsli=B.simpan;
@@ -206,6 +209,14 @@ w.fetch = async (url, options) => {
   V.confirm=async()=>{B.revisi++;return true;};
   await impor(backup);
   assert.equal(tersimpan,1,'perubahan revisi selama konfirmasi ditolak');
+  V.confirm=async()=>true;
+  const lama=JSON.parse(JSON.stringify(backup));lama.backup.format='savingduit';
+  $('st-pw-import').checked=true;
+  await impor(lama);
+  assert.equal(tersimpan,2,'backup SavingDuit lama tetap diterima');
+  lama.backup.format='asing';
+  await impor(lama);
+  assert.equal(tersimpan,2,'format asing ditolak');
   B.simpan=simpanAsli;
 
   console.log('PASS: combined dashboard, wallet routing, family create/edit isolation, invitation modal, family members, transaction filters');

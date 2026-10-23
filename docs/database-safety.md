@@ -1,8 +1,8 @@
 # Perbaikan keamanan database
 
-[← Struktur database](database.md) · [Panduan aplikasi](../DOKUMENTASI.md)
+[← Struktur database](database.md) · [Panduan aplikasi](panduan.md)
 
-**Status saat dokumen diperbarui:** kode sudah di-commit; migrasi `0005` dan deploy Worker perbaikan DB belum dijalankan pada produksi.
+**Status 23 Oktober 2026:** backup privat SQL + titik Time Travel tersimpan di luar repo; indeks `0005` dan Worker perbaikan DB sudah diterapkan. Versi Worker `4bdb20f9-0bb9-4c47-902b-512eb271516a`, SW `savingduit-v47`. Health 200, empat indeks terverifikasi, query sesi menggunakan indeks user, dan foreign_key_check tidak melaporkan pelanggaran. Cron terpasang; eksekusi terjadwal pertamanya belum diamati.
 
 ## Perubahan
 - Simpan buku pribadi/keluarga: setiap DELETE/INSERT potongan memakai syarat revisi di dalam batch atomik yang sama. Penulis kalah menghasilkan 409 tanpa mengubah potongan. Tidak ada DELETE susulan setelah konflik.
@@ -10,7 +10,7 @@
 - Migrasi `0005_database_indexes.sql` hanya menambah indeks sesi user/expiry, token expiry, rate-limit window. Tidak mengubah isi buku.
 - Cron harian 20:17 UTC membersihkan maksimal 1000 baris per tabel: sesi dan token yang sudah kedaluwarsa lebih dari sehari, serta rate-limit yang lebih tua dari tujuh hari. Undangan, akun, buku, keluarga kosong dan sync_store tidak dihapus.
 
-## Penerapan produksi (belum dijalankan oleh perubahan kode)
+## Prosedur penerapan produksi (rollout 23 Oktober 2026 selesai)
 1. Simpan backup D1 di lokasi privat di luar repo dan catat titik pemulihan Time Travel. Backup berisi hash autentikasi dan data keuangan; jangan commit atau bagikan.
 2. Jalankan migrasi indeks `0005_database_indexes.sql` pada D1 produksi setelah memeriksa daftar migrasi. Jangan mengulang migrasi destruktif atau mereset database.
    Perintah khusus indeks (hanya setelah backup dan persetujuan produksi):

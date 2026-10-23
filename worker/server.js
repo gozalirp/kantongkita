@@ -60,7 +60,7 @@ const server = http.createServer(function (req, res) {
   // ==================== REST API ENDPOINTS ====================
   // Health check endpoint untuk Cloud Run
   if (pathname === '/api/health') {
-    return sendJSON(res, 200, { status: 'ok', service: 'SavingDuit Cloud', time: new Date().toISOString() });
+    return sendJSON(res, 200, { status: 'ok', service: 'KantongKita Cloud', time: new Date().toISOString() });
   }
 
   // GET /api/sync — Ambil data dari server
@@ -140,7 +140,7 @@ server.on('error', function (e) {
 
 server.listen(PORT, '0.0.0.0', function () {
   console.log('');
-  console.log('  SavingDuit Server Siap:');
+  console.log('  KantongKita Server Siap:');
   console.log('  ->  Port:    ' + PORT);
   console.log('  ->  API:     http://localhost:' + PORT + '/api/health');
   console.log('  ->  Lokal:   http://localhost:' + PORT);

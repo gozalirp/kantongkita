@@ -1,4 +1,4 @@
-name: Build Android APK (SavingDuit)
+name: Build Android APK (KantongKita)
 
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.savingduit.app",
-            "appName": "SavingDuit",
+            "appName": "KantongKita",
             "webDir": "public",
             "server": {
               "androidScheme": "https"
@@ -78,5 +78,5 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SavingDuit-App
+          name: KantongKita-App
           path: android/app/build/outputs/apk/debug/*.apk

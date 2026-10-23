@@ -1,7 +1,7 @@
 {
-  "name": "savingduit",
+  "name": "kantongkita",
   "version": "1.0.0",
-  "description": "SavingDuit - Aplikasi Keuangan Pribadi (frontend: public/, backend: worker/)",
+  "description": "KantongKita - Aplikasi Keuangan Pribadi (frontend: public/, backend: worker/)",
   "private": true,
   "scripts": {
     "start": "node worker/server.js",

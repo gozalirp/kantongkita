@@ -1,8 +1,8 @@
-# Email dan pemulihan akun SavingDuit
+# Email dan pemulihan akun KantongKita
 
-[← Panduan aplikasi](DOKUMENTASI.md) · [Struktur database](docs/database.md)
+[← Panduan aplikasi](panduan.md) · [Struktur database](database.md)
 
-Provider: Resend (Free). Pengirim: `Money Planner <akun@mail.darmintompel.my.id>`.
+Provider: Resend (Free). Pengirim: `KantongKita <akun@mail.darmintompel.my.id>`.
 Origin tautan selalu `https://moneyplanner.darmintompel.my.id`.
 
 ## Konfigurasi produksi

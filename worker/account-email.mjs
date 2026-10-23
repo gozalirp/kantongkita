@@ -17,7 +17,7 @@ export async function sendAccountEmail(env, userId, email, purpose, now) {
   try {
     response = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: env.EMAIL_FROM, to: [email], subject: purpose === 'reset' ? 'Reset password Money Planner' : 'Verifikasi email Money Planner',
+      body: JSON.stringify({ from: env.EMAIL_FROM, to: [email], subject: purpose === 'reset' ? 'Reset password KantongKita' : 'Verifikasi email KantongKita',
         text: `${purpose === 'reset' ? 'Buat password baru (berlaku 30 menit)' : 'Verifikasi email Anda (berlaku 24 jam)'}:\n${link}\n\nTautan hanya dapat dipakai sekali. Jika bukan Anda yang meminta, abaikan email ini. Jangan bagikan tautan ini.` }),
       signal: AbortSignal.timeout(10000)
     });

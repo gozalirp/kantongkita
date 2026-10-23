@@ -40,7 +40,7 @@
     if (kode) {
       return '' +
         '<div class="card gerbang-kartu">' +
-          '<div class="gerbang-merek"><span class="ui-icon-wrap" aria-hidden="true">' + U.icon('wallet') + '</span>Money Planner</div>' +
+          '<div class="gerbang-merek"><span class="ui-icon-wrap" aria-hidden="true">' + U.icon('wallet') + '</span>KantongKita</div>' +
           '<div class="gerbang-ikon">' + U.icon('check') + '</div>' +
           '<h2>Akun berhasil dibuat</h2>' +
           '<p class="muted gerbang-tip">Simpan kode di bawah. Kode ini hanya tampil sekali ' +
@@ -55,7 +55,7 @@
     const daftar = App._gerbangDaftar === true;
     return '' +
       '<div class="card gerbang-kartu">' +
-        '<div class="gerbang-merek"><span class="ui-icon-wrap" aria-hidden="true">' + U.icon('wallet') + '</span>Money Planner</div>' +
+        '<div class="gerbang-merek"><span class="ui-icon-wrap" aria-hidden="true">' + U.icon('wallet') + '</span>KantongKita</div>' +
         '<div class="gerbang-ikon">' + U.icon(daftar ? 'user' : 'lock') + '</div>' +
         '<h2>' + (daftar ? 'Buat akun baru' : 'Masuk dulu untuk membuka catatan') + '</h2>' +
         '<div class="seg gerbang-tab" role="tablist" aria-label="Pilih keperluan">' +
@@ -511,7 +511,7 @@
   function periodChart(data, trend) {
     const max = Math.max.apply(null, data.map(function (d) { return Math.max(d.income || 0, d.expense || 0); }).concat([0]));
     if (!max) return emptyBox('chart', 'Belum ada pemasukan atau pengeluaran pada periode ini.');
-    const legend = '<div class="time-legend"><span class="series-in">━ Pemasukan</span><span class="series-out">┄ Pengeluaran</span></div>';
+    const legend = '<div class="time-legend"><span class="series-in">━ Pemasukan</span><span class="series-out">━ Pengeluaran</span></div>';
     const table = '<details class="chart-data"><summary>Lihat nominal per periode</summary><div class="table-wrap"><table><thead><tr><th>Periode</th><th>Pemasukan</th><th>Pengeluaran</th></tr></thead><tbody>' + data.map(function (d) {
       return '<tr><td>' + H(d.label) + '</td><td>' + U.fmtRp(d.income || 0) + '</td><td>' + U.fmtRp(d.expense || 0) + '</td></tr>';
     }).join('') + '</tbody></table></div></details>';
@@ -539,20 +539,22 @@
         const cy = y(max * fraction);
         return '<line x1="90" y1="' + cy + '" x2="680" y2="' + cy + '" class="chart-grid"/><text x="80" y="' + (cy + 4) + '" text-anchor="end">' + H(U.fmtRpShort(max * fraction)) + '</text>';
       }).join('');
-      const areas = trend === 'area' ? ['income', 'expense'].map(function (key) {
-        const points = x(0) + ',205 ' + data.map(function (d, i) { return x(i) + ',' + y(d[key] || 0); }).join(' ') + ' ' + x(data.length - 1) + ',205';
-        return '<polygon class="trend-area area-' + key + '" points="' + points + '" aria-hidden="true"/>';
-      }).join('') : '';
       const lines = ['income', 'expense'].map(function (key) {
-        return '<polyline class="trend-' + key + '" fill="none" stroke-width="3" points="' + data.map(function (d, i) { return x(i) + ',' + y(d[key] || 0); }).join(' ') + '"/>' + data.map(function (d, i) {
-          return '<circle class="trend-point point-' + key + '" cx="' + x(i) + '" cy="' + y(d[key] || 0) + '" r="3"><title>' + H(d.label + ' · ' + (key === 'income' ? 'Pemasukan ' : 'Pengeluaran ') + U.fmtRp(d[key] || 0)) + '</title></circle>';
-        }).join('');
+        return '<polyline class="trend-' + key + '" fill="none" stroke-width="3" points="' + data.map(function (d, i) { return x(i) + ',' + y(d[key] || 0); }).join(' ') + '"/>';
+      }).join('');
+      const targets = data.map(function (d, i) {
+        const detail = d.label + ' · Pemasukan: ' + U.fmtRp(d.income || 0) + ' · Pengeluaran: ' + U.fmtRp(d.expense || 0) + ' · Selisih: ' + U.fmtRp((d.income || 0) - (d.expense || 0));
+        return '<g class="trend-day" tabindex="0" role="button" aria-label="' + H(detail) + '" data-detail="' + H(detail) + '">' +
+          '<rect class="trend-hit" x="' + (x(i) - 10) + '" y="20" width="20" height="190"/>' +
+          '<line class="trend-cursor" x1="' + x(i) + '" x2="' + x(i) + '" y1="25" y2="205"/>' +
+          '<circle class="trend-point point-income" cx="' + x(i) + '" cy="' + y(d.income || 0) + '" r="5"/>' +
+          '<rect class="trend-point point-expense" x="' + (x(i) - 4) + '" y="' + (y(d.expense || 0) - 4) + '" width="8" height="8" rx="1"/></g>';
       }).join('');
       const labels = data.map(function (d, i) {
         if (i !== 0 && i !== data.length - 1 && i % Math.ceil(data.length / 5)) return '';
         return '<text x="' + x(i) + '" y="232" text-anchor="middle">' + H(String(d.label).replace(/ \d{4}$/, '')) + '</text>';
       }).join('');
-      return '<div class="time-chart line-chart' + (trend === 'area' ? ' area-chart' : '') + '">' + legend + '<svg viewBox="0 0 720 250" role="img" aria-label="Tren pemasukan garis utuh dan pengeluaran garis putus-putus. Nominal lengkap tersedia di tabel per periode.">' + grid + areas + lines + labels + '</svg>' + table + '</div>';
+      return '<div class="time-chart line-chart daily-lines">' + legend + '<svg viewBox="0 0 720 250" role="group" aria-label="Tren harian pemasukan dan pengeluaran, dua garis solid. Gunakan panah kiri dan kanan untuk memilih tanggal.">' + grid + lines + labels + targets + '</svg><p class="trend-detail" aria-live="polite" aria-atomic="true">Pilih tanggal pada grafik untuk melihat nominal. Gunakan sentuh atau panah kiri/kanan.</p>' + table + '</div>';
     }
     return '<div class="time-chart grouped-chart">' + legend + '<p class="chart-scale">Skala bersama mulai Rp0 · maksimum ' + U.fmtRp(max) + '</p>' +
       data.map(function (d) {
@@ -898,7 +900,7 @@
         '<section class="card planner-chart"><div class="card-head"><h2>Statistik keuangan</h2>' +
           '<div class="seg" id="dash-chart">' + segBtn(st.chart, '6m', '6 Bulan') +
           segBtn(st.chart, '12m', '12 Bulan') + segBtn(st.chart, '30d', '30 Hari') + '</div></div>' +
-          '<p class="muted planner-caption">Pemasukan dan pengeluaran · ' + chartCaption + '</p>' + periodChart(chartData, st.chart === '30d' ? 'area' : 'column') +
+          '<p class="muted planner-caption">Pemasukan dan pengeluaran · ' + chartCaption + '</p>' + periodChart(chartData, st.chart === '30d' ? 'line' : 'column') +
         '</section>' +
         '<section class="card"><div class="card-head"><h2>Catatan Terakhir</h2>' +
           '<button class="btn sm" onclick="App.go(\'transaksi\')">Lihat semua</button></div>' +
@@ -985,6 +987,37 @@
   };
 
   V.dashboardBind = function () {
+    const chart = document.querySelector('.daily-lines');
+    if (chart) {
+      const svg = chart.querySelector('svg');
+      const days = Array.from(chart.querySelectorAll('.trend-day'));
+      const select = function (day) {
+        days.forEach(function (item) { item.classList.toggle('is-active', item === day); });
+        chart.querySelector('.trend-detail').textContent = day.dataset.detail;
+      };
+      chart.addEventListener('focusin', function (e) {
+        const day = e.target.closest('.trend-day');
+        if (day) select(day);
+      });
+      const point = function (e) {
+        const bounds = svg.getBoundingClientRect();
+        const x = (e.clientX - bounds.left) / bounds.width * 720;
+        const index = Math.round((x - 90) / 590 * (days.length - 1));
+        select(days[Math.max(0, Math.min(days.length - 1, index))]);
+      };
+      svg.addEventListener('pointermove', function (e) { if (e.pointerType !== 'touch') point(e); });
+      svg.addEventListener('click', point);
+      svg.addEventListener('keydown', function (e) {
+        const day = e.target.closest('.trend-day');
+        if (!day) return;
+        const index = days.indexOf(day);
+        if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+          e.preventDefault();
+          const next = e.key === 'Home' ? 0 : e.key === 'End' ? days.length - 1 : index + (e.key === 'ArrowLeft' ? -1 : 1);
+          days[Math.max(0, Math.min(days.length - 1, next))].focus();
+        } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(day); }
+      });
+    }
     const box = el('dash-chart');
     if (box) box.addEventListener('click', function (e) {
       const b = e.target.closest('[data-seg]'); if (!b) return;
@@ -1304,7 +1337,7 @@
     const bytes = root.Excel.buat(V.bukuBackup(sumber), sumber, U.today());
     const url = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
     const a = document.createElement('a');
-    a.href = url; a.download = 'savingduit-' + U.today() + '-' + sumber + '.xlsx';
+    a.href = url; a.download = 'kantongkita-' + U.today() + '-' + sumber + '.xlsx';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
     V.toast('Excel buku ' + sumber + ' diunduh', 'ok');
@@ -1313,7 +1346,7 @@
   V.exportCSV = function (db, sumber) {
     if (!db && !sumber) return V.pilihEkspor('csv');
     const buku = db || V.bukuBackup(sumber);
-    root.App.download('savingduit-' + U.today() + '-' + (sumber || 'rekap') + '.csv', 'text/csv', '﻿' + S.toCSV(buku));
+    root.App.download('kantongkita-' + U.today() + '-' + (sumber || 'rekap') + '.csv', 'text/csv', '﻿' + S.toCSV(buku));
     V.toast('CSV seluruh transaksi buku diunduh', 'ok');
   };
 
@@ -1734,7 +1767,7 @@
   V.exportJSON = function (sumber) {
     if (!sumber) return V.pilihEkspor('json');
     const db = JSON.parse(JSON.stringify(V.bukuBackup(sumber)));
-    db.backup = { format: 'savingduit', version: 1, sumber: sumber, waktu: new Date().toISOString() };
+    db.backup = { format: 'kantongkita', version: 1, sumber: sumber, waktu: new Date().toISOString() };
     const f = S.Persist.exportFile(db, sumber);
     root.App.download(f.name, 'application/json', f.text);
     V.toast('Backup buku ' + sumber + ' diunduh', 'ok');
@@ -1757,9 +1790,9 @@
             keys.some(k => !Array.isArray(raw[k])) ||
             keys.some(k => raw[k].some(x => !x || typeof x !== 'object' || !x.id || x._sumber || x._id)) ||
             !raw.receipts || typeof raw.receipts !== 'object' || Array.isArray(raw.receipts)) {
-          throw Error('Berkas itu bukan backup Money Planner yang lengkap');
+          throw Error('Berkas itu bukan backup KantongKita yang lengkap');
         }
-        if (raw.backup && (raw.backup.format !== 'savingduit' || raw.backup.version !== 1 || raw.backup.sumber !== sumber)) {
+        if (raw.backup && (!['savingduit', 'kantongkita'].includes(raw.backup.format) || raw.backup.version !== 1 || raw.backup.sumber !== sumber)) {
           throw Error('Sumber backup berbeda. Pilih buku tujuan yang sesuai; data tidak diimpor.');
         }
         const cekSesi = function () {

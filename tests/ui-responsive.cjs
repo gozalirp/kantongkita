@@ -49,6 +49,12 @@ window.addEventListener('load',()=>setTimeout(async()=>{
   check(w.getComputedStyle(d.querySelector('.planner-dashboard .card')).boxShadow!=='none',width+' printed card shadow');
   w.V.state.dashboard.chart='30d';w.App.render();
   check(!!d.querySelector('.line-chart svg'),width+' daily trend rendered');
+ check(w.getComputedStyle(d.querySelector('.daily-lines .trend-expense')).strokeDasharray==='none',width+' expense line solid');
+ check(w.getComputedStyle(d.querySelector('.daily-lines .chart-grid')).strokeDasharray==='none',width+' grid solid');
+ check(!d.querySelector('.daily-lines polygon'),width+' no overlapping areas');
+ const day=d.querySelector('.trend-day');day.focus();
+ check(d.querySelector('.trend-detail').textContent===day.dataset.detail,width+' focused daily detail');
+ check(w.getComputedStyle(day.querySelector('.trend-point')).opacity==='1',width+' selected point visible');
   check(d.getElementById('content').scrollWidth<=d.getElementById('content').clientWidth+1,width+' trend overflow');
   const scrollHost=d.getElementById('content');
   scrollHost.scrollTop=180;const posisi=scrollHost.scrollTop;

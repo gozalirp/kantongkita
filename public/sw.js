@@ -1,5 +1,5 @@
-/* Service Worker untuk PWA SavingDuit (Offline-first & Installable) */
-const CACHE_NAME = 'savingduit-v47';
+/* Service Worker untuk PWA KantongKita (Offline-first & Installable) */
+const CACHE_NAME = 'kantongkita-v49';
 const ASSETS = [
   './',
   './index.html',

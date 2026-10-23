@@ -458,7 +458,7 @@
 
     exportFile: function (db, label) {
       return {
-        name: 'savingduit-backup-' + U.today() + (label ? '-' + label : '') + '.json',
+        name: 'kantongkita-backup-' + U.today() + (label ? '-' + label : '') + '.json',
         mime: 'application/json',
         text: S.toJSON(db)
       };

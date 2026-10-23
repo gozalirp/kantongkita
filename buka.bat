@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title SavingDuit - Catatan Keuangan
+title KantongKita - Catatan Keuangan
 cd /d "%~dp0"
 
 set PORT=8765
@@ -16,7 +16,7 @@ if not defined NODE if exist "%APPDATA%\npm\node.exe" set NODE=%APPDATA%\npm\nod
 if not defined NODE goto NONODE
 
 echo.
-echo   SavingDuit - menyalakan server lokal...
+echo   KantongKita - menyalakan server lokal...
 echo   Browser akan terbuka otomatis sebentar lagi.
 echo.
 echo   JANGAN tutup jendela ini selama memakai aplikasi.

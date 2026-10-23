@@ -461,7 +461,7 @@
         const notice = document.createElement('p'); notice.className = 'hint'; notice.textContent = 'Pengelolaan catatan pribadi. Catatan keluarga tersedia di Dashboard dan Transaksi.'; content.prepend(notice);
       }
       const descriptions = {
-        menu: 'Semua fitur Money Planner dalam satu tempat.',
+        menu: 'Semua fitur KantongKita dalam satu tempat.',
         transaksi: 'Semua pemasukan, pengeluaran, dan transfer dalam satu tempat.',
         rekap: 'Pahami kebiasaan keuanganmu lewat ringkasan dan statistik.',
         anggaran: 'Atur batas pengeluaran agar rencana tetap di jalurnya.',

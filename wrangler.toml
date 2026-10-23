@@ -13,7 +13,7 @@ directory = "public"
 # Mengaktifkan akun keluarga. Setel "false" untuk menonaktifkan tanpa mengubah kode.
 FAMILY_ENABLED = "true"
 APP_ORIGIN = "https://moneyplanner.darmintompel.my.id"
-EMAIL_FROM = "Money Planner <akun@mail.darmintompel.my.id>"
+EMAIL_FROM = "KantongKita <akun@mail.darmintompel.my.id>"
 # RESEND_API_KEY must be stored using wrangler secret put, never committed.
 
 # ==================== BACKEND ====================

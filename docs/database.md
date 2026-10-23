@@ -1,6 +1,6 @@
 # Database dan akun
 
-[← Panduan aplikasi](../DOKUMENTASI.md) · [Keamanan dan migrasi](database-safety.md)
+[← Panduan aplikasi](panduan.md) · [Keamanan dan migrasi](database-safety.md)
 
 ## Akses melalui Cloudflare
 
@@ -9,7 +9,7 @@
 3. Pilih **savingduit-db**.
 4. Gunakan **Studio** untuk melihat tabel atau **Console** untuk menjalankan query.
 
-Nama/menu dashboard bisa berubah. Hak akses Cloudflare berbeda dari akun pengguna SavingDuit; jangan memberikan akses dashboard kepada pengguna biasa untuk melihat bukunya.
+Nama/menu dashboard bisa berubah. Hak akses Cloudflare berbeda dari akun pengguna KantongKita; jangan memberikan akses dashboard kepada pengguna biasa untuk melihat bukunya.
 
 **Gunakan SELECT untuk pemeriksaan.** Jangan mengedit baris akun, keluarga, revisi, atau potongan buku secara manual. Simpan backup privat sebelum migrasi. Jangan membagikan tangkapan layar yang memuat email, hash, atau token.
 
@@ -109,6 +109,6 @@ Hasil kosong dari `foreign_key_check` berarti tidak ditemukan pelanggaran foreig
 
 Migrasi `0001`–`0004` membentuk struktur akun/buku/email. `0005_database_indexes.sql` menambahkan indeks tanpa menghapus data.
 
-**Status saat dokumen diperbarui:** `0005` dan Worker dengan cron retensi belum diterapkan ke produksi. Detail kebijakan dan urutan backup → migrasi → deploy ada di [database-safety.md](database-safety.md).
+**Status 23 Oktober 2026:** `0005` dan Worker dengan cron retensi sudah diterapkan ke produksi setelah backup privat D1. Detail kebijakan dan urutan backup → migrasi → deploy ada di [database-safety.md](database-safety.md).
 
 Jangan mengganti struktur menjadi tabel transaksi terpisah tanpa rancangan migrasi, isolasi akun, kompatibilitas klien, backup, dan rencana pemulihan. Perubahan tersebut tidak diperlukan untuk sekadar merapikan tampilan ekspor.

@@ -1,6 +1,6 @@
 {
-  "name": "Money Planner - Catatan Keuangan",
-  "short_name": "Money Planner",
+  "name": "KantongKita - Catatan Keuangan",
+  "short_name": "KantongKita",
   "description": "Aplikasi catatan keuangan pribadi & usaha offline",
   "start_url": "./index.html",
   "display": "standalone",

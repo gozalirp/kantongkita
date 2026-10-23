@@ -1,4 +1,4 @@
-# Panduan SavingDuit
+# Panduan KantongKita
 
 Panduan penggunaan dan pemeliharaan aplikasi pencatat keuangan pribadi dan keluarga.
 
@@ -24,7 +24,7 @@ Panduan penggunaan dan pemeliharaan aplikasi pencatat keuangan pribadi dan kelua
 - Akun server digunakan untuk login, sinkronisasi pribadi, dan keanggotaan keluarga.
 - Profil lokal memisahkan catatan pada perangkat. PIN profil bukan password server, bukan enkripsi seluruh database, dan tidak menggantikan autentikasi akun.
 - Pemulihan memakai kode pemulihan atau email terverifikasi, sesuai kondisi akun. Simpan kode pemulihan di tempat privat.
-- Detail konfigurasi email: [EMAIL_SETUP.md](EMAIL_SETUP.md).
+- Detail konfigurasi email: [Konfigurasi email](email-setup.md).
 
 ### Buku pribadi dan keluarga
 
@@ -78,7 +78,7 @@ Cache PWA membantu memuat aset aplikasi; ini tidak berarti login dan buku keluar
 
 ### APK
 
-Build tersedia melalui [GitHub Actions](https://github.com/gozalirp/savingduit/actions), apabila workflow berhasil. Jangan merujuk APK lokal lama sebagai rilis terbaru.
+Build tersedia melalui [GitHub Actions](https://github.com/gozalirp/kantongkita/actions), apabila workflow berhasil. Jangan merujuk APK lokal lama sebagai rilis terbaru.
 
 Workflow saat ini membungkus aset `public/` dengan Capacitor dan tidak menetapkan `server.url` produksi. Karena API memakai path relatif, konektivitas APK ke backend produksi belum boleh dianggap siap. PWA dan APK memiliki konteks penyimpanan berbeda. Pengujian HP fisik tetap diperlukan.
 
@@ -95,7 +95,7 @@ Browser / PWA
                └─ buku keluarga per family_id
 ```
 
-Isi buku keuangan disimpan sebagai JSON yang dipecah menjadi potongan teks; belum ada tabel SQL terpisah untuk tiap transaksi, dompet, atau kategori. Kolom revisi mengendalikan konflik penulisan. Lihat [struktur database](docs/database.md).
+Isi buku keuangan disimpan sebagai JSON yang dipecah menjadi potongan teks; belum ada tabel SQL terpisah untuk tiap transaksi, dompet, atau kategori. Kolom revisi mengendalikan konflik penulisan. Lihat [struktur database](database.md).
 
 | Endpoint | Metode | Tujuan |
 |---|---|---|
@@ -135,7 +135,7 @@ worker/
   server.js                      Server pengembangan Node lama
  tests/                          Tes otomatis dan skrip integrasi lokal
  docs/                           Panduan database dan operasional
- design-system/savingduit/       Pedoman desain
+ docs/design-system.md         Pedoman desain
  wrangler.toml                   Konfigurasi Worker, D1, aset, cron
 ```
 
@@ -181,7 +181,7 @@ Tes lokal bukan bukti konkurensi runtime D1, pengiriman email nyata, kualitas vi
 
 ## Deployment dan migrasi
 
-**Status saat pembaruan dokumen:** ekspor Excel dan pilihan buku sudah diterbitkan. Perbaikan DB, indeks `0005`, serta cron retensi baru ada di kode dan belum diterapkan ke produksi.
+**Status 23 Oktober 2026:** ekspor Excel, pilihan buku, UI neobrutal, perbaikan DB, indeks `0005`, dan cron retensi sudah diterapkan ke produksi setelah backup privat D1.
 
 1. Periksa perubahan dan jalankan tes.
 2. Untuk perubahan DB, simpan backup privat di luar repo dan catat titik pemulihan Time Travel.
@@ -190,7 +190,7 @@ Tes lokal bukan bukti konkurensi runtime D1, pengiriman email nyata, kualitas vi
 5. Deploy frontend dan Worker dengan `npm run deploy`.
 6. Periksa health, aset, dan skema secara baca-saja. Jangan memakai data nyata untuk tes tulis.
 
-Instruksi khusus perbaikan DB tersedia di [database-safety.md](docs/database-safety.md). Commit, push, migrasi dan deploy terpisah. Push ke branch utama dapat memicu build APK; keberhasilan push tidak menjamin build APK berhasil.
+Instruksi khusus perbaikan DB tersedia di [database-safety.md](database-safety.md). Commit, push, migrasi dan deploy terpisah. Push ke branch utama dapat memicu build APK; keberhasilan push tidak menjamin build APK berhasil.
 
 Rahasia Resend disimpan melalui Wrangler secret, bukan `wrangler.toml` atau Git. Jangan commit dump DB, token, cookie, hash autentikasi, dan backup pengguna.
 

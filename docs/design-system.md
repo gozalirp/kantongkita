@@ -1,4 +1,4 @@
-# SavingDuit — Planner ungu pastel
+# KantongKita — Planner ungu pastel
 
 ## Arah desain
 Acuan: gambar pengguna `Pictures/dashboard.png`. Antarmuka personal finance yang ramah, tenang, dan ringkas. Pertahankan Plus Jakarta Sans, sidebar ungu, kartu pastel, grafik horizontal dan donat. Desktop dua kolom pada dashboard; HP satu kolom dengan bottom navigation.
@@ -86,3 +86,8 @@ fitur Pro, streak, atau angka contoh dari karya tersebut.
 - Menu fitur: outline 2px, ikon berbingkai, jarak kartu 12–14px. Tabs/filter memakai selected border + shadow, tidak hanya warna. Badge dan toast mengikuti outline yang konsisten.
 - Donut, batang/area statistik, kalender transaksi, struktur kartu yang disetujui dan emoji data pengguna tidak diganti. Nilai/ID kontrol, alur navigasi, privasi, API dan hitungan keuangan tetap.
 - Semua perubahan masih preview lokal sampai ada izin deploy terpisah. Tidak mengadopsi seluruh 64 komponen untuk fitur yang tidak diperlukan.
+
+
+## Pembaruan 30 Hari — 23 Oktober 2026
+
+Bagian ini menggantikan aturan area chart harian sebelumnya. Statistik dashboard 30 Hari memakai dua garis lurus **solid**, tanpa polygon/area bertumpuk dan tanpa grid putus-putus. Pemasukan mint dengan marker lingkaran; pengeluaran oranye dengan marker kotak. Marker hanya muncul untuk tanggal terpilih. Detail tanggal/nominal/selisih dapat diakses melalui pointer, sentuh, fokus, panah kiri/kanan, Home/End, dan tabel. Chart 6/12 Bulan serta donut tetap.

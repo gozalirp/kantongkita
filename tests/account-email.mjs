@@ -11,7 +11,7 @@ const wrap = (sql, values = []) => ({
   async all() { return { results: db.prepare(sql).all(...values) }; },
   async run() { return { meta: { changes: db.prepare(sql).run(...values).changes } }; }
 });
-const env = { DB: { prepare: wrap, async batch(items) { db.exec('BEGIN'); try { const result = []; for (const item of items) result.push(await item.run()); db.exec('COMMIT'); return result; } catch (e) { db.exec('ROLLBACK'); throw e; } } }, RESEND_API_KEY: 'test-only', EMAIL_FROM: 'Money Planner <akun@example.com>', APP_ORIGIN: 'https://moneyplanner.darmintompel.my.id' };
+const env = { DB: { prepare: wrap, async batch(items) { db.exec('BEGIN'); try { const result = []; for (const item of items) result.push(await item.run()); db.exec('COMMIT'); return result; } catch (e) { db.exec('ROLLBACK'); throw e; } } }, RESEND_API_KEY: 'test-only', EMAIL_FROM: 'KantongKita <akun@example.com>', APP_ORIGIN: 'https://moneyplanner.darmintompel.my.id' };
 const mail = [];
 let deliveryFails = false;
 globalThis.fetch = async (url, options) => { assert.equal(url, 'https://api.resend.com/emails'); mail.push(JSON.parse(options.body)); return { ok: !deliveryFails }; };
