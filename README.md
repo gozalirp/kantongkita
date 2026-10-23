@@ -42,7 +42,7 @@ Perbaikan keamanan simpan, migrasi `0005_database_indexes.sql`, dan cron retensi
 
 Commit, push, migrasi, dan deploy merupakan tindakan terpisah. Jangan menyimpan rahasia, dump DB, atau data akun ke Git.
 
-## Rilis UI terbaru — 23 Oktober 2026
+## Riwayat rilis chart — 23 Oktober 2026
 
 Chart **30 Hari** memakai dua garis solid, tanpa area bertumpuk atau garis putus-putus. Detail per tanggal tersedia melalui hover, sentuh, dan keyboard; tabel nominal tetap tersedia. Chart 6/12 bulan dan donut tidak berubah.
 
@@ -58,3 +58,11 @@ Branding aplikasi, PWA, email, ekspor, dan APK memakai **KantongKita**. Repo: ht
 Worker live: `03ef9e32-4824-4001-841b-73bde5799067`, SW `kantongkita-v49`. Delapan aset utama terverifikasi sesuai lokal; health 200. Seluruh suite npm, DOM 366, browser 152 dan responsif 449 lolos. Backup lama tetap bisa diimpor; format asing ditolak.
 
 Alamat aplikasi, identifier penyimpanan/database, dan Android application ID lama dipertahankan untuk kompatibilitas; lihat [catatan rebrand](docs/README.md#rebrand-kantongkita). Nama aplikasi di PWA yang sudah terpasang mungkin memerlukan pembaruan browser atau pemasangan ulang setelah memastikan data tersinkron/terbackup.
+
+## Pembaruan ikon uang hijau — 23 Oktober 2026
+
+- Logo dan semua ikon SVG uang/dompet bawaan memakai hijau tua `#166534` dan hijau muda `#86EFAC`; ikon koin PWA juga hijau.
+- Warna utama oranye, chart, dan emoji kategori/dompet pilihan pengguna tidak berubah. Tidak ada perubahan data, API, atau migrasi database.
+- Service worker lokal: `kantongkita-v50`. **Belum deploy**; produksi terakhir tetap versi rebrand `03ef9e32-4824-4001-841b-73bde5799067` / SW v49.
+- Validasi: `npm test` lolos (DOM 366); browser 152 dan responsif 457 lolos, termasuk warna stroke/fill logo. Ikon PWA pada HP terpasang belum diperiksa.
+- Detail visual: [sistem desain](docs/design-system.md#ikon-uang-hijau--23-oktober-2026). Salinan/ZIP drive E dan upload Google Drive tidak otomatis mengikuti commit; arsip E terakhir masih v49, upload Drive masih terblokir konflik ekstensi browser.

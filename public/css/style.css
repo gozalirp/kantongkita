@@ -1363,3 +1363,6 @@ th{background:#FFF0D2}
 .daily-lines .time-legend span::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;border:1px solid #171717;background:#5DD4BD;border-radius:50%}
 .daily-lines .time-legend .series-out::before{background:#F5790B;border-radius:1px}
 @media(max-width:600px){.daily-lines svg{min-height:210px}.daily-lines .trend-detail{min-height:92px}}
+
+/* Ikon uang bawaan hijau; emoji/data pilihan pengguna tidak disentuh. */
+.ui-icon.ui-icon-money{color:#166534!important;stroke:#166534!important;fill:#86EFAC!important}

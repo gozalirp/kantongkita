@@ -185,7 +185,7 @@
       settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z', grid:'M4 6h16 M4 12h16 M4 18h16', gift:'M3 8h18v4H3z M5 12v9h14v-9 M12 8v13 M12 8C9 8 6 6.5 6 4.5A2.5 2.5 0 0 1 11 4.1L12 8c1-3.9 6-3.9 6-1.5C18 6.6 15 8 12 8', arrow:'M12 4v16 M6 14l6 6 6-6',
       chevron:'M9 5l7 7-7 7', close:'M6 6l12 12 M18 6L6 18', eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6', pause:'M9 5v14 M15 5v14', play:'M8 5l11 7-11 7z'
     };
-    return '<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + (shapes[name] || shapes.tag) + '"/></svg>';
+    return '<svg class="ui-icon' + (name === 'wallet' ? ' ui-icon-money' : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + (shapes[name] || shapes.tag) + '"/></svg>';
   };
 
   /* Ikon emoji hanya diganti di kontrol aksi (tombol, pintasan, kepala modal).

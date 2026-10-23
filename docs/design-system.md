@@ -91,3 +91,10 @@ fitur Pro, streak, atau angka contoh dari karya tersebut.
 ## Pembaruan 30 Hari — 23 Oktober 2026
 
 Bagian ini menggantikan aturan area chart harian sebelumnya. Statistik dashboard 30 Hari memakai dua garis lurus **solid**, tanpa polygon/area bertumpuk dan tanpa grid putus-putus. Pemasukan mint dengan marker lingkaran; pengeluaran oranye dengan marker kotak. Marker hanya muncul untuk tanggal terpilih. Detail tanggal/nominal/selisih dapat diakses melalui pointer, sentuh, fokus, panah kiri/kanan, Home/End, dan tabel. Chart 6/12 Bulan serta donut tetap.
+
+
+## Ikon uang hijau — 23 Oktober 2026
+
+Semua SVG bawaan bertipe `wallet` memakai outline hijau tua `#166534` dan isi hijau muda `#86EFAC`, termasuk logo, navigasi, dan kontrol. Ikon PWA koin memakai latar hijau tua, lingkaran hijau muda dan koin hijau `#22C55E`. Warna utama oranye, warna seri chart, dan emoji kategori/dompet pilihan pengguna tetap. Perubahan ini tidak menyentuh data.
+
+Status: perubahan ikon hijau ada di source lokal dengan SW `kantongkita-v50`, belum deploy. Tes DOM 366, browser 152, dan responsif 457 lolos; cache/ikon PWA pada HP fisik belum diverifikasi.

@@ -45,6 +45,8 @@ window.addEventListener('load',()=>setTimeout(async()=>{
   w.App.view='dashboard';w.App.render();
   const hero=d.querySelector('.planner-dashboard>.grid>.stat');
   check(w.getComputedStyle(hero).backgroundColor==='rgb(245, 121, 11)',width+' orange balance hero');
+ check(w.getComputedStyle(d.querySelector('.brand-icon .ui-icon-money')).stroke==='rgb(22, 101, 52)',width+' green money logo');
+ check(w.getComputedStyle(d.querySelector('.brand-icon .ui-icon-money')).fill==='rgb(134, 239, 172)',width+' green money fill');
   check(w.getComputedStyle(hero).borderTopWidth==='2px',width+' outlined balance hero');
   check(w.getComputedStyle(d.querySelector('.planner-dashboard .card')).boxShadow!=='none',width+' printed card shadow');
   w.V.state.dashboard.chart='30d';w.App.render();

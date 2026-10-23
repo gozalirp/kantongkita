@@ -6,7 +6,7 @@
 - [Konfigurasi email](email-setup.md)
 - [Sistem desain](design-system.md)
 
-Status rilis terbaru dan hasil pengujian: [README proyek](../README.md#rilis-ui-terbaru--23-oktober-2026).
+Status rilis terbaru dan hasil pengujian: [README proyek](../README.md#pembaruan-ikon-uang-hijau--23-oktober-2026).
 
 Salinan bersih tidak memuat dependensi, riwayat Git, rahasia, atau database pengguna. Jalankan `npm install` untuk memasang dependensi. Autentikasi Cloudflare dan secret email harus disiapkan terpisah; lihat panduan. ZIP source bukan backup data keuangan dan bukan salinan lengkap riwayat Git.
 
