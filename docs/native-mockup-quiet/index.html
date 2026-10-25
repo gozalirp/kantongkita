@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KantongKita — Quiet Ledger / Konsep 02</title>
+<link rel="stylesheet" href="../native-mockup/mockup.css"><link rel="stylesheet" href="quiet.css">
+</head>
+<body>
+<svg class="sprites" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<symbol id="i-wallet" viewBox="0 0 24 24"><path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14V8H6a2 2 0 0 1 0-4"/><path d="M20 12h-5v5h5M16 14.5h1"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v11h-6v-7H9v7H3Z"/></symbol>
+<symbol id="i-history" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
+<symbol id="i-plan" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="m12 12 7-8"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7H7m10 0v10"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+</defs></svg>
+<div class="workspace">
+<aside class="intro"><a class="wordmark" href="../native-android-plan.md"><span class="logo"><svg><use href="#i-wallet"/></svg></span>KantongKita<span class="tag">ANDROID</span></a>
+<div class="concept">DESIGN DIRECTION 02 / QUIET LEDGER</div><h1>Lebih jernih.<br><span>Lebih terkendali.</span></h1><p>Ruang yang tenang untuk memahami uangmu. Ringkasan yang mudah dipindai, catatan yang cepat, dan privasi yang tetap jelas.</p>
+<div class="notes"><div><b>01</b><span>Angka utama dulu, detail saat dibutuhkan</span></div><div><b>02</b><span>Forest green, ivory, dan ruang bernapas</span></div><div><b>03</b><span>Pribadi dan keluarga tidak tercampur</span></div></div>
+<div class="preview-note"><strong>Ini prototipe, bukan akun kamu.</strong><p>Semua angka adalah data contoh. Tambahan transaksi hanya bertahan selama tab ini terbuka. Tidak terhubung ke server.</p></div>
+<a class="plan-link" href="../native-mockup/">Bandingkan konsep 01 ↗</a> · <a class="plan-link" href="../native-android-plan.md">Rencana native ↗</a>
+</aside>
+<div class="device-wrap"><div class="device-caption"><span>PREVIEW INTERAKTIF</span><span>Quiet Ledger · konsep 02</span></div>
+<div class="phone"><div class="statusbar" aria-hidden="true"><b>9:41</b><span>▴ ▰ 100%</span></div>
+<header class="app-header"><div class="app-brand"><span class="logo"><svg><use href="#i-wallet"/></svg></span><b>KantongKita</b></div><button class="avatar" id="account" aria-label="Lihat rencana akun">G</button></header>
+<div class="book-row"><button id="book-switch" class="book-switch" aria-label="Ganti buku"><span id="book-label">Buku pribadi</span><svg><use href="#i-down"/></svg></button><span class="local-status">● Demo lokal</span></div>
+<main id="screen" tabindex="-1"></main>
+<nav class="bottom-nav" aria-label="Navigasi utama"><button data-page="home" aria-current="page"><svg><use href="#i-home"/></svg><span>Ringkasan</span></button><button data-page="history"><svg><use href="#i-history"/></svg><span>Riwayat</span></button><button data-page="plans"><svg><use href="#i-plan"/></svg><span>Rencana</span></button><button data-page="more"><svg><use href="#i-grid"/></svg><span>Lainnya</span></button></nav>
+</div><p class="below-phone">Coba ganti buku, buka tab, dan tambah transaksi.</p></div>
+</div>
+<dialog id="entry-dialog" aria-labelledby="entry-title"><div class="sheet-head"><div><small>CATATAN BARU · DEMO</small><h2 id="entry-title">Catat pergerakan uang</h2></div><button type="button" class="icon-btn" data-close aria-label="Tutup form"><svg><use href="#i-close"/></svg></button></div>
+<form id="entry-form"><p id="form-book" class="form-context"></p><div class="form-scroll"><label>Jenis transaksi<select name="type"><option value="out">Pengeluaran</option><option value="in">Pemasukan</option></select></label><label>Nominal (Rp)<input name="amount" inputmode="numeric" pattern="[0-9]{1,12}" maxlength="12" required placeholder="Contoh: 25000" autocomplete="off"><small>Rupiah utuh tanpa titik, maksimal 12 digit.</small></label><div class="form-grid"><label>Dompet<select name="wallet"><option value="bank">Rekening utama</option><option value="cash">Tunai</option></select></label><label>Kategori<select name="category"><option value="food">Makan & minum</option><option value="ride">Transportasi</option><option value="shop">Belanja</option><option value="salary">Pendapatan</option><option value="other">Lainnya</option></select></label></div><label>Tanggal<input type="date" name="date" required min="2000-01-01" max="2100-12-31"></label><label>Catatan<input name="note" required maxlength="80" placeholder="Misalnya, makan siang" autocomplete="off"></label><p id="form-error" role="alert"></p></div><div class="sheet-footer"><button class="primary" type="submit">Simpan transaksi demo <svg><use href="#i-arrow"/></svg></button><small>Hanya di memori tab ini. Reload untuk reset.</small></div></form></dialog>
+<dialog id="info-dialog" aria-labelledby="info-title"><div class="sheet-head"><h2 id="info-title"></h2><button class="icon-btn" data-close aria-label="Tutup informasi"><svg><use href="#i-close"/></svg></button></div><div id="info-body"></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="../native-mockup/mockup.js"></script>
+</body></html>

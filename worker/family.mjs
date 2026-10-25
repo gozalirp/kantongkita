@@ -1,3 +1,4 @@
+import { accountProfiles } from './account-profiles.mjs';
 import { token, digest, username, hashPassword, verifyPassword, sameOrigin, sessionCookie } from './family-security.mjs';
 import { emailAddress, emailReady, sendAccountEmail, accountEmail } from './account-email.mjs';
 const json = (value, status = 200, headers = {}) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
@@ -121,6 +122,11 @@ export async function family(request, env) {
     const cookie = request.headers.get('Cookie')?.match(/(?:^|;\s*)__Host-sd_session=([a-f0-9]{64})(?:;|$)/)?.[1];
     const user = cookie && await q(`SELECT u.id,u.family_id,u.username,u.role FROM family_sessions s JOIN family_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?`, await digest(cookie), now).first();
     if (!user) return fail('Silakan login', 401);
+    // Draft API needs migration 0006; deployment must not activate it before an approved migration.
+    if (path === 'profiles' || path.startsWith('profiles/')) {
+      if (env.ACCOUNT_PROFILES_ENABLED !== 'true') return fail('Fitur profil akun belum diaktifkan', 503);
+      return await accountProfiles(path, request.method, body, user.id, env, now, validBook);
+    }
     if (path === 'me' && request.method === 'GET') return json({ ok: true, user, members: (await q('SELECT username,role FROM family_users WHERE family_id=?', user.family_id).all()).results });
     if (path === 'logout' && request.method === 'POST') {
       await q('DELETE FROM family_sessions WHERE token_hash=?', await digest(cookie)).run();

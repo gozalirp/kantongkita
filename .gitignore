@@ -1,4 +1,5 @@
 node_modules/
+.tools/
 .wrangler/
 screen.png
 snap.ps1
@@ -26,3 +27,17 @@ www/
 capacitor.config.json
 
 .dev.vars
+
+# Signing material: keep private and backed up outside the repository
+*.jks
+*.keystore
+*.p12
+android-twa/.gradle/
+android-twa/**/build/
+android-twa/local.properties
+
+# Native Android build outputs
+android-native/.gradle/
+android-native/.kotlin/
+android-native/**/build/
+android-native/local.properties

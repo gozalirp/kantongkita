@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.savingduit.app",
+      "sha256_cert_fingerprints": [
+        "22:1C:9F:96:10:5F:00:DF:CA:09:D3:17:B1:A2:7C:33:DE:C8:45:F8:D4:EB:C5:72:46:5B:86:39:43:42:E8:85"
+      ]
+    }
+  }
+]

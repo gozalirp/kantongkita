@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "KantongKita - Aplikasi Keuangan Pribadi (frontend: public/, backend: worker/)",
   "private": true,
+  "devDependencies": { "jsdom": "^26.1.0" },
   "scripts": {
     "start": "node worker/server.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "node tests/web-font.cjs && node tests/database-safety.mjs && node tests/excel.cjs && node tests/smoke.js && node tests/profile-test.js && node tests/dom-test.js && node tests/email-field.cjs && node tests/akun-email-ui.cjs && node tests/account-email.mjs && node tests/family-security.test.mjs && node tests/cloud-access.test.mjs && node tests/buku-gabungan.cjs && node tests/buku-ui.cjs && node tests/dashboard-bersama.cjs",
+    "test": "node tests/web-font.cjs && node tests/android-twa.cjs && node tests/account-profiles.mjs && node tests/database-safety.mjs && node tests/personal-sync-conflict.cjs && node tests/excel.cjs && node tests/smoke.js && node tests/profile-test.js && node tests/dom-test.js && node tests/email-field.cjs && node tests/akun-email-ui.cjs && node tests/account-email.mjs && node tests/family-security.test.mjs && node tests/cloud-access.test.mjs && node tests/buku-gabungan.cjs && node tests/buku-ui.cjs && node tests/dashboard-bersama.cjs",
     "test:browser": "node tests/browser-test.js && node tests/ui-responsive.cjs"
   }
 }

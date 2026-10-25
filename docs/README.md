@@ -35,3 +35,5 @@ Mulai dari infrastruktur → alur aplikasi → panduan lokal → database/email 
 ## Versi PDF
 
 [Dokumentasi lengkap v54 (PDF)](KantongKita-Dokumentasi-v54.pdf) menggabungkan README dan10 dokumen inti di indeks ini (termasuk indeks dan rilis). Lima diagram Mermaid dirender. PDF snapshot23Oktober2026; Markdown adalah sumber utama untuk pembaruan berikutnya. Tidak berisi data pengguna.
+
+- [Android TWA: build, signing, verifikasi domain dan batas sinkronisasi](android.md)

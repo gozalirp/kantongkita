@@ -1287,6 +1287,12 @@ th{background:#FFF0D2}
 .planner-chart .area-chart .area-expense{fill:#F5790B;fill-opacity:.24}
 .planner-chart .area-chart .trend-area{stroke:none;pointer-events:none}
 
+/* Sora wraps wider on small phones; keep profile cards compact without shrinking controls. */
+@media(max-width:360px){
+ [data-page=profil]>.card{padding:12px}
+ [data-page=profil] .hint{padding:10px;line-height:1.65}
+}
+
 /* Kalender transaksi lokal: nilai ISO tetap pada f-date. */
 .calendar-toggle{width:100%;justify-content:space-between;text-align:left;min-height:48px}
 .calendar-toggle::after{content:'▦';font-size:23px;margin-left:12px}

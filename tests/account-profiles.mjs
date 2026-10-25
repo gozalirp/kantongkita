@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import { DatabaseSync } from 'node:sqlite';
+import { readFileSync,readdirSync } from 'node:fs';
+import { family } from '../worker/family.mjs';
+import { digest } from '../worker/family-security.mjs';
+const db=new DatabaseSync(':memory:'); db.exec('PRAGMA foreign_keys=ON');
+for(const f of readdirSync('worker/migrations').filter(f=>f.endsWith('.sql')).sort()) db.exec(readFileSync('worker/migrations/'+f,'utf8'));
+const wrap=(sql,values=[])=>({bind(...v){return wrap(sql,v)},async first(){return db.prepare(sql).get(...values)||null},async all(){return {results:db.prepare(sql).all(...values)}},async run(){const stmt=db.prepare(sql);if(/^SELECT/.test(sql))return {results:stmt.all(...values),meta:{changes:0}};return {meta:{changes:stmt.run(...values).changes}}}});
+let race=null,failAt=-1;
+const env={ACCOUNT_PROFILES_ENABLED:'true',DB:{prepare:wrap,async batch(items){if(race){const fn=race;race=null;fn()}db.exec('BEGIN');try{const out=[];for(let i=0;i<items.length;i++){if(i===failAt)throw Error('test rollback');out.push(await items[i].run())}db.exec('COMMIT');return out}catch(e){db.exec('ROLLBACK');throw e}}}};
+const now=Math.floor(Date.now()/1000);
+db.exec("INSERT INTO families VALUES('f',1)");
+for(const [id,char]of [['u','a'],['v','b']]){db.prepare('INSERT INTO family_users VALUES(?,?,?,?,?,?,?)').run(id,'f',id,'hash','recovery'+id,id==='u'?'owner':'partner',1);db.prepare('INSERT INTO family_sessions VALUES(?,?,?)').run(await digest(char.repeat(64)),id,now+3600)}
+async function call(path,body,char='a'){const r=await family(new Request('https://example.test/api/family/'+path,{method:body?'POST':'GET',headers:{Origin:'https://example.test',Cookie:'__Host-sd_session='+char.repeat(64)},body:body?JSON.stringify(body):undefined}),env);return {status:r.status,body:await r.json()}}
+const book={wallets:[],categories:[],transactions:[],goals:[],budgets:[],subscriptions:[],secret:'must not serialize'};
+env.ACCOUNT_PROFILES_ENABLED='false';
+assert.equal((await call('profiles')).status,503);
+assert.equal(db.prepare('SELECT COUNT(*) AS n FROM account_profiles').get().n,0);
+env.ACCOUNT_PROFILES_ENABLED='true';
+const payload={profileId:'pf_test',revision:0,name:'Pribadi',icon:'avatar:alya',color:'#F5790B',book,preferences:{monthlyIncome:100}};
+assert.equal((await call('profiles/save',payload)).status,200);
+assert.equal((await call('profiles')).body.profiles.length,1);
+assert.equal((await call('profiles',undefined,'b')).body.profiles.length,0);
+assert.equal((await call('profiles/read',{profileId:'pf_test'},'b')).status,404);
+let read=await call('profiles/read',{profileId:'pf_test'});assert.equal(read.body.profile.icon,'avatar:alya');assert.equal(read.body.book.settings.monthlyIncome,100);assert.equal(read.body.book.secret,undefined);
+assert.equal((await call('profiles/save',payload)).status,409);
+assert.equal((await call('profiles/save',{...payload,revision:1,icon:'https://evil.test/a.svg'})).status,400);
+assert.equal((await call('profiles/save',{...payload,revision:1,preferences:{pinHash:'secret'}})).status,400);
+assert.equal((await call('profiles/save',payload,'c')).status,401);
+race=()=>db.prepare('UPDATE account_profiles SET revision=2 WHERE user_id=?').run('u');
+assert.equal((await call('profiles/save',{...payload,revision:1,name:'loser'})).status,409);
+read=await call('profiles/read',{profileId:'pf_test'});assert.equal(read.body.profile.name,'Pribadi');assert.equal(read.body.book.settings.monthlyIncome,100);
+failAt=2;assert.equal((await call('profiles/save',{...payload,revision:2})).status,409);failAt=-1;
+assert.equal((await call('profiles/read',{profileId:'pf_test'})).body.book.settings.monthlyIncome,100);
+assert.equal(db.prepare('SELECT COUNT(*) AS n FROM personal_data').get().n,0);
+assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]);
+console.log('PASS: account profiles auth/isolation, metadata/preferences roundtrip, allowlist, stale race, rollback and legacy preservation');

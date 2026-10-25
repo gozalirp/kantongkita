@@ -60,6 +60,8 @@
      seperti biasa; server hanya salinannya, supaya bisa dibuka di perangkat lain.
      Kuncinya akun, jadi anggota keluarga lain tidak bisa membaca isi ini. */
   M.revisiPribadi = 0;
+  M.bentrokPribadi = false;
+  M.sibukPribadi = false;
   M.punyaCloud = false;
   /* true setelah sesi terbukti. Jadi gerbang dashboard hanya terbuka sekali
      per pemuatan halaman, bukan setiap kali render. */
@@ -90,23 +92,28 @@
     if (!M.punyaCloud) return null;
     const d = await api('personal/data', { method: 'GET' });
     if (d.status !== 200) { if (d.status === 401) M.punyaCloud = false; return null; }
-    M.revisiPribadi = d.body.revision || 0;
+    // A diagnostic GET after 409 must not authorize the stale local draft.
+    if (!M.bentrokPribadi) M.revisiPribadi = d.body.revision || 0;
     return d.body.data || null;
   };
 
   /* Kirim salinan pribadi. Hasil: 'ok' | 'bentrok' | 'keluar' | 'gagal' | 'luring' | 'pribadi'. */
   M.simpanPribadi = async function (db) {
     if (!M.punyaCloud) return 'pribadi';
+    if (M.bentrokPribadi) return 'bentrok';
+    if (M.sibukPribadi) return 'antre';
+    M.sibukPribadi = true;
     try {
       const hasil = await api('personal/save', {
         method: 'POST',
         body: JSON.stringify({ revision: M.revisiPribadi, book: M.rakit(db) })
       });
       if (hasil.status === 200) { M.revisiPribadi = hasil.body.revision || M.revisiPribadi + 1; return 'ok'; }
-      if (hasil.status === 409) return 'bentrok';
+      if (hasil.status === 409) { M.bentrokPribadi = true; return 'bentrok'; }
       if (hasil.status === 401) { M.punyaCloud = false; return 'keluar'; }
       return 'gagal';
     } catch (e) { return 'luring'; }
+    finally { M.sibukPribadi = false; }
   };
 
   /* Dipanggil saat App.muat(). Mengembalikan null kalau mode pribadi

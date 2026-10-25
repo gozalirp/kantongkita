@@ -1,0 +1,35 @@
+plugins { id 'com.android.application' }
+
+def signingReady = ['ANDROID_KEYSTORE_PATH', 'ANDROID_KEYSTORE_PASSWORD', 'ANDROID_KEY_ALIAS', 'ANDROID_KEY_PASSWORD'].every { System.getenv(it) }
+if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } && !signingReady) {
+    throw new GradleException('Release requires all four ANDROID signing variables; never distribute an unsigned release.')
+}
+android {
+    namespace 'com.savingduit.app'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.savingduit.app'
+        minSdk 24
+        targetSdk 36
+        versionCode Integer.parseInt(System.getenv('ANDROID_VERSION_CODE') ?: '1')
+        versionName System.getenv('ANDROID_VERSION_NAME') ?: '1.0.0'
+    }
+    signingConfigs {
+        if (signingReady) {
+            release {
+                storeFile file(System.getenv('ANDROID_KEYSTORE_PATH'))
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        debug { applicationIdSuffix '.debug'; versionNameSuffix '-debug' }
+        release {
+            if (signingReady) signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+}
+dependencies { implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.4' }
