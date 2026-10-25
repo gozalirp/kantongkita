@@ -1,6 +1,13 @@
 /* ============================================================
    KantongKita — Modern Aesthetic FinTech UI
    ============================================================ */
+@font-face{
+  font-family:"Sora";
+  src:url("../fonts/Sora-Variable.ttf") format("truetype");
+  font-weight:100 800;
+  font-style:normal;
+  font-display:swap;
+}
 :root{
   /* Planner terang: tinta gelap untuk kontras, pastel hanya sebagai latar. */
   --bg:#F4F5FC;
@@ -65,7 +72,7 @@ body{
   background:var(--bg);
   background-attachment: fixed;
   color:var(--txt);
-  font:15px/1.5 "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font:15px/1.5 "Sora", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing:antialiased;
   overflow:hidden;
 }
