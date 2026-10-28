@@ -1429,3 +1429,8 @@ th{background:#FFF0D2}
 .profile-avatar-option.on{outline:3px solid var(--accent,#F5790B);outline-offset:2px}
 .profile-avatar-option:focus-visible{outline:3px solid #166534;outline-offset:3px}
 @media(max-width:400px){.profile-avatar-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* Compact book switch; keep each touch target at least 44px tall. */
+.buku-pemilih{display:inline-flex;width:auto;max-width:100%;flex-wrap:nowrap;padding:2px;gap:2px;margin-bottom:8px;border-width:1px;border-radius:10px}
+.buku-pemilih button{flex:0 0 auto;min-width:80px;min-height:44px;padding:6px 12px;font-size:13px;border-width:1px;border-radius:7px;white-space:nowrap}
+.buku-pemilih button.on{box-shadow:none}
