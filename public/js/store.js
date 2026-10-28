@@ -119,7 +119,7 @@
     });
     (db.goals || []).forEach(function (g) {
       (Array.isArray(g.history) ? g.history : []).forEach(function (h) {
-        if (h.walletId in out && Number.isSafeInteger(h.amount) && h.amount > 0) {
+        if (!h.walletApplied && h.walletId in out && Number.isSafeInteger(h.amount) && h.amount > 0) {
           if (h.type === 'deposit') out[h.walletId] -= h.amount;
           if (h.type === 'withdraw') out[h.walletId] += h.amount;
         }
@@ -136,7 +136,11 @@
     if (withdraw && amount > saved) throw Error('Saldo target tidak cukup.');
     if (!withdraw && S.walletBalance(db, walletId) < amount) throw Error('Saldo dompet tidak cukup.');
     if (!Array.isArray(goal.history)) goal.history = [];
-    goal.history.push({ id: U.uid('gh'), type: withdraw ? 'withdraw' : 'deposit', amount: amount, walletId: wallet.id, walletName: wallet.name, at: new Date().toISOString() });
+    // Keep the wallet adjustment in the common schema understood by older clients/imports.
+    const initial = Number(wallet.initial || 0) + (withdraw ? amount : -amount);
+    if (!Number.isSafeInteger(initial) || !Number.isSafeInteger(saved + (withdraw ? -amount : amount))) throw Error('Nominal melewati batas aman.');
+    wallet.initial = initial;
+    goal.history.push({ id: U.uid('gh'), type: withdraw ? 'withdraw' : 'deposit', amount: amount, walletId: wallet.id, walletName: wallet.name, walletApplied: true, at: new Date().toISOString() });
     goal.saved = saved + (withdraw ? -amount : amount);
   };
 

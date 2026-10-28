@@ -281,6 +281,9 @@
       const hash = await root.crypto.subtle.digest('SHA-256', bytes);
       return 'lama_' + Array.from(new Uint8Array(hash)).slice(0, 16).map(x => x.toString(16).padStart(2, '0')).join('');
     };
+    if ((asal.goals || []).some(g => (Array.isArray(g.history) ? g.history : []).some(h => h.walletId && !h.walletApplied && dipilih.has(h.walletId)))) {
+      throw Error('Dompet memiliki riwayat tabungan versi uji lama. Impor ditunda agar saldo tidak berubah.');
+    }
     const maps = { wallets: {}, categories: {} };
     for (const key of ['wallets', 'categories', 'transactions']) {
       const daftar = asal[key].filter(x => key === 'wallets' ? dipilih.has(x.id) : key === 'categories' ? kategori.has(x.id) : transaksi.includes(x));
