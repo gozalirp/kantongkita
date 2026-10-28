@@ -335,9 +335,20 @@
     /* Satu status untuk semua badge jaringan. Nilainya disimpan supaya badge
        yang baru digambar ulang (mis. kartu di Pengaturan) mewarisi keadaan
        terakhir, bukan mengarang "aktif" sendiri. */
+    statusSinkronKeluarga: function () {
+      const b = root.Buku;
+      if (!root.K || !K.terbuka) return 'Buku bersama: belum masuk akun.';
+      if (!b) return 'Buku bersama: belum dimuat.';
+      if (b.memuat) return 'Buku bersama: sedang dimuat…';
+      if (b.sibuk) return 'Buku bersama: sedang disimpan…';
+      if (b.pesan) return 'Buku bersama: gagal dimuat. Muat ulang untuk mencoba lagi.';
+      if (b.keluarga && b.akun === K.nama) return 'Buku bersama: berhasil dimuat dari server. Perubahan pasangan perlu dimuat ulang.';
+      return 'Buku bersama: belum dimuat.';
+    },
+
     updateNetDot: function (online, label) {
       const on = !!online;
-      const teks = label || (on ? 'Tersinkron' : 'Lokal');
+      const teks = label || (on ? 'Sinkronisasi terakhir berhasil' : 'Pribadi: lokal · cloud belum dikonfirmasi');
       this._net = { on: on, label: teks };
       const dots = document.querySelectorAll('#net-dot,#st-net-dot');
       Array.prototype.forEach.call(dots, function (d) {

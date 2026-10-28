@@ -1714,11 +1714,11 @@
         '<input type="checkbox" id="st-pw-import" style="width:auto"> Impor menggantikan seluruh isi buku tujuan (bukan menggabung)</label></div>' +
     '</div>' +
 
-    '<div class="card mt"><div class="card-head"><h2>Cloudflare D1 Cloud Sync (Otomatis)</h2>' +
-      '<span class="net-dot" id="st-net-dot"><span></span><em>Lokal</em></span></div>' +
-      '<p class="dim" style="font-size:13px;margin-bottom:14px">' +
-        'Data kamu otomatis tersinkronkan ke database serverless Cloudflare D1 di latar belakang setiap ada perubahan. ' +
-        'Kalau mau memaksa sinkronisasi sekarang, klik tombol Sinkronkan Sekarang.</p>' +
+    '<div class="card mt"><div class="card-head"><h2>Penyimpanan &amp; sinkronisasi</h2></div>' +
+      '<p class="dim"><strong>Buku pribadi:</strong> tersimpan di perangkat ini. Jika akun mendukung cloud pribadi, perubahan juga dikirim ke cloud. Status berikut adalah hasil proses terakhir, bukan jaminan koneksi saat ini.</p>' +
+      '<span class="net-dot" id="st-net-dot"><span></span><em>Belum ada konfirmasi sinkronisasi</em></span>' +
+      '<p role="status">' + H(App.statusSinkronKeluarga()) + '</p>' +
+      '<p class="dim">Buku bersama disimpan terpisah di server. Tombol di bawah mengirim salinan pribadi jika tersedia dan memuat ulang buku bersama; keduanya tidak digabung.</p>' +
       '<div class="row">' +
         '<button class="btn primary" onclick="App.manualSyncCloud()">' + wrapIco('refresh') + 'Sinkronkan Sekarang (Cloudflare)</button>' +
       '</div>' +
