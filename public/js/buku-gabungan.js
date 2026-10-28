@@ -26,6 +26,7 @@
           ['walletId', 'walletTo', 'categoryId', 'receiptId'].forEach(function (ref) {
             if (x[ref]) x[ref] = B.id(sumber, x[ref]);
           });
+          if (key === 'goals' && Array.isArray(x.history)) x.history.forEach(h => { if (h.walletId) h.walletId = B.id(sumber, h.walletId); });
           if (['wallets', 'categories', 'goals', 'subscriptions'].includes(key)) x.name += ' · ' + (sumber === 'keluarga' ? 'Keluarga' : 'Pribadi');
           return x;
         }));

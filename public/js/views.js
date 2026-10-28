@@ -1543,6 +1543,9 @@
     if (root.Buku && Buku.bersama() && !ctx) return;
     const db = ctx ? ctx.db : root.App.db;
     const w = db.wallets.filter(function (x) { return x.id === id; })[0];
+    if ((db.goals || []).some(g => (Array.isArray(g.history) ? g.history : []).some(h => h.walletId === id))) {
+      V.toast('Dompet memiliki riwayat tabungan dan tidak bisa dihapus.', 'err'); return;
+    }
     const n = S.txCountForWallet(db, id);
     const aktif = (db.wallets || []).filter(function (x) { return !x.archived; }).length;
     if (aktif <= 1) { V.toast('Minimal harus ada 1 dompet aktif', 'err'); return; }
@@ -2112,6 +2115,7 @@
         '</div>' +
         '<div class="row mt" style="gap:7px">' +
           '<button class="btn sm primary" onclick="V.goalAdd(\'' + g.id + '\')">' + wrapIco('plus') + 'Nabung</button>' +
+        '<button class="btn sm" onclick="V.goalHistory(\'' + g.id + '\')">Riwayat</button>' +
           (p.saved > 0 ? '<button class="btn sm" onclick="V.goalAdd(\'' + g.id + '\',true)">' + wrapIco('minus') + 'Tarik</button>' : '') +
           '<span class="spacer"></span>' +
           (p.done ? '<span class="muted" style="font-size:12px">Selesai</span>'
@@ -2194,6 +2198,7 @@
         id: g ? g.id : U.uid('goal'),
         name: name, icon: el('g-icon').value.trim() || '🎯',
         target: target, saved: U.parseAmount(el('g-saved').value),
+        history: g && Array.isArray(g.history) ? g.history : [],
         walletId: el('g-wallet').value, due: el('g-due').value,
         note: el('g-note').value.trim()
       };
@@ -2205,6 +2210,24 @@
       V.toast(g ? 'Target diperbarui' : 'Target ditambahkan', 'ok');
       V.modal.close();
     };
+  };
+
+  V.goalHistory = function (id) {
+    const db = root.Buku ? Buku.data() : root.App.db;
+    const g = (db.goals || []).find(function (x) { return x.id === id; });
+    if (!g) return;
+    const history = Array.isArray(g.history) ? g.history : [];
+    V.modal.open({
+      title: 'Riwayat — ' + H(g.name),
+      body: '<p class="hint">Riwayat mulai dicatat sejak fitur ini tersedia. Saldo awal dan perubahan lewat Ubah Target tidak termasuk aktivitas Nabung/Tarik.</p>' +
+        (history.length ? '<ul class="goal-history">' + history.slice().reverse().map(function (h) {
+          const date = new Date(h.at);
+          return '<li><strong>' + (h.type === 'withdraw' ? 'Tarik −' : 'Nabung +') + H(U.fmtRp(h.amount)) + '</strong><br><span class="dim">' +
+            H(Number.isNaN(date.getTime()) ? 'Waktu tidak tersedia' : date.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) +
+            (h.walletName ? ' · ' + H(h.walletName) : ' · Tanpa perpindahan dompet (catatan lama)') + '</span></li>';
+        }).join('') + '</ul>' : '<p>Belum ada riwayat nabung atau tarik untuk target ini.</p>'),
+      foot: '<button class="btn" data-close>Tutup</button>'
+    });
   };
 
   // + Nabung / − Tarik dari sebuah target
@@ -2219,6 +2242,9 @@
     V.modal.open({
       title: (minus ? 'Tarik dari ' : 'Nabung ke ') + H(g.name),
       body:
+        '<div class="field"><label for="ga-wallet">' + (minus ? 'Dompet penerima' : 'Dompet sumber') + '</label><select id="ga-wallet">' +
+        (db.wallets || []).filter(w => !w.archived).map(w => '<option value="' + H(w.id) + '">' + H(w.name) + ' — ' + H(U.fmtRp(S.walletBalance(db, w.id))) + '</option>').join('') +
+        '</select><span class="hint">Perpindahan tabungan, bukan pemasukan atau pengeluaran.</span></div>' +
         (ctx ? '<p class="hint">' + (ctx.sumber === 'keluarga' ? 'Terlihat oleh keluarga' : 'Hanya kamu') + '</p>' : '') +
         '<div class="field"><label>Nominal</label>' +
           '<div class="money-input"><b>Rp</b><input type="text" inputmode="numeric" id="ga-amt" value="" placeholder="0"></div>' +
@@ -2247,15 +2273,8 @@
       if (!(amt > 0)) { V.toast('Nominal harus lebih dari 0', 'err'); return; }
       if (el('ga-save').disabled) return;
       el('ga-save').disabled = true;
-      if (minus) {
-        const baru = Math.max(0, Number(g.saved || 0) - amt);
-        const nyata = Number(g.saved || 0) - baru;
-        g.saved = baru;
-
-      } else {
-        g.saved = Number(g.saved || 0) + amt;
-
-      }
+      try { S.goalTransfer(db, g, el('ga-wallet').value, amt, !!minus); }
+      catch (e) { el('ga-save').disabled = false; V.toast(e.message, 'err'); return; }
       if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
       V.modal.close();
     };
@@ -2269,6 +2288,9 @@
     const db = ctx ? ctx.db : root.App.db;
     const g = (db.goals || []).filter(function (x) { return x.id === id; })[0];
     if (!g) return;
+    if ((Array.isArray(g.history) ? g.history : []).some(h => h.walletId)) {
+      V.toast('Target dengan riwayat perpindahan dana tidak bisa dihapus agar saldo dompet tetap benar.', 'err'); return;
+    }
     const ok = await V.confirm('Hapus target "' + H(g.name) + '"?',
       'Catatan target ini akan dihapus. <b>Saldo dompet dan transaksi tidak berubah.</b>', 'Hapus', true);
     if (!ok) return;
@@ -2365,8 +2387,13 @@
     if (ctx) id = ctx.id;
     const db = ctx ? ctx.db : root.App.db;
     const s = id ? (db.subscriptions || []).filter(function (x) { return x.id === id; })[0] : null;
+    const kategoriLangganan = (db.categories || []).filter(c => !c.archived && c.type === 'out');
     const f = s || { id: '', name: '', icon: '🔁', amount: '', cycle: 'month', day: U.strToDate(U.today()).getDate(),
                     walletId: '', categoryId: '', note: '', active: true };
+    const opsiKategoriLangganan = kategoriLangganan.length
+      ? '<option value="">Pilih kategori pengeluaran</option>' + kategoriLangganan.map(c =>
+        '<option value="' + H(c.id) + '"' + (c.id === f.categoryId ? ' selected' : '') + '>' + H(c.name) + '</option>').join('')
+      : '<option value="">Belum ada kategori pengeluaran di buku ini</option>';
 
     V.modal.open({
       title: s ? 'Ubah Langganan' : 'Tambah Langganan',
@@ -2387,7 +2414,8 @@
           '<input type="number" id="s-day" min="1" max="31" value="' + H(f.day) + '">' +
           '<span class="hint" id="s-day-hint" aria-live="polite"></span></div>' +
         '<div class="field"><label>Dompet pembayar</label><select id="s-wallet">' + pilihanDompet(db, f.walletId) + '</select></div>' +
-        '<div class="field"><label>Kategori</label><select id="s-cat">' + pilihanKategori(db, f.categoryId, 'out') + '</select></div>' +
+        '<div class="field"><label for="s-cat">Kategori pengeluaran</label><select id="s-cat"' + (kategoriLangganan.length ? '' : ' disabled') + '>' + opsiKategoriLangganan + '</select>' +
+          '<span class="hint">' + (kategoriLangganan.length ? 'Menggunakan kategori yang sudah ada di buku ini.' : 'Tambahkan kategori pengeluaran lewat menu Kategori pada buku yang sama, lalu buka kembali form ini.') + '</span></div>' +
         '<div class="field"><label>Catatan <span class="muted">(opsional)</span></label>' +
           '<input type="text" id="s-note" value="' + H(f.note) + '" placeholder="contoh: paket keluarga 4 layar"></div>',
       foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="s-save">Simpan</button>'
@@ -2445,7 +2473,7 @@
   };
 
   // Tandai sebuah langganan lunas bulan ini = catat transaksi + penanda di catatan
-  V.subPay = async function (id, sumber) {
+  V.subPay = async function (id, sumber, dompet) {
     const ctx = root.Buku ? Buku.konteks(id, sumber) : null;
     if (root.Buku && !ctx) return;
     if (ctx) id = ctx.id;
@@ -2454,8 +2482,30 @@
     if (!s) return;
     const today = U.today();
     if (S.subPaidIn(db, s, U.monthOf(today))) { V.toast('Bulan ini sudah ditandai lunas', 'err'); return; }
-    const walletId = s.walletId || ((db.wallets || [])[0] || {}).id;
-    if (!walletId) { V.toast('Belum ada dompet, tambahkan dulu di menu Dompet & Bank', 'err'); return; }
+    if (!dompet) {
+      const wallets = (db.wallets || []).filter(w => !w.archived);
+      if (!wallets.length) { V.toast('Tambahkan dompet aktif terlebih dahulu.', 'err'); return; }
+      V.modal.open({
+        title: 'Bayar ' + H(s.name),
+        body: '<p>Tagihan <strong>' + H(U.fmtRp(s.amount)) + '</strong> akan dicatat sebagai pengeluaran.</p>' +
+          '<div class="field"><label for="sub-pay-wallet">Dompet sumber</label><select id="sub-pay-wallet"><option value="">Pilih dompet</option>' +
+          wallets.map(w => '<option value="' + H(w.id) + '"' + (w.id === s.walletId ? ' selected' : '') + '>' + H(w.name) + ' — ' + H(U.fmtRp(S.walletBalance(db, w.id))) + '</option>').join('') + '</select></div>',
+        foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="sub-pay-confirm">Bayar sekarang</button>'
+      });
+      el('sub-pay-confirm').onclick = async function () {
+        const selected = el('sub-pay-wallet').value;
+        if (!selected) { V.toast('Pilih dompet sumber.', 'err'); return; }
+        if (this.disabled) return;
+        this.disabled = true;
+        try { await V.subPay(root.Buku ? Buku.id(ctx.sumber, id) : id, sumber, selected); }
+        finally { if (el('sub-pay-confirm')) el('sub-pay-confirm').disabled = false; }
+      };
+      return;
+    }
+    const walletId = dompet;
+    if (!(db.wallets || []).some(w => w.id === walletId && !w.archived)) { V.toast('Pilih dompet aktif dari buku yang sama.', 'err'); return; }
+    if (!Number.isSafeInteger(s.amount) || s.amount <= 0) { V.toast('Nominal langganan tidak valid.', 'err'); return; }
+    if (S.walletBalance(db, walletId) < s.amount) { V.toast('Saldo dompet tidak cukup.', 'err'); return; }
     const tx = S.mkTx({
       date: today, type: 'out', amount: s.amount, walletId: walletId,
       categoryId: s.categoryId || '',
@@ -2464,6 +2514,7 @@
     db.transactions.push(tx);
     s.lastPaid = today;
     if (ctx) { if (!await Buku.simpanKonteks(ctx)) return; } else root.App.saveAndRender();
+    V.modal.close();
     V.toast('Dibayar: ' + s.name + ' ' + U.fmtRp(s.amount), 'ok');
   };
 

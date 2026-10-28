@@ -117,7 +117,27 @@
       if (t.walletId in out)   out[t.walletId]   += S.effectOnWallet(t, t.walletId);
       if (t.type === 'move' && t.walletTo in out) out[t.walletTo] += Number(t.amount);
     });
+    (db.goals || []).forEach(function (g) {
+      (Array.isArray(g.history) ? g.history : []).forEach(function (h) {
+        if (h.walletId in out && Number.isSafeInteger(h.amount) && h.amount > 0) {
+          if (h.type === 'deposit') out[h.walletId] -= h.amount;
+          if (h.type === 'withdraw') out[h.walletId] += h.amount;
+        }
+      });
+    });
     return out;
+  };
+
+  S.goalTransfer = function (db, goal, walletId, amount, withdraw) {
+    const wallet = (db.wallets || []).find(w => w.id === walletId && !w.archived);
+    if (!wallet) throw Error('Pilih dompet aktif dari buku yang sama.');
+    if (!Number.isSafeInteger(amount) || amount <= 0) throw Error('Nominal harus berupa rupiah bulat dan lebih dari 0.');
+    const saved = Number(goal.saved || 0);
+    if (withdraw && amount > saved) throw Error('Saldo target tidak cukup.');
+    if (!withdraw && S.walletBalance(db, walletId) < amount) throw Error('Saldo dompet tidak cukup.');
+    if (!Array.isArray(goal.history)) goal.history = [];
+    goal.history.push({ id: U.uid('gh'), type: withdraw ? 'withdraw' : 'deposit', amount: amount, walletId: wallet.id, walletName: wallet.name, at: new Date().toISOString() });
+    goal.saved = saved + (withdraw ? -amount : amount);
   };
 
   S.walletBalance = function (db, walletId) { return S.walletBalances(db)[walletId] || 0; };
