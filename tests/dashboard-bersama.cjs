@@ -37,7 +37,7 @@ function client(username) {
   await a.Buku.muat(); await b.Buku.muat();
   assert(a.Buku.bersama());
   assert.equal(a.Buku.data().wallets.length, 0, 'local default wallets must not leak into shared dashboard');
-  assert(!a.Buku.kontrol().includes('Buku.pilih('));
+  assert(a.Buku.kontrol().includes('Buku.pilih('));
   assert(a.Buku.kontrol().includes('Pilih data lama'));
   a.App.go('dompet');
   a.V.walletForm(); a.$('w-name').value = 'Saldo dummy'; a.$('w-initial').value = '1250000';
@@ -96,6 +96,54 @@ function client(username) {
   await b.Buku.muat();
   assert.equal(b.S.totalBalance(b.Buku.data()), a.S.totalBalance(a.Buku.data()));
   await assert.rejects(a.Buku.salinLama(a.S.normalize({ wallets: [{ id: 'a' }, { id: 'b' }], transactions: [{ id: 'move', type: 'move', walletId: 'a', walletTo: 'b', amount: 10 }] }), ['a'], 'profil'), /transfer/);
+
+  // Book switch must isolate both displayed data and new writes.
+  a.V.modal.close();
+  const sharedBeforePrivate = JSON.stringify(book);
+  await a.Buku.pilih('pribadi');
+  assert(!a.Buku.bersama());
+  assert(a.Buku.berpasangan());
+  assert(a.$('content').textContent.includes('Catatan pribadi'));
+  assert.equal(a.$('mode-pill').textContent, 'Pribadi');
+  assert(!a.Buku.data().wallets.some(w => w.name.includes('Saldo dummy')));
+  let chosen;
+  a.Buku.pilihSumber(source => { chosen = source; });
+  assert.equal(chosen, 'pribadi');
+  a.App.go('dompet');
+  a.V.walletForm(); a.$('w-name').value = 'Rahasia pribadi'; a.$('w-initial').value = '777';
+  await a.$('w-save').onclick();
+  assert(a.App.db.wallets.some(w => w.name === 'Rahasia pribadi'));
+  assert.equal(JSON.stringify(book), sharedBeforePrivate, 'private wallet never writes family');
+  a.Buku.catat();
+  assert(!a.$('buku-dompet').textContent.includes('Saldo dummy'), 'private transaction picker excludes shared wallets');
+  await a.Buku.pilih('keluarga');
+  assert.equal(a.Buku.filter, 'pribadi', 'cannot switch underneath an open form');
+  a.V.modal.close();
+  a.App.go('transaksi');
+  a.V.txForm(null, null, 'pribadi');
+  a.$('f-amount').value = '12'; a.$('f-note').value = 'Transaksi rahasia';
+  await a.$('f-save').onclick();
+  assert(a.App.db.transactions.some(t => t.note === 'Transaksi rahasia'));
+  assert.equal(JSON.stringify(book), sharedBeforePrivate, 'private transaction never writes family');
+  const privateBeforeShared = JSON.stringify(a.App.db);
+  await a.Buku.pilih('keluarga');
+  assert(a.Buku.bersama());
+  assert.equal(a.$('mode-pill').textContent, 'Bersama');
+  assert(!a.Buku.data().wallets.some(w => w.name.includes('Rahasia pribadi')));
+  a.Buku.pilihSumber(source => { chosen = source; });
+  assert.equal(chosen, 'keluarga');
+  a.V.walletForm(); a.$('w-name').value = 'Bersama baru'; a.$('w-initial').value = '123';
+  await a.$('w-save').onclick();
+  assert(book.wallets.some(w => w.name === 'Bersama baru'));
+  assert.equal(JSON.stringify(a.App.db), privateBeforeShared, 'shared write preserves private book');
+  await b.Buku.muat();
+  assert(!b.Buku.data().wallets.some(w => w.name.includes('Rahasia pribadi')), 'partner never sees private wallet');
+  await a.Buku.pilih('pribadi');
+  await a.Buku.muat();
+  assert.equal(a.Buku.filter, 'pribadi', 'refresh preserves selection');
+  assert(a.Buku.data().wallets.some(w => w.name.includes('Rahasia pribadi')));
+  await a.Buku.pilih('keluarga');
+  console.log('PASS: paired private/shared selection, modal guard, wallet write isolation and partner privacy');
 
   /* Sinkronkan manual: buku keluarga yang gagal dimuat tidak boleh dilaporkan
      "berhasil", dan sesudah pulih pesannya kembali normal. */

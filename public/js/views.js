@@ -1457,7 +1457,7 @@
 
     // pindah dana cepat
     const moves = S.filterTx(db, {}).filter(function (t) { return t.type === 'move'; }).slice(0, 8);
-    const adaKeluarga = !!(root.Buku && root.Buku.akun && !Buku.bersama());
+    const adaKeluarga = !!(root.Buku && root.Buku.akun && !Buku.berpasangan());
     const tombolKeluarga = adaKeluarga
       ? '<button class="btn" onclick="Buku.dompet()">' + wrapIco('users') + 'Tambah Dompet Keluarga</button>'
       : '';

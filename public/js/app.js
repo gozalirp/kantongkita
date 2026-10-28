@@ -254,7 +254,7 @@
       const aktif = root.K && K.aktif();
       const pill = document.getElementById('mode-pill');
       if (pill) {
-        pill.textContent = root.Buku ? (Buku.bersama() ? 'Dashboard bersama' : 'Semua catatan') : (aktif ? 'Keluarga' : 'Pribadi');
+        pill.textContent = root.Buku ? (Buku.bersama() ? 'Dashboard bersama' : (Buku.filter === 'pribadi' ? 'Pribadi' : 'Semua catatan')) : (aktif ? 'Keluarga' : 'Pribadi');
         pill.classList.toggle('keluarga', aktif);
         pill.title = aktif ? 'Buku bersama keluarga' : 'Catatan pribadi di perangkat ini';
       }
@@ -431,7 +431,7 @@
       const scrollHost = document.getElementById('content');
       const posisiScroll = scrollHost.dataset.page === name ? scrollHost.scrollTop : 0;
       const mode = document.getElementById('mode-pill');
-      if (mode && root.Buku) { mode.textContent = Buku.bersama() ? 'Bersama' : 'Semua catatan'; mode.title = Buku.bersama() ? 'Catatan yang terlihat oleh kedua anggota keluarga' : 'Lihat ringkasan catatan'; }
+      if (mode && root.Buku) { mode.textContent = Buku.bersama() ? 'Bersama' : (Buku.filter === 'pribadi' ? 'Pribadi' : 'Semua catatan'); mode.title = Buku.bersama() ? 'Catatan yang terlihat oleh kedua anggota keluarga' : 'Catatan sesuai buku yang dipilih'; }
       this.catatTerakhir(name);
       this.catatJejak(name);
       const tabMenu = document.querySelector('.bnav-item[data-bview="menu"]');

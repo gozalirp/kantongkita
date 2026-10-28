@@ -1,5 +1,5 @@
 /* Service Worker untuk PWA KantongKita (Offline-first & Installable) */
-const CACHE_NAME = 'kantongkita-v58';
+const CACHE_NAME = 'kantongkita-v59';
 const ASSETS = [
   './',
   './index.html',

@@ -34,8 +34,10 @@
     });
     return hasil;
   };
-  B.bersama = function () { return !!(B.jumlah >= 2 && root.K && K.terbuka && B.akun === K.nama); };
+  B.berpasangan = function () { return !!(B.jumlah >= 2 && root.K && K.terbuka && B.akun === K.nama); };
+  B.bersama = function () { return B.berpasangan() && B.filter !== 'pribadi'; };
   B.data = function () {
+    if (B.berpasangan() && B.filter === 'pribadi') return B.gabung(B.pribadi(), null, 'pribadi');
     if (B.bersama()) {
       const db = B.gabung(null, B.keluarga, 'keluarga');
       ['wallets', 'categories', 'goals', 'subscriptions'].forEach(key => db[key].forEach(x => { x.name = x.name.replace(/ · Keluarga$/, ''); }));
@@ -95,8 +97,12 @@
       B.keluarga = salin(db);
     } finally { B.sibuk = false; }
   };
-  B.pilih = function (nilai) {
+  B.pilih = async function (nilai) {
     if (!['semua', 'pribadi', 'keluarga'].includes(nilai)) return;
+    if (B.sibuk || document.querySelector('#modal-wrap.show')) {
+      root.V.toast('Selesaikan atau tutup formulir sebelum berpindah buku.', 'err'); return;
+    }
+    if (nilai === 'pribadi' && root.K && K.aktif()) await root.App.gantiMode('pribadi');
     B.filter = nilai;
     root.V.state.transaksi.walletId = ''; root.V.state.transaksi.catId = '';
     root.V.state.transaksi.by = '';
@@ -125,11 +131,17 @@
 
   B.kontrol = function () {
     const H = root.U.esc;
-    if (B.bersama()) return '<section class="card buku-kontrol buku-bersama" aria-label="Dashboard keluarga">' +
-      '<div class="buku-heading"><span class="buku-symbol" aria-hidden="true">' + root.U.icon('users') + '</span><div><h2>Dashboard bersama</h2><p>Satu saldo dan catatan untuk berdua.</p></div>' +
+    if (B.berpasangan()) return '<section class="card buku-kontrol buku-bersama" aria-label="Pilihan buku catatan">' +
+      '<div class="seg buku-pemilih" role="group" aria-label="Pilih buku catatan">' +
+      [['pribadi', 'Pribadi'], ['keluarga', 'Bersama']].map(function (p) {
+        const aktif = p[0] === 'pribadi' ? !B.bersama() : B.bersama();
+        return '<button type="button" aria-pressed="' + aktif + '" class="' + (aktif ? 'on' : '') + '" onclick="Buku.pilih(\'' + p[0] + '\')">' + p[1] + '</button>';
+      }).join('') + '</div>' +
+      '<p class="hint">' + (B.bersama() ? 'Catatan dan input baru terlihat oleh kamu dan pasangan.' : 'Catatan dan input baru hanya untuk akunmu. Tidak dibagikan ke pasangan.') + '</p>' +
+      '<div class="buku-heading"><span class="buku-symbol" aria-hidden="true">' + root.U.icon('users') + '</span><div><h2>' + (B.bersama() ? 'Dashboard bersama' : 'Catatan pribadi') + '</h2><p>' + (B.bersama() ? 'Satu saldo dan catatan untuk berdua.' : 'Dompet dan transaksi milikmu sendiri.') + '</p></div>' +
       '<button class="btn sm" onclick="Buku.muat()"' + (B.memuat || B.sibuk ? ' disabled' : '') + '>' + root.U.icon('refresh') + (B.memuat ? 'Memuat…' : 'Muat ulang') + '</button></div>' +
       '<details class="buku-detail"><summary>Anggota &amp; pengelolaan keluarga</summary><div class="buku-detail-body">' + B.anggotaKeluarga() +
-      '<p>Semua input baru terlihat oleh kedua anggota. Data pribadi lama hanya dibagikan jika kamu memilihnya.</p><button class="btn" onclick="Buku.imporLama()">Pilih data lama untuk digabung</button></div></details>' +
+      '<p>Input di buku Bersama terlihat oleh kedua anggota. Data pribadi hanya dibagikan jika kamu memilihnya.</p><button class="btn" onclick="Buku.imporLama()">Pilih data lama untuk digabung</button></div></details>' +
       (B.pesan ? '<p class="buku-error" role="alert">' + H(B.pesan) + '</p>' : '') + '</section>';
     return '<section class="card buku-kontrol" aria-label="Catatan pribadi dan keluarga">' +
       '<div class="row"><div class="seg" role="group" aria-label="Tampilkan catatan">' +
@@ -196,7 +208,7 @@
   B.catat = function () {
     const H = root.U.esc;
     const pribadi = B.pribadi();
-    const daftar = [[ 'pribadi', B.bersama() ? null : pribadi ], ['keluarga', root.K && K.terbuka && B.akun === K.nama ? B.keluarga : null]];
+    const daftar = [[ 'pribadi', B.bersama() ? null : pribadi ], ['keluarga', B.berpasangan() && !B.bersama() ? null : (root.K && K.terbuka && B.akun === K.nama ? B.keluarga : null)]];
     let opsi = '';
     daftar.forEach(function (p) {
       if (!p[1]) return;
@@ -245,7 +257,7 @@
     }
   };
   B.pilihSumber = function (lanjut) {
-    if (B.bersama()) { lanjut('keluarga'); return; }
+    if (B.berpasangan()) { lanjut(B.bersama() ? 'keluarga' : 'pribadi'); return; }
     root.V.modal.open({ title: 'Simpan ke catatan mana?',
       body: '<div class="field"><label for="buku-sumber">Pemilik catatan</label><select id="buku-sumber"><option value="pribadi">Pribadi — hanya kamu</option><option value="keluarga">Keluarga — terlihat oleh pasangan</option></select></div>',
       foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="buku-pilih">Lanjut</button>' });
@@ -255,7 +267,7 @@
   /* Salin pilihan secara eksplisit; ID stabil membuat pengulangan tidak menggandakan saldo. */
   B.salinLama = async function (asal, pilihan, profil) {
     const ctx = B.konteks(null, 'keluarga');
-    if (!ctx || !B.bersama()) throw Error('Muat dashboard keluarga terlebih dahulu.');
+    if (!ctx || !B.berpasangan()) throw Error('Muat dashboard keluarga terlebih dahulu.');
     const dipilih = new Set(pilihan);
     if (!dipilih.size) throw Error('Pilih minimal satu dompet.');
     const transaksi = asal.transactions.filter(t => dipilih.has(t.walletId) || dipilih.has(t.walletTo));
@@ -288,7 +300,7 @@
     if (!await B.simpanKonteks(ctx)) throw Error('Data lama belum digabung. Coba lagi setelah muat ulang.');
   };
   B.imporLama = function () {
-    if (!B.bersama() || !B.keluarga) return;
+    if (!B.berpasangan() || !B.keluarga) return;
     const asal = salin(B.pribadi()), profil = root.S.Profiles.activeId(), akun = B.akun;
     const H = root.U.esc;
     root.V.modal.open({ title: 'Pilih data lama untuk dibagikan',
