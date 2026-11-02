@@ -18,7 +18,7 @@
     rekap:     { tab: 'hari', ym: '', year: '' },
     dompet:    {},
     kategori:  { tab: 'out' },
-    anggaran:  {},
+    anggaran:  { period: 'month' },
     target:    {},
     langganan: {}
   };
@@ -2024,8 +2024,14 @@
   V.anggaran = function () {
     const db = root.Buku ? Buku.data() : root.App.db;
     const today = U.today();
-    const rows = S.budgetStatus(db, today);
-    const tot = S.budgetTotal(db, today);
+    const period = V.state.anggaran.period || 'month';
+    const periodName = period === 'all' ? 'Keseluruhan' : period === 'year' ? 'Tahunan' : 'Bulanan';
+    const rows = S.budgetStatus(db, today).filter(function (r) { return (r.budget.period || 'month') === period; });
+    const tot = rows.filter(function (r) { return r.valid; }).reduce(function (sum, r) {
+      sum.limit += r.usage.limit; sum.used += r.usage.used; return sum;
+    }, { limit: 0, used: 0 });
+    tot.left = tot.limit - tot.used;
+    tot.pct = tot.limit > 0 ? tot.used / tot.limit * 100 : 0;
 
     const kartu = rows.map(function (r) {
       const u = r.usage, c = r.category;
@@ -2057,14 +2063,17 @@
     const belum = catOut.filter(function (c) { return !dipakai[c.id]; });
 
     return '<div class="card"><div class="card-head">' +
-        '<span class="muted" style="font-size:12px">' + U.fmtMonth(U.monthOf(today)) + '</span>' +
+        '<div class="seg" id="budget-period" role="group" aria-label="Periode anggaran">' +
+        [['month', 'Bulanan'], ['year', 'Tahunan'], ['all', 'Keseluruhan']].map(function (p) {
+          return '<button type="button" data-period="' + p[0] + '" aria-pressed="' + (period === p[0]) + '" class="' + (period === p[0] ? 'on' : '') + '" onclick="V.state.anggaran.period=this.dataset.period;App.render()">' + p[1] + '</button>';
+        }).join('') + '</div>' +
         '<span class="spacer"></span>' +
         '<button class="btn primary" onclick="V.budgetForm()">' + wrapIco('plus') + 'Tambah Anggaran</button></div>' +
       (rows.length
-        ? '<div class="grid cols-3">' + kartu + '</div>'
-        : emptyBox('target', 'Belum ada anggaran. Pasang batas pengeluaran supaya lebih terkendali.')) +
+        ? '<p class="hint">Menampilkan anggaran ' + periodName.toLowerCase() + '. Pilihan ini menyaring anggaran sesuai periode yang tersimpan.</p><div class="grid cols-3">' + kartu + '</div>'
+        : emptyBox('target', 'Belum ada anggaran ' + periodName.toLowerCase() + '. Tambahkan anggaran atau ubah periode anggaran yang sudah ada.')) +
       (rows.length ? '<div class="grid cols-4 mt">' +
-        '<div class="stat"><div class="lbl">Total anggaran bulanan</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.limit) + '</div></div>' +
+        '<div class="stat"><div class="lbl">Total anggaran ' + periodName.toLowerCase() + '</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.limit) + '</div></div>' +
         '<div class="stat out"><div class="lbl">Terpakai</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.used) + '</div>' +
           '<div class="sub">' + U.round1(tot.pct) + '% dari anggaran</div></div>' +
         '<div class="stat' + (tot.left < 0 ? ' out' : ' in') + '"><div class="lbl">' + (tot.left < 0 ? 'Lebih' : 'Sisa') + '</div>' +
@@ -2102,7 +2111,7 @@
     const b = id ? (db.budgets || []).filter(function (x) { return x.id === id; })[0] : null;
     const catOut = (db.categories || []).filter(function (c) { return !c.archived && c.type === 'out'; });
     if (!catOut.length) { V.toast('Belum ada kategori pengeluaran, tambahkan dulu di menu Kategori', 'err'); return; }
-    const f = b || { id: '', categoryId: presetCat || '', limit: '', period: 'month', note: '' };
+    const f = b || { id: '', categoryId: presetCat || '', limit: '', period: V.state.anggaran.period || 'month', note: '' };
 
     V.modal.open({
       title: b ? 'Ubah Anggaran' : 'Tambah Anggaran',
