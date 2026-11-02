@@ -252,10 +252,12 @@ function s12(){try{
   say('T target-jumlah|'+(w.App.db.goals[0]?w.App.db.goals[0].target:'-'));
   var nb=d.querySelector('#content button[onclick*="goalAdd"]');
   say('T target-tombol-nabung|'+(nb?'ADA':'TIDAK ADA'));
+  w.App.db.wallets[0].initial=10000000;
   nb.click(); setTimeout(s13,350);
 }catch(e){err(e);}}
 function s13(){try{
   say('T nabung-modal|'+(!d.getElementById('modal-wrap').hidden));
+  d.getElementById('ga-wallet').value=w.App.db.wallets[0].id;
   var inp=d.getElementById('ga-amt');
   inp.value='2.500.000'; inp.dispatchEvent(new w.Event('input',{bubbles:true}));
   say('T nabung-terformat|'+inp.value);
@@ -288,7 +290,10 @@ function s17(){try{
   say('T langganan-tx-sebelum|'+w.__txBefore);
   var bayar=Array.prototype.filter.call(d.querySelectorAll('#content button'),function(b){return /Tandai dibayar/.test(b.textContent);})[0];
   say('T langganan-tombol-bayar|'+(bayar?'ADA':'TIDAK ADA'));
-  bayar.click(); setTimeout(s18,500);
+  bayar.click(); setTimeout(function(){try{
+    d.getElementById('sub-pay-wallet').value=w.App.db.wallets[0].id;
+    d.getElementById('sub-pay-confirm').click();setTimeout(s18,500);
+  }catch(e){err(e);}},200);
 }catch(e){err(e);}}
 function s18(){try{
   say('T langganan-tx-sesudah|'+w.App.db.transactions.length);

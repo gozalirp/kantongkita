@@ -44,6 +44,15 @@ window.addEventListener('load',()=>setTimeout(async()=>{
    }
 
   }
+  // Both book choices stay visible, touch-friendly and semantically selected.
+  for(const source of ['pribadi','keluarga']){
+   await w.Buku.pilih(source);w.App.view='dashboard';w.App.render();
+   check(d.documentElement.scrollWidth<=width+1,width+' '+source+' book overflow');
+   const buttons=Array.from(d.querySelectorAll('.buku-pemilih button'));
+   check(buttons.length===2,width+' book choices visible');
+   check(buttons.filter(b=>b.getAttribute('aria-pressed')==='true').length===1,width+' exactly one selected');
+   for(const button of buttons)check(button.getBoundingClientRect().height>=44,width+' book switch touch height');
+  }
   // Larger text must reflow instead of covering neighboring actions.
   for(const page of ['dashboard','transaksi','rekap','dompet','profil']){
    w.App.view=page;w.App.render();
@@ -74,7 +83,8 @@ window.addEventListener('load',()=>setTimeout(async()=>{
    }
    w.V.modal.close();
   }
-  w.App.view='rekap';w.V.state.rekap.ym='2026-10';w.V.state.rekap.year='2026';
+  await w.Buku.pilih('keluarga');
+  w.App.view='rekap';w.V.state.rekap.ym=w.U.monthOf(w.U.today());w.V.state.rekap.year=w.U.yearOf(w.U.today());
   for(const tab of ['hari','minggu','bulan','tahun']){
    w.V.state.rekap.tab=tab;w.App.render();
    const labels=Array.from(d.querySelectorAll('.column-label'));
@@ -86,7 +96,10 @@ window.addEventListener('load',()=>setTimeout(async()=>{
    check(!d.querySelector('.column-scroll')&&d.querySelector('.column-plot').scrollWidth<=d.querySelector('.column-plot').clientWidth+1,width+' '+tab+' plot fits without scroll');
    check(!d.querySelector('.column-chart .sr-only'),width+' '+tab+' no leaked accessibility text');
    check(d.querySelectorAll('.column-axis span').length===5,width+' '+tab+' numeric axis');
-   if(tab==='hari')check(labels.map(e=>e.textContent).join(',')===Array.from({length:31},(_,i)=>String(i+1)).join(','),width+' daily dates ordered 1-31');
+   if(tab==='hari'){
+    const days=Number(w.U.monthEnd(w.U.today()).slice(8));
+    check(labels.map(e=>e.textContent).join(',')===Array.from({length:days},(_,i)=>String(i+1)).join(','),width+' daily dates ordered for selected month');
+   }
   }
   w.App.view='dashboard';w.App.render();
   if(width<=860){

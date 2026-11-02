@@ -14,7 +14,7 @@
      ============================================================ */
   V.state = {
     dashboard: { chart: '6m', range: 'month' },
-    transaksi: { preset: 'month', walletId: '', type: 'all', catId: '', q: '', by: '', from: '', to: '' },
+    transaksi: { preset: 'month', date: '', walletId: '', type: 'all', catId: '', q: '', by: '', from: '', to: '' },
     rekap:     { tab: 'hari', ym: '', year: '' },
     dompet:    {},
     kategori:  { tab: 'out' },
@@ -237,6 +237,7 @@
       el('modal-foot').innerHTML = opt.foot || '';
       U.polishIcons(el('modal'));
       U.ikatLabel(el('modal'));
+      V.bindCalendars(el('modal-body'));
       fitModalViewport();
       el('modal-body').scrollTop = 0;
       el('modal-wrap').hidden = false;
@@ -432,16 +433,50 @@
     return '<div class="empty"><span class="e-ic">' + U.icon(icon) + '</span><p>' + text + '</p></div>';
   }
 
-  function transactionCalendar() {
-    const input = el('f-date');
-    const host = el('f-calendar');
-    const toggle = el('f-calendar-toggle');
+  V.bindCalendars = function (scope) {
+    (scope || document).querySelectorAll('input[type="date"],input[type="month"]').forEach(function (input) {
+      if (input.dataset.calendarBound) return;
+      input.dataset.calendarBound = 'true';
+      let toggle = el(input.id === 'f-date' ? 'f-calendar-toggle' : input.id + '-toggle');
+      let host = el(input.id === 'f-date' ? 'f-calendar' : input.id + '-calendar');
+      if (!toggle) {
+        const wrapper = document.createElement('span');
+        wrapper.className = 'calendar-field';
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.appendChild(input);
+        toggle = document.createElement('button');
+        toggle.type = 'button'; toggle.id = input.id + '-toggle'; toggle.className = 'btn calendar-toggle';
+        host = document.createElement('span');
+        host.id = input.id + '-calendar'; host.className = 'transaction-calendar'; host.hidden = true;
+        wrapper.append(toggle, host);
+      }
+      const label = document.querySelector('label[for="' + input.id + '"]');
+      if (label) label.htmlFor = toggle.id;
+      toggle.setAttribute('aria-label', input.getAttribute('aria-label') || (label ? label.textContent : input.id === 'g-due' ? 'Tenggat tabungan' : 'Pilih tanggal'));
+      toggle.setAttribute('aria-controls', host.id);
+      toggle.setAttribute('aria-expanded', 'false');
+      input.hidden = true;
+      dateCalendar(input, host, toggle);
+    });
+  };
+
+  function dateCalendar(input, host, toggle) {
+    const monthOnly = input.type === 'month';
     let month = U.strToDate(input.value || U.today());
     month.setDate(1);
     function draw(focusDate) {
-      toggle.textContent = U.fmtDate(input.value || U.today());
+      toggle.textContent = input.value ? (monthOnly ? U.fmtMonth(input.value) : U.fmtDate(input.value)) : 'Pilih tanggal';
       const year = month.getFullYear(), m = month.getMonth();
       const first = new Date(year, m, 1);
+      if (monthOnly) {
+        host.innerHTML = '<span class="calendar-nav"><button type="button" class="btn" data-year="-1" aria-label="Tahun sebelumnya">‹</button><strong aria-live="polite">' + year +
+          '</strong><button type="button" class="btn" data-year="1" aria-label="Tahun berikutnya">›</button></span><span class="calendar-days calendar-months">' +
+          Array.from({ length: 12 }, function (_, i) {
+            const ym = year + '-' + String(i + 1).padStart(2, '0');
+            return '<button type="button" data-date="' + ym + '" aria-label="' + H(U.fmtMonth(ym)) + '" aria-pressed="' + (ym === input.value) + '">' + H(U.fmtMonth(ym).replace(' ' + year, '')) + '</button>';
+          }).join('') + '</span>';
+        return;
+      }
       const offset = (first.getDay() + 6) % 7;
       const count = new Date(year, m + 1, 0).getDate();
       const iso = function (day) { return year + '-' + String(m + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0'); };
@@ -451,32 +486,38 @@
         '<div class="calendar-days">' + Array(offset).fill('<span></span>').join('') + Array.from({length:count}, function (_, i) {
           const date = iso(i + 1);
           return '<button type="button" data-date="' + date + '" aria-label="' + H(U.fmtDate(date)) + '" aria-pressed="' + (date === input.value) + '"' + (date === U.today() ? ' aria-current="date"' : '') + '>' + (i + 1) + '</button>';
-        }).join('') + '</div><button type="button" class="btn calendar-today">Hari ini</button>';
+        }).join('') + '</div><button type="button" class="btn calendar-today">Hari ini</button>' +
+        (input.id === 'g-due' ? '<button type="button" class="btn calendar-clear">Hapus tenggat</button>' : '');
       if (focusDate) { const target = host.querySelector('[data-date="' + focusDate + '"]'); if (target) target.focus(); }
     }
     function select(date) {
       input.value = date;
-      input.dispatchEvent(new Event('change', {bubbles:true}));
       host.hidden = true;
       toggle.setAttribute('aria-expanded', 'false');
       draw(); toggle.focus();
+      input.dispatchEvent(new Event('change', {bubbles:true}));
     }
     toggle.onclick = function () {
       host.hidden = !host.hidden;
       toggle.setAttribute('aria-expanded', String(!host.hidden));
-      if (!host.hidden) { month = U.strToDate(input.value || U.today()); month.setDate(1); draw(input.value); }
+      if (!host.hidden) {
+        month = U.strToDate(input.value || U.today()); month.setDate(1); draw(input.value);
+        if (monthOnly) host.querySelector('[aria-pressed="true"], [data-date]').focus();
+      }
     };
     host.onclick = function (event) {
       const button = event.target.closest('button'); if (!button) return;
       if (button.dataset.month) { month.setMonth(month.getMonth() + Number(button.dataset.month)); draw(); host.querySelector('[data-month="' + button.dataset.month + '"]').focus(); }
+      else if (button.dataset.year) { month.setFullYear(month.getFullYear() + Number(button.dataset.year)); draw(); host.querySelector('[data-year="' + button.dataset.year + '"]').focus(); }
       else if (button.dataset.date) select(button.dataset.date);
       else if (button.classList.contains('calendar-today')) select(U.today());
+      else if (button.classList.contains('calendar-clear')) select('');
     };
     host.onkeydown = function (event) {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); host.hidden = true; toggle.setAttribute('aria-expanded','false'); toggle.focus(); return; }
       const date = event.target.dataset.date;
       const steps = {ArrowLeft:-1,ArrowRight:1,ArrowUp:-7,ArrowDown:7};
-      if (date && steps[event.key]) {
+      if (!monthOnly && date && steps[event.key]) {
         event.preventDefault();
         const next = U.addDays(date, steps[event.key]);
         month = U.strToDate(next); month.setDate(1); draw(next);
@@ -727,7 +768,7 @@
       });
 
       /* --- bind --- */
-      transactionCalendar();
+      V.bindCalendars(el('modal-body'));
       el('f-type').addEventListener('click', function (e) {
         const b = e.target.closest('[data-seg]'); if (!b) return;
         syncForm();
@@ -1058,8 +1099,29 @@
   V.transaksi = function () {
     const db = root.Buku ? Buku.data() : root.App.db;
     const st = V.state.transaksi;
-    const r = S.rangeFor(st.preset, U.today());
+    if (!st.date) st.date = U.today();
+    const adjustable = ['today', 'month', 'year'].includes(st.preset);
+    const r = S.rangeFor(st.preset === 'week' ? '7d' : st.preset, adjustable ? st.date : U.today());
     st.from = r.from; st.to = r.to;
+    let periodPicker = '';
+    if (st.preset === 'month') {
+      periodPicker = '<label>Bulan <select id="tx-month">' +
+        Array.from({ length: 12 }, function (_, i) {
+          const month = String(i + 1).padStart(2, '0');
+          return '<option value="' + month + '"' + (st.date.slice(5, 7) === month ? ' selected' : '') + '>' +
+            H(U.fmtMonth('2000-' + month).replace(' 2000', '')) + '</option>';
+        }).join('') + '</select></label>';
+    }
+    if (st.preset === 'month' || st.preset === 'year') {
+      periodPicker += '<label>Tahun <input type="number" id="tx-year" min="1000" max="9999" step="1" value="' +
+        H(U.yearOf(st.date)) + '" style="max-width:110px"></label>';
+    } else if (st.preset === 'today') {
+      periodPicker = '<label>Tanggal <input type="date" id="tx-date" value="' + H(st.date) + '"></label>';
+    }
+    const periodCaption = st.preset === 'month' ? U.fmtMonth(U.monthOf(st.date)) :
+      st.preset === 'year' ? 'Tahun ' + U.yearOf(st.date) :
+      st.preset === 'week' ? '7 hari terakhir · ' + S.periodLabel('custom', st.from, st.to) :
+      adjustable ? S.periodLabel('custom', st.from, st.to) : S.periodLabel(st.preset, st.from, st.to);
     const sum = S.summary(db, st.from, st.to);
     let list = sum.list;
     /* Pilihan pencatat diambil dari seluruh transaksi pada periode ini, bukan
@@ -1090,13 +1152,14 @@
       '<div class="card">' +
         '<div class="row" style="gap:12px">' +
           '<div class="seg" id="tx-preset" style="flex:1;min-width:260px">' +
-            segBtn(st.preset, 'today', 'Hari ini') + segBtn(st.preset, 'week', 'Minggu') +
-            segBtn(st.preset, 'month', 'Bulan') + segBtn(st.preset, 'year', 'Tahun') +
-            segBtn(st.preset, '7d', '7 Hari') + segBtn(st.preset, 'all', 'Semua') +
+            segBtn(st.preset, 'today', 'Harian') + segBtn(st.preset, 'week', 'Mingguan') +
+            segBtn(st.preset, 'month', 'Bulanan') + segBtn(st.preset, 'year', 'Tahunan') +
+            segBtn(st.preset, 'all', 'Semua') +
           '</div>' +
           '<input type="search" id="tx-q" aria-label="Cari transaksi" placeholder="Cari catatan / kategori…" value="' + H(st.q) + '" style="max-width:240px">' +
           '<button class="btn primary" onclick="V.txForm()">' + wrapIco('plus') + 'Catat Transaksi</button>' +
         '</div>' +
+        (periodPicker ? '<div class="row mt" style="gap:12px">' + periodPicker + '</div>' : '') +
         '<div class="row mt" style="gap:12px">' +
           (pencatat.length >= 2 || st.by ?
             '<select id="tx-by" aria-label="Saring pencatat" style="max-width:190px">' +
@@ -1123,7 +1186,7 @@
             '<option value="move"' + (st.type === 'move' ? ' selected' : '') + '>Pindah dana</option>' +
           '</select>' +
           '<span class="spacer"></span>' +
-          '<span class="muted" style="font-size:12.5px">' + S.periodLabel(st.preset, st.from, st.to) +
+          '<span class="muted" style="font-size:12.5px">' + H(periodCaption) +
             ' · ' + list.length + ' transaksi</span>' +
         '</div>' +
       '</div>';
@@ -1164,6 +1227,22 @@
   };
 
   V.transaksiBind = function () {
+    V.bindCalendars();
+    const st = V.state.transaksi;
+    const date = el('tx-date');
+    if (date) date.onchange = function () {
+      if (!date.value || !date.validity.valid) return;
+      st.date = date.value; root.App.render();
+    };
+    const month = el('tx-month');
+    if (month) month.onchange = function () {
+      st.date = U.yearOf(st.date) + '-' + month.value + '-01'; root.App.render();
+    };
+    const year = el('tx-year');
+    if (year) year.onchange = function () {
+      if (!year.value || !year.validity.valid) return;
+      st.date = year.value + '-' + st.date.slice(5, 7) + '-01'; root.App.render();
+    };
     const pre = el('tx-preset');
     if (pre) pre.addEventListener('click', function (e) {
       const b = e.target.closest('[data-seg]'); if (!b) return;
@@ -1316,6 +1395,7 @@
   };
 
   V.rekapBind = function () {
+    V.bindCalendars();
     const tb = el('rk-tab');
     if (tb) tb.addEventListener('click', function (e) {
       const b = e.target.closest('[data-seg]'); if (!b) return;

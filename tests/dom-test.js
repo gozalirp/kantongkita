@@ -785,16 +785,29 @@ section('9. Konfirmasi hapus: batal lalu setuju');
   V.modal.close();
 
   const gid = App.db.goals[0].id;
+  wlt.initial = 10000000;
+  const walletBeforeSaving = S.walletBalance(App.db, wlt.id);
   V.goalAdd(gid);
+  setVal($('ga-wallet'), wlt.id);
   ok('modal nabung terbuka', $('modal-wrap').classList.contains('show'));
+  setVal($('ga-amt'), '20.000.000');
+  click($('ga-save'));
+  eq('nabung melebihi saldo dompet ditolak', App.db.goals[0].saved, 5000000);
+  eq('penolakan nabung tidak mengubah saldo dompet', S.walletBalance(App.db, wlt.id), walletBeforeSaving);
   setVal($('ga-amt'), '2.500.000');
   click($('ga-save'));
   eq('saldo target bertambah', App.db.goals[0].saved, 7500000);
+  eq('saldo dompet berkurang saat nabung', S.walletBalance(App.db, wlt.id), walletBeforeSaving - 2500000);
 
   V.goalAdd(gid, true);
+  setVal($('ga-wallet'), wlt.id);
   setVal($('ga-amt'), '10.000.000');
   click($('ga-save'));
-  eq('tarik dibatasi sampai 0', App.db.goals[0].saved, 0);
+  eq('tarik melebihi saldo ditolak', App.db.goals[0].saved, 7500000);
+  setVal($('ga-amt'), '7.500.000');
+  click($('ga-save'));
+  eq('tarik seluruh saldo target', App.db.goals[0].saved, 0);
+  eq('hasil tarik kembali ke dompet', S.walletBalance(App.db, wlt.id), walletBeforeSaving + 5000000);
 
   V.goalAdd(gid);
   setVal($('ga-amt'), '0');
@@ -804,7 +817,7 @@ section('9. Konfirmasi hapus: batal lalu setuju');
 
   window.__setConfirm(true);
   await V.goalDelete(gid);
-  eq('target terhapus', App.db.goals.length, 0);
+  eq('target dengan riwayat dana tidak boleh dihapus', App.db.goals.length, 1);
 
   section('31. Langganan di DOM');
   nav('langganan');
@@ -833,7 +846,11 @@ section('9. Konfirmasi hapus: batal lalu setuju');
   // tandai dibayar -> bikin transaksi + penanda
   const sid = App.db.subscriptions[0].id;
   const txCount = App.db.transactions.length;
-  V.subPay(sid);
+  await V.subPay(sid);
+  ok('pembayaran meminta konfirmasi dompet', !!$('sub-pay-confirm'));
+  eq('belum ada transaksi sebelum konfirmasi', App.db.transactions.length, txCount);
+  setVal($('sub-pay-wallet'), wlt.id);
+  await $('sub-pay-confirm').onclick();
   eq('tandai dibayar membuat 1 transaksi', App.db.transactions.length, txCount + 1);
   const txBaru = App.db.transactions[App.db.transactions.length - 1];
   eq('nominal transaksi = nominal langganan', txBaru.amount, 54000);

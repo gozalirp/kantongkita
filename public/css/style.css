@@ -1293,10 +1293,17 @@ th{background:#FFF0D2}
  [data-page=profil] .hint{padding:10px;line-height:1.65}
 }
 
-/* Kalender transaksi lokal: nilai ISO tetap pada f-date. */
+/* Kalender neobrutal bersama: input menyimpan nilai ISO tanpa mengubah skema. */
+.calendar-field{display:block;max-width:100%;min-width:0}
+.calendar-field>input[hidden]{display:none}
+.calendar-field>.transaction-calendar{display:block}
+.calendar-field>.transaction-calendar[hidden]{display:none}
+.calendar-months{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+.calendar-months button{padding:8px 4px;font-size:12px}
+.calendar-clear{width:100%;margin-top:8px;min-height:44px;justify-content:center}
 .calendar-toggle{width:100%;justify-content:space-between;text-align:left;min-height:48px}
 .calendar-toggle::after{content:'▦';font-size:23px;margin-left:12px}
-.transaction-calendar{margin-top:12px;padding:12px;background:var(--panel);border:2px solid #171717;border-radius:14px;box-shadow:3px 3px 0 #171717}
+.transaction-calendar{margin-top:12px;padding:12px;background:var(--panel);border:2px solid #171717;border-radius:8px;box-shadow:4px 4px 0 #171717;max-width:360px;box-sizing:border-box}
 .transaction-calendar[hidden]{display:none}
 .calendar-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
 .calendar-nav strong{font-size:14px;text-transform:capitalize;text-align:center}
@@ -1434,3 +1441,9 @@ th{background:#FFF0D2}
 .buku-pemilih{display:inline-flex;width:auto;max-width:100%;flex-wrap:nowrap;padding:2px;gap:2px;margin-bottom:8px;border-width:1px;border-radius:10px}
 .buku-pemilih button{flex:0 0 auto;min-width:80px;min-height:44px;padding:6px 12px;font-size:13px;border-width:1px;border-radius:7px;white-space:nowrap}
 .buku-pemilih button.on{box-shadow:none}
+
+/* Keep Sora calendar labels and transaction fields within narrow modal columns. */
+.calendar-months button{font-size:11px;letter-spacing:-.2px;overflow-wrap:anywhere}
+#modal-body .field:has(>.transaction-calendar){min-width:0}
+.transaction-calendar{width:100%;min-width:0}
+@media(max-width:360px){.transaction-calendar{max-width:calc(100vw - 48px)}}
