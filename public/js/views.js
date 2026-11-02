@@ -2035,7 +2035,7 @@
           '<div class="ico-badge ' + (u.over ? 'out' : 'in') + '">' + emo(c.icon) + '</div>' +
           '<div style="flex:1;min-width:0">' +
             '<div class="t1">' + H(c.name) + (r.valid ? '' : ' <span class="tag out">kategori hilang</span>') + '</div>' +
-            '<div class="t2">' + (r.budget.period === 'year' ? 'per tahun' : 'per bulan') +
+            '<div class="t2">' + (r.budget.period === 'all' ? 'keseluruhan · tanpa reset' : r.budget.period === 'year' ? 'per tahun' : 'per bulan') +
               (r.budget.note ? ' · ' + H(r.budget.note) : '') + '</div>' +
           '</div>' +
           pctTag(u.pct, u.over) +
@@ -2064,7 +2064,7 @@
         ? '<div class="grid cols-3">' + kartu + '</div>'
         : emptyBox('target', 'Belum ada anggaran. Pasang batas pengeluaran supaya lebih terkendali.')) +
       (rows.length ? '<div class="grid cols-4 mt">' +
-        '<div class="stat"><div class="lbl">Total anggaran</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.limit) + '</div></div>' +
+        '<div class="stat"><div class="lbl">Total anggaran bulanan</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.limit) + '</div></div>' +
         '<div class="stat out"><div class="lbl">Terpakai</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.used) + '</div>' +
           '<div class="sub">' + U.round1(tot.pct) + '% dari anggaran</div></div>' +
         '<div class="stat' + (tot.left < 0 ? ' out' : ' in') + '"><div class="lbl">' + (tot.left < 0 ? 'Lebih' : 'Sisa') + '</div>' +
@@ -2080,11 +2080,12 @@
         return '<button class="btn sm" onclick="V.budgetForm(null,\'' + c.id + '\')">' + emo(c.icon) + H(c.name) + '</button>';
       }).join('') + '</div></div>' : '') +
 
-    (rows.length ? '<div class="card mt"><div class="card-head"><h2>Pemakaian Anggaran Bulan Ini</h2></div>' +
+    (rows.length ? '<div class="card mt"><div class="card-head"><h2>Pemakaian Anggaran Sesuai Periode</h2></div>' +
       '<div class="tbl-wrap"><table><thead><tr><th>Kategori</th><th>Batas</th><th>Terpakai</th><th>Sisa</th><th style="width:150px">Progres</th></tr></thead><tbody>' +
       rows.map(function (r) {
         const u = r.usage;
-        return '<tr><td>' + emo(r.category.icon) + H(r.category.name) + '</td>' +
+        return '<tr><td>' + emo(r.category.icon) + H(r.category.name) + '<br><span class="muted">' +
+            (r.budget.period === 'all' ? 'Keseluruhan · tanpa reset' : r.budget.period === 'year' ? 'Tahun ' + U.yearOf(today) : U.fmtMonth(U.monthOf(today))) + '</span></td>' +
           '<td class="num">' + U.fmtRp(u.limit) + '</td>' +
           '<td class="num">' + U.fmtRp(u.used) + '</td>' +
           '<td class="num ' + (u.left < 0 ? 'val-out' : '') + '">' + U.fmtRp(u.left) + '</td>' +
@@ -2114,7 +2115,8 @@
             (f.limit ? U.fmtNum(f.limit) : '') + '" placeholder="contoh: 1.500.000"></div>' +
           '<span class="hint">Batas pengeluaran untuk kategori ini.</span></div>' +
         '<div class="field"><label>Periode</label><select id="b-period">' +
-          opsiNilai([['month', 'Per bulan'], ['year', 'Per tahun']], f.period) + '</select></div>' +
+          opsiNilai([['month', 'Bulanan'], ['year', 'Tahunan'], ['all', 'Keseluruhan — tanpa reset']], f.period) + '</select>' +
+          '<span class="hint">Bulanan: bulan berjalan. Tahunan: tahun berjalan. Keseluruhan: semua pengeluaran kategori, termasuk transaksi lama, tanpa reset.</span></div>' +
         '<div class="field"><label>Catatan <span class="muted">(opsional)</span></label>' +
           '<input type="text" id="b-note" value="' + H(f.note) + '" placeholder="contoh: jatah makan sebulan"></div>',
       foot: '<button class="btn" data-close>Batal</button><button class="btn primary" id="b-save">Simpan</button>'

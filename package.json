@@ -10,7 +10,7 @@
     "start": "node worker/server.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "node tests/goal-transfer.cjs && node tests/sync-status.cjs && node tests/calendar.cjs && node tests/transaction-period.cjs && node tests/web-font.cjs && node tests/android-twa.cjs && node tests/account-profiles.mjs && node tests/database-safety.mjs && node tests/personal-sync-conflict.cjs && node tests/excel.cjs && node tests/smoke.js && node tests/profile-test.js && node tests/dom-test.js && node tests/email-field.cjs && node tests/akun-email-ui.cjs && node tests/account-email.mjs && node tests/family-security.test.mjs && node tests/cloud-access.test.mjs && node tests/buku-gabungan.cjs && node tests/buku-ui.cjs && node tests/dashboard-bersama.cjs",
+    "test": "node tests/budget-period.cjs && node tests/goal-transfer.cjs && node tests/sync-status.cjs && node tests/calendar.cjs && node tests/transaction-period.cjs && node tests/web-font.cjs && node tests/android-twa.cjs && node tests/account-profiles.mjs && node tests/database-safety.mjs && node tests/personal-sync-conflict.cjs && node tests/excel.cjs && node tests/smoke.js && node tests/profile-test.js && node tests/dom-test.js && node tests/email-field.cjs && node tests/akun-email-ui.cjs && node tests/account-email.mjs && node tests/family-security.test.mjs && node tests/cloud-access.test.mjs && node tests/buku-gabungan.cjs && node tests/buku-ui.cjs && node tests/dashboard-bersama.cjs",
     "test:browser": "node tests/calendar-browser.cjs && node tests/browser-test.js && node tests/ui-responsive.cjs"
   }
 }

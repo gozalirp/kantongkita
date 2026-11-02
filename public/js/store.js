@@ -491,7 +491,7 @@
 
   /* ============================================================
      4. ANGGARAN PER KATEGORI
-     Bentuk: {id, categoryId, limit, period:'month'|'year', note}
+     Bentuk: {id, categoryId, limit, period:'month'|'year'|'all', note}
      ============================================================ */
   S.budgetFor = function (db, catId) {
     return (db.budgets || []).filter(function (b) { return b.categoryId === catId; })[0] || null;
@@ -500,6 +500,7 @@
   // Rentang tanggal anggaran berdasarkan periodenya
   S.budgetRange = function (b, today) {
     const t = today || U.today();
+    if (b && b.period === 'all') return { from: '', to: '' };
     if (b && b.period === 'year') return { from: U.yearOf(t) + '-01-01', to: U.yearOf(t) + '-12-31' };
     return { from: U.monthStart(t), to: U.monthEnd(t) };
   };
@@ -552,7 +553,7 @@
     let limit = 0, used = 0;
     S.budgetStatus(db, today).forEach(function (r) {
       if (!r.valid) return;
-      if (r.budget.period === 'year') return;   // anggaran tahunan tidak dijumlahkan ke bulanan
+      if (['year', 'all'].includes(r.budget.period)) return; // ringkasan ini khusus anggaran bulanan
       limit += r.usage.limit; used += r.usage.used;
     });
     return { limit: limit, used: used, left: limit - used, pct: limit > 0 ? (used / limit) * 100 : 0 };
