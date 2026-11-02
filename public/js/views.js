@@ -18,7 +18,7 @@
     rekap:     { tab: 'hari', ym: '', year: '' },
     dompet:    {},
     kategori:  { tab: 'out' },
-    anggaran:  { period: 'month' },
+    anggaran:  { period: 'month', date: '' },
     target:    {},
     langganan: {}
   };
@@ -2026,7 +2026,13 @@
     const today = U.today();
     const period = V.state.anggaran.period || 'month';
     const periodName = period === 'all' ? 'Keseluruhan' : period === 'year' ? 'Tahunan' : 'Bulanan';
-    const rows = S.budgetStatus(db, today).filter(function (r) { return (r.budget.period || 'month') === period; });
+    const st = V.state.anggaran;
+    if (!st.date) st.date = today;
+    const caption = period === 'all' ? 'Keseluruhan · semua tanggal' : period === 'year' ? 'Tahun ' + U.yearOf(st.date) : U.fmtMonth(U.monthOf(st.date));
+    // The selected period changes the transaction range, never the stored budgets.
+    const rows = S.budgetStatus(Object.assign({}, db, { budgets: (db.budgets || []).map(function (b) {
+      return Object.assign({}, b, { period: period });
+    }) }), st.date);
     const tot = rows.filter(function (r) { return r.valid; }).reduce(function (sum, r) {
       sum.limit += r.usage.limit; sum.used += r.usage.used; return sum;
     }, { limit: 0, used: 0 });
@@ -2041,7 +2047,7 @@
           '<div class="ico-badge ' + (u.over ? 'out' : 'in') + '">' + emo(c.icon) + '</div>' +
           '<div style="flex:1;min-width:0">' +
             '<div class="t1">' + H(c.name) + (r.valid ? '' : ' <span class="tag out">kategori hilang</span>') + '</div>' +
-            '<div class="t2">' + (r.budget.period === 'all' ? 'keseluruhan · tanpa reset' : r.budget.period === 'year' ? 'per tahun' : 'per bulan') +
+            '<div class="t2">' + H(caption) +
               (r.budget.note ? ' · ' + H(r.budget.note) : '') + '</div>' +
           '</div>' +
           pctTag(u.pct, u.over) +
@@ -2054,6 +2060,7 @@
           '<span class="num ' + (habis ? 'val-out' : 'val-in') + '">' +
             (habis ? 'lewat ' + U.fmtRp(-u.left) : 'sisa ' + U.fmtRp(u.left)) + '</span>' +
         '</div>' +
+        '<button type="button" class="btn sm mt" data-budget-category="' + H(r.budget.categoryId) + '" onclick="V.budgetTransactions(this.dataset.budgetCategory)">Lihat transaksi</button>' +
       '</div>';
     }).join('');
 
@@ -2069,9 +2076,13 @@
         }).join('') + '</div>' +
         '<span class="spacer"></span>' +
         '<button class="btn primary" onclick="V.budgetForm()">' + wrapIco('plus') + 'Tambah Anggaran</button></div>' +
+      '<div class="row mt" style="gap:12px">' +
+      (period === 'month' ? '<label>Bulan <input type="month" id="budget-month" value="' + U.monthOf(st.date) + '"></label>' :
+        period === 'year' ? '<label>Tahun <input type="number" id="budget-year" min="1000" max="9999" value="' + U.yearOf(st.date) + '"></label>' : '') +
+      '<span class="muted">' + H(caption) + '</span></div>' +
       (rows.length
-        ? '<p class="hint">Menampilkan anggaran ' + periodName.toLowerCase() + '. Pilihan ini menyaring anggaran sesuai periode yang tersimpan.</p><div class="grid cols-3">' + kartu + '</div>'
-        : emptyBox('target', 'Belum ada anggaran ' + periodName.toLowerCase() + '. Tambahkan anggaran atau ubah periode anggaran yang sudah ada.')) +
+        ? '<p class="hint">Menampilkan anggaran ' + periodName.toLowerCase() + '. Kategori dan batas tetap; pengeluaran dihitung dari transaksi pada periode pilihan. Batas tidak dikalikan atau direset oleh tombol ini.</p><div class="grid cols-3">' + kartu + '</div>'
+        : emptyBox('target', 'Belum ada anggaran. Tambahkan batas untuk kategori pengeluaran.')) +
       (rows.length ? '<div class="grid cols-4 mt">' +
         '<div class="stat"><div class="lbl">Total anggaran ' + periodName.toLowerCase() + '</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.limit) + '</div></div>' +
         '<div class="stat out"><div class="lbl">Terpakai</div><div class="val" style="font-size:17px">' + U.fmtRpShort(tot.used) + '</div>' +
@@ -2094,12 +2105,34 @@
       rows.map(function (r) {
         const u = r.usage;
         return '<tr><td>' + emo(r.category.icon) + H(r.category.name) + '<br><span class="muted">' +
-            (r.budget.period === 'all' ? 'Keseluruhan · tanpa reset' : r.budget.period === 'year' ? 'Tahun ' + U.yearOf(today) : U.fmtMonth(U.monthOf(today))) + '</span></td>' +
+            H(caption) + '</span></td>' +
           '<td class="num">' + U.fmtRp(u.limit) + '</td>' +
           '<td class="num">' + U.fmtRp(u.used) + '</td>' +
           '<td class="num ' + (u.left < 0 ? 'val-out' : '') + '">' + U.fmtRp(u.left) + '</td>' +
           '<td>' + progBar(u.pct, u.over ? 'over' : (u.pct >= 80 ? 'warn' : '')) + '</td></tr>';
       }).join('') + '</tbody></table></div></div>' : '');
+  };
+
+  V.anggaranBind = function () {
+    V.bindCalendars();
+    const month = el('budget-month'), year = el('budget-year');
+    if (month) month.onchange = function () {
+      if (!month.value || !month.validity.valid) return;
+      V.state.anggaran.date = month.value + '-01'; root.App.render();
+    };
+    if (year) year.onchange = function () {
+      if (!year.value || !year.validity.valid) return;
+      V.state.anggaran.date = year.value + '-01-01'; root.App.render();
+    };
+  };
+
+  V.budgetTransactions = function (categoryId) {
+    const st = V.state.anggaran;
+    Object.assign(V.state.transaksi, {
+      preset: st.period || 'month', date: st.date || U.today(), catId: categoryId,
+      type: 'out', walletId: '', q: '', by: '', from: '', to: ''
+    });
+    root.App.go('transaksi');
   };
 
   V.budgetForm = function (id, presetCat, sumber) {

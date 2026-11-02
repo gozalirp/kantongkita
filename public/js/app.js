@@ -29,7 +29,7 @@
   }
   const BIND = {
     menu: null, dashboard: 'V.dashboardBind()', transaksi: 'V.transaksiBind()', rekap: 'V.rekapBind()',
-    anggaran: null, target: null, langganan: null,
+    anggaran: 'V.anggaranBind()', target: null, langganan: null,
     dompet: null, kategori: 'V.kategoriBind()', pengaturan: 'V.pengaturanBind()', profil: null, masuk: null
   };
 
