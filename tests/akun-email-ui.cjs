@@ -84,6 +84,17 @@ const tampak = (w, id) => !w.$(id).hidden && w.$(id).style.display !== 'none';
   assert.equal(d.panggilan[0].url, '/api/family/email/request-reset');
   assert.equal(d.panggilan[0].body.email, 'orang@contoh.id', 'spasi email dipangkas');
 
+  const v = buka('');
+  v.$('email-address').value = 'user@gmail.com';
+  v.$('email-form').dispatchEvent(new v.SubmitEvent('submit', { bubbles: true, cancelable: true, submitter: v.$('email-verification') }));
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(v.panggilan[0].url, '/api/family/email/request-verification');
+  assert.equal(v.panggilan[0].body.email, 'user@gmail.com');
+  assert.equal(v.$('email-form').hidden, false, 'can request reset after verification');
+  assert.equal(v.$('email-verification').disabled, false);
+  assert.equal(b.$('email-verification').hidden, true);
+  assert.equal(c.$('email-verification').hidden, true);
+
   // 5. Galat server ditampilkan, tombol hidup lagi
   const e = buka('#recover');
   e.balas = { ok: false, status: 403, json: async () => ({ error: 'Kode pemulihan salah atau kedaluwarsa.' }) };

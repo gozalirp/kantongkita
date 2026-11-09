@@ -30,6 +30,16 @@ export async function sendAccountEmail(env, userId, email, purpose, now) {
 export async function accountEmail(path, body, env, now) {
   const q = (sql, ...v) => env.DB.prepare(sql).bind(...v);
   const result = (value, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store' } });
+  if (path === 'email/request-verification') {
+    if (!emailReady(env)) return result({ ok: false, error: 'Layanan email belum diaktifkan. Gunakan kode pemulihan.' }, 503);
+    const email = emailAddress(body.email);
+    const user = await q('SELECT user_id FROM account_emails WHERE email=? AND verified_at IS NULL', email).first();
+    if (user) {
+      const recent = await q("SELECT token_hash FROM account_email_tokens WHERE user_id=? AND purpose='verify' AND expires_at>?", user.user_id, now + 86340).first();
+      if (!recent) { try { await sendAccountEmail(env, user.user_id, email, 'verify', now); } catch { /* Do not disclose account or delivery status. */ } }
+    }
+    return result({ ok: true, message: 'Jika email terdaftar dan belum diverifikasi, tautan verifikasi akan dikirim. Periksa inbox dan spam. Setelah verifikasi, kembali ke halaman ini untuk meminta reset password.' });
+  }
   if (path === 'email/request-reset') {
     if (!emailReady(env)) return result({ ok: false, error: 'Layanan email belum diaktifkan. Gunakan kode pemulihan.' }, 503);
     const email = emailAddress(body.email);

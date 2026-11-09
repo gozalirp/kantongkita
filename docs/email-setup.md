@@ -29,3 +29,7 @@ Langkah ini untuk penyiapan atau pemeriksaan konfigurasi, bukan perintah yang ha
 
 ## Uji lokal
 `node tests/account-email.mjs` memakai SQLite memory dan mock Resend; tidak mengirim email atau membuat akun produksi.
+
+## Pemulihan tanpa login — v63
+
+Halaman /akun-email menyediakan tombol Kirim ulang verifikasi email. Endpoint POST /api/family/email/request-verification menerima email tanpa sesi, hanya mengirim ke alamat terdaftar yang belum terverifikasi, dan selalu memberi pesan publik generik untuk alamat valid. Origin, pembatasan IP dan cooldown akun tetap berlaku. Setelah membuka tautan dan mengonfirmasi verifikasi, pengguna kembali ke halaman lupa password untuk meminta reset. Tidak mengubah password atau verified_at hanya karena permintaan kirim.

@@ -9,6 +9,7 @@
     el('recovery-field').hidden = false; el('recovery-field').style.display = '';
     el('recovery-user').required = true; el('recovery-code').required = true;
   }
+  el('email-verification').hidden = purpose !== 'request-reset';
   if (purpose !== 'request-reset') {
     el('email-field').hidden = true;
     el('email-field').style.display = 'none';
@@ -22,10 +23,13 @@
   }
   el('email-form').addEventListener('submit', async event => {
     event.preventDefault();
+    if (el('email-submit').disabled) return;
+    const action = purpose === 'request-reset' && event.submitter?.id === 'email-verification' ? 'request-verification' : purpose;
     el('email-submit').disabled = true;
+    el('email-verification').disabled = true;
     el('email-message').textContent = 'Memproses…';
     try {
-      const response = await fetch((purpose === 'recover' ? '/api/family/recover' : '/api/family/email/' + purpose), {
+      const response = await fetch((purpose === 'recover' ? '/api/family/recover' : '/api/family/email/' + action), {
         method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, email: el('email-address').value.trim(), username: el('recovery-user').value.trim(), code: el('recovery-code').value.trim(), password: el('email-password').value })
       });
@@ -35,6 +39,6 @@
       if (purpose !== 'request-reset') { el('email-form').hidden = true; el('email-form').style.display = 'none'; }
       el('email-password').value = '';
     } catch (error) { el('email-message').textContent = error.message || 'Tidak bisa menghubungi server.'; }
-    finally { el('email-submit').disabled = false; }
+    finally { el('email-submit').disabled = false; el('email-verification').disabled = false; }
   });
 })();

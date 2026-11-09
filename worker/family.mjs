@@ -55,11 +55,11 @@ export async function family(request, env) {
     const count = await q(`INSERT INTO family_rate_limits(key_hash,window_start,attempts) VALUES(?,?,1)
       ON CONFLICT(key_hash) DO UPDATE SET attempts=CASE WHEN window_start<? THEN 1 ELSE attempts+1 END,
       window_start=CASE WHEN window_start<? THEN excluded.window_start ELSE window_start END RETURNING attempts`, key, now, now-900, now-900).first();
-    if (count.attempts > (['login','activate','join','link','recover','email/request-reset','email/verify','email/reset','email/resend'].includes(path) ? 10 : 120)) return fail('Terlalu banyak percobaan. Tunggu 15 menit.', 429);
+    if (count.attempts > (['login','activate','join','link','recover','email/request-reset','email/request-verification','email/verify','email/reset','email/resend'].includes(path) ? 10 : 120)) return fail('Terlalu banyak percobaan. Tunggu 15 menit.', 429);
   }
   try {
     if (path === 'email/config' && request.method === 'GET') return json({ ok: true, enabled: emailReady(env) });
-    if (['email/request-reset','email/verify','email/reset'].includes(path) && request.method === 'POST') return await accountEmail(path, body, env, now);
+    if (['email/request-reset','email/request-verification','email/verify','email/reset'].includes(path) && request.method === 'POST') return await accountEmail(path, body, env, now);
     if (['activate','join','login','recover'].includes(path) && request.method === 'POST') {
       const name = username(body.username);
       if (path === 'login') {
